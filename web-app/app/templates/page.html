@@ -1,0 +1,358 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Segmentation Experiment</title>
+  <meta name="description" content="A segmentation interface!">
+  <meta name="author" content="SitePoint">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/themes/smoothness/jquery-ui.css">
+  <link href="https://s3.amazonaws.com/mturk-public/bs30/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+  <script src="{{ url_for('static', filename='lib/blowup.js') }}"></script>
+  <script src="{{ url_for('static', filename='lib/jquery.panzoom.js') }}"></script>
+  <script src="{{ url_for('static', filename='lib/jquery.canvasAreaDraw.js') }}"></script>
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+  <div id="wrapper" style="padding:0.3cm;">
+    <h1><font face="garamond">Identify an object in the image below, and segment it!</font></h1>
+  </div>
+  <!-- <div style="width: 100%; display: table; padding: 0.3cm;">
+    <div style="display: table-row"> -->
+      <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
+        <!-- <div id="canvasDiv" style="display: table-cell;"></div> -->
+  <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+      <!-- </div> -->
+  <canvas id="clipCanvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+      <!-- <div id="clipped" class="clipParent" style="display: table-cell;"></div> -->
+    <!-- </div>
+  </div> -->
+  
+
+  <div style="float:left; padding: 0.3cm;">
+    <div id = "buttonarea">
+      <button id="undo" type="button"> <font face="courier"> Undo [U] </font></button>
+      <button id="reset" type="button"> <font face="courier"> Reset [R] </font></button>
+      <button id="submit">  <font face="courier">Submit [S]</font></button>
+    </div>
+    <br>
+    <button class="zoom-in"><font face="courier">Zoom In [I]</font></button>
+    <button class="zoom-out"><font face="courier">Zoom Out [O]</font></button>
+    <input type="range" class="zoom-range">
+    <button class="reset"><font face="courier">Reset Zoom [R]</font></button>
+    <br><br>
+    <button id="instruct"><font face="courier">Instructions</font></button>
+  </div>
+    
+
+  <div id="instructions" title="Task Instructions">
+    <p><h4><font face="garamond">You will be shown a single image, on which are marked a pair of points. For this pair of points, you have to judge which of the 2 points is deeper in the image (from the perspective of the camera). Select an option (you can use your keyboard for faster input), and click Next to move on to a new pair of points. Please choose carefully! If you find that making a judgment is extremely confusing, you can choose to mark the points as being at equal depth, but please do this sparingly if possible. You also have the ability to zoom into the image, to take a closer look at the points. <br><br>
+
+    You can go back to review your previous answers using the Previous button. There are a total of {{ numpoints }} pairs in this HIT.<br><br>
+
+    Here's an example as a starting point!<br><br>
+
+    <img src="{{ url_for('static', filename = 'example.png') }}" style="height:400px;width=400px;"><br><br>
+
+    Notice how Point 2 is deeper in this image! Point 1 is on the couch, which is much closer to where the camera is standing, while Point 2 is on the wall behind.<br></font></h4></p>
+
+  </div>
+
+  <div id="end-dialog-message" title="Ready to submit?">
+  </div>
+  <form id = "endForm" action="{{ name.amazon_host }}" method="POST">
+      <input type="hidden" id="user-input" value="" name="user-input"/>
+      <input type="hidden" id="times" value="" name="times"/>
+      <input type="hidden" id="zooms" value="" name="zooms"/>
+      <input type="hidden" id="choices" value="" name="choices"/>
+      <input type="hidden" id="comment-input" value="" name="comment-input"/>
+      <input type="hidden" id="assignmentId" value="{{ name.assignment_id }}" name="assignmentId"/>
+      <input type="hidden" id="workerId" value="{{ name.worker_id }}" name="workerId"/>
+      <input type="hidden" id="hitId" value="{{ name.hit_id }}" name="hitId"/>
+  </form>
+
+</body>
+
+<script>
+  var accepted = '{{ accepted|tojson }}';
+
+  var canvas = document.getElementById('canvas');
+  var context = canvas.getContext('2d');
+
+  var imageObj = new Image();
+
+  imageObj.onload = function() {
+    $(canvas).attr({
+      width: this.width,
+      height: this.height
+    });
+    context.drawImage(imageObj, 0, 0);
+  };
+  
+  imageObj.src = '{{ filename }}';
+
+  var clipCanvas = document.getElementById('clipCanvas');
+  var clipContext = clipCanvas.getContext('2d');
+
+  var clickX = new Array();
+  var clickY = new Array();
+  //var clickDrag = new Array(); 
+  var undoArray = new Array();
+  var hoverActive = false;
+  var hoverPoint = -1;
+  var paint;
+
+  createInstructionsDialog();
+
+  function addClick(x, y, dragging) {
+    undoArray.push([-1, -1, -1]);
+    console.log(undoArray);
+    clickX.push(x);
+    clickY.push(y);
+  }
+
+  function redraw() {
+    canvas.width = canvas.width; // Clears the canvas 
+    context.drawImage(imageObj, 0, 0);
+    //context.globalCompositeOperation = 'destination-over';
+
+    context.fillStyle = 'rgb(255,255,255)';
+    context.strokeStyle = "rgb(20,255,20)";
+    context.lineWidth = 1;
+
+    context.beginPath();
+    context.moveTo(clickX[0], clickY[0]);
+    for (var i = 0; i < clickX.length; i++) {
+      if (i == hoverPoint) {
+        context.fillRect(clickX[i] - 4, clickY[i] - 4, 8, 8);
+        context.strokeRect(clickX[i] - 4, clickY[i] - 4, 8, 8);
+      } else {
+        context.fillRect(clickX[i] - 2, clickY[i] - 2, 4, 4);
+        context.strokeRect(clickX[i] - 2, clickY[i] - 2, 4, 4);
+      }
+      if (clickX.length > 1 && i > 0) {
+        context.lineTo(clickX[i], clickY[i]);
+      }
+    }
+    context.closePath();
+    context.fillStyle = 'rgba(0,255,0,0.3)';
+    context.fill();
+    context.stroke();
+  }
+
+  move = function(e) {
+    var newX = e.pageX - this.offsetLeft;
+    var newY = e.pageY - this.offsetTop;
+    clickX[activePoint] = Math.round(newX);
+    clickY[activePoint] = Math.round(newY);
+    redraw();
+    generateClipping();
+  };
+
+
+  $('#canvas').mouseup(function(e) {
+    $(this).off('mousemove');
+    activePoint = null;
+    $(this).on('mousemove', handleFreeMouseMove)
+  });
+
+  $('#canvas').mousedown(function(e) {
+    var mouseX = e.pageX - this.offsetLeft;
+    var mouseY = e.pageY - this.offsetTop;
+
+    for (var i = 0; i < clickX.length; i += 1) {
+      dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
+      if (dis < 6) {
+        activePoint = i;
+        undoArray.push([activePoint, clickX[i], clickY[i]]);
+        $(this).on('mousemove', move);
+        return false;
+      }
+    }
+
+    addClick(e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
+    redraw();
+    generateClipping();
+  });
+
+  function generateClipping() {
+    clipCanvas.width = clipCanvas.width; // Clears the canvas 
+    clipContext.beginPath();
+    clipContext.moveTo(clickX[0], clickY[0]);
+    for (var i = 0; i < clickX.length; i++) {
+      if (clickX.length > 1 && i > 0) {
+        clipContext.lineTo(clickX[i], clickY[i]);
+      }
+    }
+    clipContext.closePath();
+    clipContext.clip();
+    clipContext.drawImage(imageObj, 0, 0);
+  }
+
+
+  $('#undo').click(function() {
+    if (undoArray.length <= 0) {
+      return;
+    }
+    op = undoArray.pop();
+    if (op[0] == -1) {
+      clickX.pop();
+      clickY.pop();
+    } else {
+      clickX[op[0]] = op[1];
+      clickY[op[0]] = op[2];
+    }
+    redraw();
+    generateClipping();
+  });
+
+  $('#reset').click(function() {
+    clickX = [];
+    clickY = [];
+    redraw();
+  });
+
+  $("#panzoom").panzoom({
+    $zoomIn: $(".zoom-in"),
+    $zoomOut: $(".zoom-out"),
+    $zoomRange: $(".zoom-range"),
+    $reset: $(".reset"),
+    //onZoom: function(event, panzoom) { zooms[pageNumber] = 1;},
+    contain: false,
+    increment: 0.7,
+    maxScale: 7.0
+  });
+
+  function createInstructionsDialog(){
+    $( "#instructions" ).dialog({
+      resizable: true,
+      height:600,
+      width:800,
+      modal: true,
+      closeOnEscape: false,
+      open: function(event, ui) { $(".ui-dialog-titlebar-close", ui.dialog | ui).hide(); },
+      buttons: {
+        "Start Task": function() {
+          if (accepted == 'true'){
+            console.log("Closing.");
+            $( this ).dialog( "close" );  
+          }
+          else{
+            alert("Please accept the HIT to continue!");
+          }
+        }
+      }
+    });
+  }
+
+  function onSubmission(){
+    endDialog();
+    $("#end-dialog-message").html("");
+    $("#end-dialog-message").append('<p><h4><font face="garamond">Please give us your feedback to help us improve this interface!</font></h4></p><textarea id="comments"></textarea>');
+    $('#comments').val('');
+  }
+
+  function onKeyPress(event)
+  {
+    if (event.which == 114) {
+        $("#reset").get(0).click();
+    } 
+    else if (event.which == 117) {
+        $("#undo").get(0).click();
+    }
+    else if (event.which == 115){
+        $("#submit").click(onSubmission());
+    }
+  }
+
+  function clearContents(element) {
+    element.value = '';
+  }
+
+  function endDialog()
+  {
+    $( "#end-dialog-message" ).dialog({
+      resizable: false,
+      height:400,
+      width:300,
+      modal: true,
+      buttons: {
+        "Submit Results?": function() {
+          $('input[name="user-input"]').val(JSON.stringify(dict));
+          $('input[name="times"]').val(JSON.stringify(times));
+          $('input[name="zooms"]').val(JSON.stringify(zooms));
+          $('input[name="choices"]').val(JSON.stringify(choices));
+          $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
+          $("#endForm").submit();
+          $( this ).dialog( "close" );
+          // alert("Just in case, this blacks out the screen");
+          $("#wrapper").remove();
+          $("body").append('<div id="endsplash" style ="height:100%;width:100%;top:0px;left:0px;z-index:999;background:rgba(0,0,0,1);"> </div>');
+        },
+        Cancel: function() {
+          $( this ).dialog( "close" );
+        }
+      }
+    }); 
+  }
+  
+  jQuery('#end-dialog-message').bind('keypress', function(e) {
+    e.stopPropagation(); 
+  });
+
+  jQuery('#instructions').bind('keypress', function(e) {
+    e.stopPropagation(); 
+  });
+
+  $("#submit").click(function(){
+    onSubmission();
+  });
+
+  $("#instruct").click(function(){
+    createInstructionsDialog();
+  });
+
+  $(document).keypress(function(event){
+    onKeyPress(event);
+  });
+
+  function handleFreeMouseMove(e) {
+    var mouseX = e.pageX - this.offsetLeft;
+    var mouseY = e.pageY - this.offsetTop;
+    for (var i = 0; i < clickX.length; i += 1) {
+      dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
+      if (dis < 6) {
+        if (!hoverActive) {
+          hoverPoint = i;
+          hoverActive = true;
+          redraw();
+        }
+        break;
+      } else {
+        if (hoverActive) {
+          hoverPoint = -1;
+          hoverActive = false;
+          redraw();
+        }
+      }
+    }
+  };
+
+
+  $("#canvas").mousemove(function(e) {
+    handleFreeMouseMove(e);
+  });
+
+
+
+  </script>
+
+</html>

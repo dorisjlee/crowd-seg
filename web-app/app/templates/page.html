@@ -28,11 +28,12 @@
   <!-- <div style="width: 100%; display: table; padding: 0.3cm;">
     <div style="display: table-row"> -->
       <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
-        <!-- <div id="canvasDiv" style="display: table-cell;"></div> -->
-  <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+        
+  <!-- <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas> -->
+  <div id="canvasDiv" style="display: table-cell;float: left;"></div>
       <!-- </div> -->
-  <canvas id="clipCanvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
-      <!-- <div id="clipped" class="clipParent" style="display: table-cell;"></div> -->
+  <!-- <canvas id="clipCanvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas> -->
+      <div id="clipped" class="clipParent" style="display: table-cell;float: left;"></div>
     <!-- </div>
   </div> -->
   
@@ -84,7 +85,16 @@
 <script>
   var accepted = '{{ accepted|tojson }}';
 
-  var canvas = document.getElementById('canvas');
+  // var canvas = document.getElementById('canvas');
+  var canvasDiv = document.getElementById('canvasDiv');
+  canvas = document.createElement('canvas');
+  canvas.setAttribute('width', '{{ wd }}'+'px');
+  canvas.setAttribute('height','{{ ht }}'+'px');
+  canvas.setAttribute('id', 'canvas');
+  $(canvasDiv).prepend(canvas);
+  if (typeof G_vmlCanvasManager != 'undefined') {
+    canvas = G_vmlCanvasManager.initElement(canvas);
+  }
   var context = canvas.getContext('2d');
 
   var imageObj = new Image();
@@ -99,7 +109,22 @@
   
   imageObj.src = '{{ filename }}';
 
-  var clipCanvas = document.getElementById('clipCanvas');
+  // var clipCanvas = document.getElementById('clipCanvas');
+  // var clipContext = clipCanvas.getContext('2d');
+  var clipParent = document.getElementById('clipped');
+  clipCanvas = document.createElement('canvas');
+
+  clipCanvas.setAttribute('id', 'clipCanvas');
+  $(clipParent).prepend(clipCanvas);
+  if (typeof G_vmlCanvasManager != 'undefined') {
+    clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
+  }
+  clipCanvas.setAttribute('width', canvas.getAttribute('width')+'px');
+  clipCanvas.setAttribute('height',canvas.getAttribute('height')+'px');
+  
+  clipParent.setAttribute('width', canvas.getAttribute('width')+'px');
+  clipParent.setAttribute('height',canvas.getAttribute('height')+'px');
+
   var clipContext = clipCanvas.getContext('2d');
 
   var clickX = new Array();
@@ -114,7 +139,7 @@
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
-    console.log(undoArray);
+    // console.log(undoArray);
     clickX.push(x);
     clickY.push(y);
   }
@@ -242,7 +267,7 @@
       buttons: {
         "Start Task": function() {
           if (accepted == 'true'){
-            console.log("Closing.");
+            // console.log("Closing.");
             $( this ).dialog( "close" );  
           }
           else{

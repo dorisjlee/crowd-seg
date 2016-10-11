@@ -75,9 +75,9 @@
   canvas = document.createElement('canvas');
   // canvas.setAttribute('width', '{{ wd }}'+'px');
   // canvas.setAttribute('height','{{ ht }}'+'px');
-  canvas.setAttribute('width', window.innerWidth/2.);
-  // canvas.setAttribute('width', '{{ wd }}'+'px');
-  canvas.setAttribute('height',window.innerHeight);
+  // canvas.setAttribute('width', '50%');
+  canvas.setAttribute('width', '{{ wd }}'+'px');
+  canvas.setAttribute('height','{{ ht }}'+'px');
   
   canvas.setAttribute('id', 'canvas');
   $(canvasDiv).prepend(canvas);
@@ -90,11 +90,12 @@
 
   imageObj.onload = function() {
     $(canvas).attr({
-      width: window.innerWidth/2.,
-      height: window.innerHeight
+      width: this.width,
+      height: this.height
     });
-    context.drawImage(imageObj, 0, 0,window.innerWidth/2.,window.innerHeight);
-  }; 
+    context.drawImage(imageObj, 0, 0);
+  };
+  
   imageObj.src = '{{ filename }}';
 
   // var clipCanvas = document.getElementById('clipCanvas');
@@ -107,11 +108,11 @@
   if (typeof G_vmlCanvasManager != 'undefined') {
     clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
   }
-  clipCanvas.setAttribute('width', window.innerWidth/2.);
-  clipCanvas.setAttribute('height',window.innerHeight);
+  clipCanvas.setAttribute('width', canvas.getAttribute('width')+'px');
+  clipCanvas.setAttribute('height',canvas.getAttribute('height')+'px');
   
-  clipParent.setAttribute('width', window.innerWidth/2.);
-  clipParent.setAttribute('height',window.innerHeight);
+  clipParent.setAttribute('width', canvas.getAttribute('width')+'px');
+  clipParent.setAttribute('height',canvas.getAttribute('height')+'px');
 
   var clipContext = clipCanvas.getContext('2d');
 
@@ -134,8 +135,7 @@
 
   function redraw() {
     canvas.width = canvas.width; // Clears the canvas 
-    // context.drawImage(imageObj, 0, 0);
-    context.drawImage(imageObj, 0, 0,window.innerWidth/2.,window.innerHeight);
+    context.drawImage(imageObj, 0, 0);
     //context.globalCompositeOperation = 'destination-over';
 
     context.fillStyle = 'rgb(255,255,255)';
@@ -359,9 +359,13 @@
       }
     }
   };
+
+
   $("#canvas").mousemove(function(e) {
     handleFreeMouseMove(e);
   });
+
+
 
   </script>
 

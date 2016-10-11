@@ -33,7 +33,7 @@
   </div>
     <!-- <div id="panzoom"> -->
       <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
-          <div id="canvasDiv" style="display: table-cell;float: left;"></div>
+      <div id="canvasDiv" style="display: table-cell;float: left;padding-top: 20px;padding-left: 80px;"></div>
       <!-- </div> -->
       <div id="clipped" class="clipParent" style="display: table-cell;float: left;"></div>
    
@@ -73,12 +73,9 @@
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
-  // canvas.setAttribute('width', '{{ wd }}'+'px');
-  // canvas.setAttribute('height','{{ ht }}'+'px');
-  // canvas.setAttribute('width', '50%');
   canvas.setAttribute('width', '{{ wd }}'+'px');
-  canvas.setAttribute('height','{{ ht }}'+'px');
-  
+  canvas.setAttribute('height','{{ ht }}'+'px'); 
+      
   canvas.setAttribute('id', 'canvas');
   $(canvasDiv).prepend(canvas);
   if (typeof G_vmlCanvasManager != 'undefined') {

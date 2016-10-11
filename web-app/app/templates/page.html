@@ -23,38 +23,23 @@
 
 <body>
   <div id="wrapper" style="padding:0.3cm;">
-    <h1><font face="garamond">Identify an object in the image below, and segment it!</font></h1>
-  </div>
-  <!-- <div style="width: 100%; display: table; padding: 0.3cm;">
-    <div style="display: table-row"> -->
-      <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
-        
-  <!-- <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas> -->
-  <div id="canvasDiv" style="display: table-cell;float: left;"></div>
-      <!-- </div> -->
-  <!-- <canvas id="clipCanvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas> -->
-      <div id="clipped" class="clipParent" style="display: table-cell;float: left;"></div>
-    <!-- </div>
-  </div> -->
-  
-
-  <div style="float:left; padding: 0.3cm;">
-    <div id = "buttonarea">
+    <h1 style=" display:inline;"><font face="garamond">Identify objects in the image below, and segment it!</font></h1>
+    <div id = "buttonarea" style="padding:0.3cm;float:right;display:inline-block;">
       <button id="undo" type="button"> <font face="courier"> Undo [U] </font></button>
       <button id="reset" type="button"> <font face="courier"> Reset [R] </font></button>
       <button id="submit">  <font face="courier">Submit [S]</font></button>
+      <button id="instruct"><font face="courier">Instructions</font></button>
     </div>
-    <br>
-    <button class="zoom-in"><font face="courier">Zoom In [I]</font></button>
-    <button class="zoom-out"><font face="courier">Zoom Out [O]</font></button>
-    <input type="range" class="zoom-range">
-    <button class="reset"><font face="courier">Reset Zoom [R]</font></button>
-    <br><br>
-    <button id="instruct"><font face="courier">Instructions</font></button>
   </div>
+    <!-- <div id="panzoom"> -->
+      <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
+          <div id="canvasDiv" style="display: table-cell;float: left;"></div>
+      <!-- </div> -->
+      <div id="clipped" class="clipParent" style="display: table-cell;float: left;"></div>
+   
     
 
-  <div id="instructions" title="Task Instructions">
+  <!-- <div id="instructions" title="Task Instructions">
     <p><h4><font face="garamond">You will be shown a single image, on which are marked a pair of points. For this pair of points, you have to judge which of the 2 points is deeper in the image (from the perspective of the camera). Select an option (you can use your keyboard for faster input), and click Next to move on to a new pair of points. Please choose carefully! If you find that making a judgment is extremely confusing, you can choose to mark the points as being at equal depth, but please do this sparingly if possible. You also have the ability to zoom into the image, to take a closer look at the points. <br><br>
 
     You can go back to review your previous answers using the Previous button. There are a total of {{ numpoints }} pairs in this HIT.<br><br>
@@ -65,7 +50,7 @@
 
     Notice how Point 2 is deeper in this image! Point 1 is on the couch, which is much closer to where the camera is standing, while Point 2 is on the wall behind.<br></font></h4></p>
 
-  </div>
+  </div> -->
 
   <div id="end-dialog-message" title="Ready to submit?">
   </div>
@@ -88,8 +73,12 @@
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
-  canvas.setAttribute('width', '{{ wd }}'+'px');
-  canvas.setAttribute('height','{{ ht }}'+'px');
+  // canvas.setAttribute('width', '{{ wd }}'+'px');
+  // canvas.setAttribute('height','{{ ht }}'+'px');
+  canvas.setAttribute('width', window.innerWidth/2.);
+  // canvas.setAttribute('width', '{{ wd }}'+'px');
+  canvas.setAttribute('height',window.innerHeight);
+  
   canvas.setAttribute('id', 'canvas');
   $(canvasDiv).prepend(canvas);
   if (typeof G_vmlCanvasManager != 'undefined') {
@@ -101,12 +90,11 @@
 
   imageObj.onload = function() {
     $(canvas).attr({
-      width: this.width,
-      height: this.height
+      width: window.innerWidth/2.,
+      height: window.innerHeight
     });
-    context.drawImage(imageObj, 0, 0);
-  };
-  
+    context.drawImage(imageObj, 0, 0,window.innerWidth/2.,window.innerHeight);
+  }; 
   imageObj.src = '{{ filename }}';
 
   // var clipCanvas = document.getElementById('clipCanvas');
@@ -119,11 +107,11 @@
   if (typeof G_vmlCanvasManager != 'undefined') {
     clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
   }
-  clipCanvas.setAttribute('width', canvas.getAttribute('width')+'px');
-  clipCanvas.setAttribute('height',canvas.getAttribute('height')+'px');
+  clipCanvas.setAttribute('width', window.innerWidth/2.);
+  clipCanvas.setAttribute('height',window.innerHeight);
   
-  clipParent.setAttribute('width', canvas.getAttribute('width')+'px');
-  clipParent.setAttribute('height',canvas.getAttribute('height')+'px');
+  clipParent.setAttribute('width', window.innerWidth/2.);
+  clipParent.setAttribute('height',window.innerHeight);
 
   var clipContext = clipCanvas.getContext('2d');
 
@@ -135,7 +123,7 @@
   var hoverPoint = -1;
   var paint;
 
-  createInstructionsDialog();
+  // createInstructionsDialog();
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
@@ -146,7 +134,8 @@
 
   function redraw() {
     canvas.width = canvas.width; // Clears the canvas 
-    context.drawImage(imageObj, 0, 0);
+    // context.drawImage(imageObj, 0, 0);
+    context.drawImage(imageObj, 0, 0,window.innerWidth/2.,window.innerHeight);
     //context.globalCompositeOperation = 'destination-over';
 
     context.fillStyle = 'rgb(255,255,255)';
@@ -245,16 +234,16 @@
     redraw();
   });
 
-  $("#panzoom").panzoom({
-    $zoomIn: $(".zoom-in"),
-    $zoomOut: $(".zoom-out"),
-    $zoomRange: $(".zoom-range"),
-    $reset: $(".reset"),
-    //onZoom: function(event, panzoom) { zooms[pageNumber] = 1;},
-    contain: false,
-    increment: 0.7,
-    maxScale: 7.0
-  });
+  // $("#canvasDiv").panzoom({
+  //   $zoomIn: $(".zoom-in"),
+  //   $zoomOut: $(".zoom-out"),
+  //   $zoomRange: $(".zoom-range"),
+  //   $reset: $(".reset"),
+  //   onZoom: function(event, panzoom) { zooms[pageNumber] = 1;},
+  //   contain: true,
+  //   increment: 0.7,
+  //   maxScale: 7.0
+  // });
 
   function createInstructionsDialog(){
     $( "#instructions" ).dialog({
@@ -370,13 +359,9 @@
       }
     }
   };
-
-
   $("#canvas").mousemove(function(e) {
     handleFreeMouseMove(e);
   });
-
-
 
   </script>
 

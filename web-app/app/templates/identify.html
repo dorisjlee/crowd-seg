@@ -22,14 +22,18 @@
 </head>
 
 <body>
+
   <div id="wrapper" style="padding:0.3cm;">
-    <h1><font face="garamond">Identify objects in the image below!</font></h1>
-  </div>
-  <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;">
-    <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+   <h1 style=" display:inline;"><font face="garamond">Identify objects in the image below!</font></h1>
+    <div id = "buttonarea" style="padding:0.3cm;margin-right: 35px;float:right;display:inline-block;"> <button id="submit">  <font face="courier">Submit [S]</font></button>
+      <button id="instruct"><font face="courier">Instructions</font></button>
+    </div>
   </div>
   
-  <div style="display: inline-block;float:top; padding: 0.3cm;">
+    <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+
+  
+  <div style="margin-top: -35px;padding: 0.3cm;width: 45%;display: inline-block;">
     <br>
     <p style="color:red;font-family: garamond;font-size:16px;">Objects identified previously. You can hover over the names in the list below to view them on the image.</p>
     <div id='list' style="border:1px solid #000;overflow:hidden;height:120px;overflow-y:scroll;">
@@ -43,11 +47,7 @@
       </ul>
     </div>
     <br><br>
-    <div id = "buttonarea">
-      <button id="submit">  <font face="courier">Submit [S]</font></button>
-      <button id="instruct"><font face="courier">Instructions</font></button>
-    </div>
-    <br>
+    
 <!--     <button class="zoom-in"><font face="courier">Zoom In [I]</font></button>
     <button class="zoom-out"><font face="courier">Zoom Out [O]</font></button>
     <input type="range" class="zoom-range">

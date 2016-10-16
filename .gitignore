@@ -1,3 +1,6 @@
 mturk.py
 /flask/*
 ActiveHITs
+web-app/secret.py
+*/site-packages/*
+*.pyc

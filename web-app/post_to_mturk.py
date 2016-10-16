@@ -3,7 +3,7 @@ from boto.mturk.connection import MTurkConnection
 from boto.mturk.question import ExternalQuestion
 from boto.mturk.qualification import Qualifications, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement, Requirement
 from boto.mturk.price import Price
-
+from secret import SECRET_KEY,ACCESS_KEY
 DEV_ENVIROMENT_BOOLEAN = True
 #This allows us to specify whether we are pushing to the sandbox or live site.
 if DEV_ENVIROMENT_BOOLEAN:
@@ -14,8 +14,8 @@ else:
     MastersQualID = '2NDP2L92HECWY8NS8H3CK0CP5L9GHO'
 
 #Start Configuration Variables
-AWS_ACCESS_KEY_ID = "<ACCESS KEY ID>"
-AWS_SECRET_ACCESS_KEY = "<SECRET ACCESS KEY>"
+AWS_ACCESS_KEY_ID = ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = SECRET_KEY
 
 connection = MTurkConnection(aws_access_key_id=AWS_ACCESS_KEY_ID,
 							 aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
@@ -37,7 +37,7 @@ qualifications.add(NumberHitsApprovedRequirement(comparator="GreaterThan", integ
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','w') as f:
 	#for i in xrange(1,5):
-	url = "https://image-segment.herokuapp.com/identify/118519"# + str(i)
+	url = "https://obscure-ridge-89314.herokuapp.com/118522"# + str(i)
 	questionform = ExternalQuestion(url, frame_height)
 	create_hit_result = connection.create_hit(
 		title="Mark objects on an image",
@@ -49,6 +49,8 @@ with open('ActiveHITs','w') as f:
 		reward=Price(amount=0.15),
 		lifetime=43200)#,
 		#qualifications=qualifications)
-	f.write(str(create_hit_result[0].HITId) + "\n")
+	hit_id = str(create_hit_result[0].HITId)
+	f.write(hit_id + "\n")
+	print "Created HIT: ",hit_id
 
 

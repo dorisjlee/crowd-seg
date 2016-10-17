@@ -37,7 +37,7 @@ qualifications.add(NumberHitsApprovedRequirement(comparator="GreaterThan", integ
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','w') as f:
 	#for i in xrange(1,5):
-	url = "https://obscure-ridge-89314.herokuapp.com/118522"# + str(i)
+	url = "https://obscure-ridge-89314.herokuapp.com/identify/118522"# + str(i)
 	questionform = ExternalQuestion(url, frame_height)
 	create_hit_result = connection.create_hit(
 		title="Mark objects on an image",

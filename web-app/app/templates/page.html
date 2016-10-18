@@ -57,7 +57,7 @@
 
   <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
       <input type="hidden" id="image-id" value="{{img}}" name="image-id"/>
-      <input type="hidden" id="object-id" value="" name="object-id"/>
+      <input type="hidden" id="object_id" value="" name="object_id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
 <!--       <input type="hidden" id="user-input" value="" name="user-input"/>
@@ -317,7 +317,7 @@
         "Submit Results?": function() {
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
-          $('input[name="object-id"]').val(JSON.stringify(randkey));
+          $('input[name="object_id"]').val(randkey);
           // $('input[name="user-input"]').val(JSON.stringify(dict));
           // $('input[name="times"]').val(JSON.stringify(times));
           // $('input[name="zooms"]').val(JSON.stringify(zooms));

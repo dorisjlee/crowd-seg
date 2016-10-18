@@ -23,7 +23,7 @@
 
 <body>
   <div id="wrapper" style="padding:0.3cm;">
-    <h1 style=" display:inline;"><font face="garamond">Draw a bounding box around the object located at the pointer!</font></h1>
+    <h1 style=" display:inline;"><font face="garamond">Draw a bounding box around the <div id="objName"  style="display: inline; color:red">object</div> located at the pointer!</font></h1>
     <div id = "buttonarea" style="padding:0.3cm;float:right;display:inline-block;">
       <button id="undo" type="button"> <font face="courier"> Undo [U] </font></button>
       <button id="reset" type="button"> <font face="courier"> Reset [R] </font></button>
@@ -57,6 +57,7 @@
 
   <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
       <input type="hidden" id="image-id" value="{{img}}" name="image-id"/>
+      <input type="hidden" id="object-id" value="" name="object-id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
 <!--       <input type="hidden" id="user-input" value="" name="user-input"/>
@@ -75,7 +76,7 @@
   var accepted = '{{ accepted|tojson }}';
   var objects = JSON.parse('{{ objects|tojson }}');
   var object_locations = JSON.parse('{{ locs|tojson }}');
-  console.log(objects)
+  
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
@@ -127,7 +128,8 @@
   var hoverActive = false;
   var hoverPoint = -1;
   var paint;
-
+  //Pick a random object to segment (Only done once)
+  var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
   // createInstructionsDialog();
 
   function addClick(x, y, dragging) {
@@ -136,23 +138,15 @@
     clickX.push(x);
     clickY.push(y);
   }
-  function renderObjLoc(){
-    // context.fillStyle = 'rgb(255,255,255)';
-    // context.strokeStyle = 'rgb(20,255,20)';
+
+  function renderObjLoc(){ 
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = 'rgb(255,20,20)';
-    //context.globalCompositeOperation = 'destination-over';
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
-    for (var p in object_locations) {
-      // var circle = new Path2D();
-      // circle.arc(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 2, 0, 2 * Math.PI);
-      // context.fill(circle); 
-      // context.drawImage(pointerImg,canvas.width*object_locations[p][0] - 2,canvas.height*object_locations[p][1] - 2);
-      context.fillRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
-      context.strokeRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
-    }
-    
+    context.fillRect(canvas.width*object_locations[randkey][0] - 2, canvas.height*object_locations[randkey][1] - 2, 4, 4);
+    context.strokeRect(canvas.width*object_locations[randkey][0] - 2, canvas.height*object_locations[randkey][1] - 2, 4, 4);
+    document.getElementById("objName").innerHTML=objects[randkey];
   }
   function redraw() {
     canvas.width = canvas.width; // Clears the canvas 
@@ -323,6 +317,7 @@
         "Submit Results?": function() {
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
+          $('input[name="object-id"]').val(JSON.stringify(randkey));
           // $('input[name="user-input"]').val(JSON.stringify(dict));
           // $('input[name="times"]').val(JSON.stringify(times));
           // $('input[name="zooms"]').val(JSON.stringify(zooms));

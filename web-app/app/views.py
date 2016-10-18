@@ -171,7 +171,7 @@ def segmentation_submit():
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
 	img = json.loads(request.form['image-id'])
-	# object_names = json.loads(request.form['obj-names'])
+	object_names = json.loads(request.form['obj-names'])
 	comment = json.loads(request.form['comment-input'])
 	# #Store all the collected data in the database
 	# assume that the worker and object id is given for each task 

@@ -30,3 +30,14 @@ class Worker(db.Model):
 
 	def __repr__(self):
 		return 'id=%d,turker-id=%s' % (self.id,self.turker)
+class BoundingBox(db.Model):
+	'''
+	the x and y locations are a string that is formatted as [x1,x2,x3 ..etc]
+	'''
+	object_id = db.Column(db.Integer, db.ForeignKey('object.id'),primary_key = True)
+	worker_id = db.Column(db.Integer, db.ForeignKey('worker.id'),primary_key = True)
+	x_locs = db.Column(db.String, index=True)
+	y_locs = db.Column(db.String, index=True)
+
+	def __repr__(self):
+		return 'obj=%d,worker=%d,x=%1.3f,y=%1.3f' % (self.object_id,self.worker_id,self.x_locs,self.y_locs)

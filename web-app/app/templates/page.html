@@ -54,11 +54,15 @@
 
   <div id="end-dialog-message" title="Ready to submit?">
   </div>
-  <form id = "endForm" action="{{ name.amazon_host }}" method="POST">
-      <input type="hidden" id="user-input" value="" name="user-input"/>
+
+  <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
+      <!-- <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/> -->
+      <input type="hidden" id="x-locs" value="" name="x-locs"/>
+      <input type="hidden" id="y-locs" value="" name="y-locs"/>
+<!--       <input type="hidden" id="user-input" value="" name="user-input"/>
       <input type="hidden" id="times" value="" name="times"/>
       <input type="hidden" id="zooms" value="" name="zooms"/>
-      <input type="hidden" id="choices" value="" name="choices"/>
+      <input type="hidden" id="choices" value="" name="choices"/> -->
       <input type="hidden" id="comment-input" value="" name="comment-input"/>
       <input type="hidden" id="assignmentId" value="{{ name.assignment_id }}" name="assignmentId"/>
       <input type="hidden" id="workerId" value="{{ name.worker_id }}" name="workerId"/>
@@ -297,10 +301,12 @@
       modal: true,
       buttons: {
         "Submit Results?": function() {
-          $('input[name="user-input"]').val(JSON.stringify(dict));
-          $('input[name="times"]').val(JSON.stringify(times));
-          $('input[name="zooms"]').val(JSON.stringify(zooms));
-          $('input[name="choices"]').val(JSON.stringify(choices));
+          $('input[name="x-locs"]').val(JSON.stringify(clickX));
+          $('input[name="y-locs"]').val(JSON.stringify(clickY));
+          // $('input[name="user-input"]').val(JSON.stringify(dict));
+          // $('input[name="times"]').val(JSON.stringify(times));
+          // $('input[name="zooms"]').val(JSON.stringify(zooms));
+          // $('input[name="choices"]').val(JSON.stringify(choices));
           $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
           $("#endForm").submit();
           $( this ).dialog( "close" );

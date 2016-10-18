@@ -137,3 +137,36 @@ def new_submit(x_locs,y_locs,img,object_names,comment):
 @app.route('/<filename>')
 def send_file(filename):
 	return send_from_directory('static/', filename)
+
+
+@app.route('/segmentation/submit', methods=['GET','POST'])
+
+def segmentation_submit():
+	render_data = {"worker_id": request.args.get("workerId"), 
+					"assignment_id": request.args.get("assignmentId"), 
+					"amazon_host": AMAZON_HOST, 
+					"hit_id": request.args.get("hitId")}
+
+	x_locs = json.loads(request.form['x-locs'])
+	y_locs = json.loads(request.form['y-locs'])
+	# img = json.loads(request.form['image-id'])
+	# object_names = json.loads(request.form['obj-names'])
+	comment = json.loads(request.form['comment-input'])
+	# #Store all the collected data in the database
+	# assume that the worker and object id is given for each task 
+	worker_id =123
+	# worker_id = models.Worker.query.filter_by(turker=request.args.get("workerId")).first().id
+	# print "Worker id", worker_id
+	# image_id = models.Image.query.filter_by(filename=img).first().id
+	# print worker_id
+	# print image_id
+	# print "xlocs type:", type(x_locs)
+	img = 54
+	obj_id = 5
+	bounding_box= models.BoundingBox(object_id=obj_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
+	db.session.add(bounding_box)
+	db.session.commit()
+
+	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,comment=comment)) #img=img,
+	resp.headers['x-frame-options'] = 'this_can_be_anything'
+	return resp

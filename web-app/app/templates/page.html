@@ -23,7 +23,7 @@
 
 <body>
   <div id="wrapper" style="padding:0.3cm;">
-    <h1 style=" display:inline;"><font face="garamond">Identify objects in the image below, and segment it!</font></h1>
+    <h1 style=" display:inline;"><font face="garamond">Draw a bounding box around the object located at the pointer!</font></h1>
     <div id = "buttonarea" style="padding:0.3cm;float:right;display:inline-block;">
       <button id="undo" type="button"> <font face="courier"> Undo [U] </font></button>
       <button id="reset" type="button"> <font face="courier"> Reset [R] </font></button>
@@ -56,7 +56,7 @@
   </div>
 
   <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
-      <!-- <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/> -->
+      <input type="hidden" id="image-id" value="{{img}}" name="image-id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
 <!--       <input type="hidden" id="user-input" value="" name="user-input"/>
@@ -73,7 +73,9 @@
 
 <script>
   var accepted = '{{ accepted|tojson }}';
-
+  var objects = JSON.parse('{{ objects|tojson }}');
+  var object_locations = JSON.parse('{{ locs|tojson }}');
+  console.log(objects)
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
@@ -95,6 +97,7 @@
       height: this.height
     });
     context.drawImage(imageObj, 0, 0);
+    renderObjLoc();
   };
   
   imageObj.src = '{{ filename }}';
@@ -133,12 +136,29 @@
     clickX.push(x);
     clickY.push(y);
   }
-
+  function renderObjLoc(){
+    // context.fillStyle = 'rgb(255,255,255)';
+    // context.strokeStyle = 'rgb(20,255,20)';
+    context.fillStyle = 'rgb(255,255,255)';
+    context.strokeStyle = 'rgb(255,20,20)';
+    //context.globalCompositeOperation = 'destination-over';
+    pointerImg = new Image();
+    pointerImg.src = canvas.toDataURL("../static/pointer.png");
+    for (var p in object_locations) {
+      // var circle = new Path2D();
+      // circle.arc(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 2, 0, 2 * Math.PI);
+      // context.fill(circle); 
+      // context.drawImage(pointerImg,canvas.width*object_locations[p][0] - 2,canvas.height*object_locations[p][1] - 2);
+      context.fillRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
+      context.strokeRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
+    }
+    
+  }
   function redraw() {
     canvas.width = canvas.width; // Clears the canvas 
     context.drawImage(imageObj, 0, 0);
     //context.globalCompositeOperation = 'destination-over';
-
+    renderObjLoc();
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = "rgb(20,255,20)";
     context.lineWidth = 1;

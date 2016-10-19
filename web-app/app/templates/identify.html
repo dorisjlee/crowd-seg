@@ -91,8 +91,8 @@
   var objects = JSON.parse('{{ objects|tojson }}');
   var object_locations = JSON.parse('{{ locs|tojson }}');
 
-  var objX = new Array();
-  var objY = new Array();
+  var clickX = new Array();
+  var clickY = new Array();
 
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
@@ -131,8 +131,8 @@
     }
     $("#new-objects").append('<li class="editable-list" id=' + running_id + '><span style="font-family: courier;">' + user_input + '</span><input type="text" class="edit" style="display:none;font-family: courier;"/></li>');  
     running_id += 1;
-    objX.push(x/canvas.width);
-    objY.push(y/canvas.height);
+    clickX.push(x);
+    clickY.push(y);
   }
 
   function populateList(objs) {
@@ -149,23 +149,24 @@
     //context.globalCompositeOperation = 'destination-over';
     for (var p in object_locations) {
       if (activeListItem == p || hoverPoint == p){
-        context.fillRect(canvas.width*object_locations[p][0] - 4, canvas.height*object_locations[p][1] - 4, 8, 8);
-        context.strokeRect(canvas.width*object_locations[p][0] - 4, canvas.height*object_locations[p][1] - 4, 8, 8);
+        context.fillRect(object_locations[p][0] - 4, object_locations[p][1] - 4, 8, 8);
+        context.strokeRect(object_locations[p][0] - 4,object_locations[p][1] - 4, 8, 8);
       }
       else {
-        context.fillRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
-        context.strokeRect(canvas.width*object_locations[p][0] - 2, canvas.height*object_locations[p][1] - 2, 4, 4);
+        context.fillRect(object_locations[p][0] - 2, object_locations[p][1] - 2, 4, 4);
+        context.strokeRect(object_locations[p][0] - 2, object_locations[p][1] - 2, 4, 4);
       } 
     }
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = 'rgb(20,255,20)';
-    for (var i = 0; i < objX.length; i++) {
+    context.moveTo(clickX[0], clickY[0]);
+    for (var i = 0; i < clickX.length; i++) {
       if (i == otherActiveListItem || i == otherHoverPoint) {
-        context.fillRect(canvas.width*objX[i] - 4, canvas.height*objY[i] - 4, 8, 8);
-        context.strokeRect(canvas.width*objX[i] - 4, canvas.height*objY[i] - 4, 8, 8);
+        context.fillRect(clickX[i] - 4, clickY[i] - 4, 8, 8);
+        context.strokeRect(clickX[i] - 4, clickY[i] - 4, 8, 8);
       } else {
-        context.fillRect(canvas.width*objX[i] - 2, canvas.height*objY[i] - 2, 4, 4);
-        context.strokeRect(canvas.width*objX[i] - 2, canvas.height*objY[i] - 2, 4, 4);
+        context.fillRect(clickX[i] - 2, clickY[i] - 2, 4, 4);
+        context.strokeRect(clickX[i] - 2,clickY[i] - 2, 4, 4);
       }
     }
 
@@ -174,8 +175,8 @@
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
-    objX[activePoint] = Math.round(newX);
-    objY[activePoint] = Math.round(newY);
+    clickX[activePoint] =  newX/canvas.width;
+    clickY[activePoint] =  newY/canvas.height;
     redraw();
   };
 
@@ -188,8 +189,8 @@
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
 
-    for (var i = 0; i < objX.length; i += 1) {
-      dis = Math.sqrt(Math.pow(mouseX - canvas.width*objX[i], 2) + Math.pow(mouseY - canvas.height*objY[i], 2));
+    for (var i = 0; i < clickX.length; i += 1) {
+      dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
       if (dis < 6) {
         activePoint = i;
         $(this).on('mousemove', move);
@@ -285,8 +286,8 @@
           listItems.each(function(idx, li) {
             object_names.push($(li).children("span").text());
           });
-          $('input[name="x-locs"]').val(JSON.stringify(objX));
-          $('input[name="y-locs"]').val(JSON.stringify(objY));
+          $('input[name="x-locs"]').val(JSON.stringify(clickX));
+          $('input[name="y-locs"]').val(JSON.stringify(clickY));
           $('input[name="obj-names"]').val(JSON.stringify(object_names));
           $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
           $("#endForm").submit();
@@ -371,8 +372,8 @@
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
     for (var p in object_locations){
-      x_loc = canvas.width*object_locations[p][0];
-      y_loc = canvas.height*object_locations[p][1];
+      x_loc =  object_locations[p][0];
+      y_loc =  object_locations[p][1];
       dis = Math.sqrt(Math.pow(mouseX - x_loc, 2) + Math.pow(mouseY - y_loc, 2));
       if (dis < 6) {
         if (!hoverActive) {
@@ -390,8 +391,8 @@
         }
       }
     }
-    for (var i = 0; i < objX.length; i += 1) {
-      dis = Math.sqrt(Math.pow(mouseX - canvas.width*objX[i], 2) + Math.pow(mouseY - canvas.height*objY[i], 2));
+    for (var i = 0; i < clickX.length; i += 1) {
+      dis = Math.sqrt(Math.pow(mouseX -  clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
       if (dis < 6) {
         if (!hoverActive) {
           otherHoverPoint = i;

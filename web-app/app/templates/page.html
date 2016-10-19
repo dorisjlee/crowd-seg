@@ -142,8 +142,8 @@
     context.lineWidth = 3;
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
-    context.fillRect(canvas.width*object_locations[randkey][0] - 4, canvas.height*object_locations[randkey][1] - 4, 8,8);
-    context.strokeRect(canvas.width*object_locations[randkey][0] - 4, canvas.height*object_locations[randkey][1] - 4, 8,8);
+    context.fillRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
+    context.strokeRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
     document.getElementById("objName").innerHTML=objects[randkey];
   }
   function redraw() {

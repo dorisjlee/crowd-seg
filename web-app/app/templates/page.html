@@ -38,7 +38,7 @@
       <div id="clipped" class="clipParent" style="display: table-cell;float: left;"></div>
    
     
-
+<!-- 
   <div id="instructions" title="Task Instructions">
     <p><h4><font face="garamond">Please segment the image by drawing around the boundaries of the object denoted by the pointer. You can click and drag the points that makes up the bounding box. If you made a mistake, you can use the Undo button to go back to the previous step or Reset to start over again.<br><br>
     Here's an example as a starting point!<br><br>
@@ -51,7 +51,7 @@
 
   <div id="end-dialog-message" title="Ready to submit?">
   </div>
-
+ -->
   <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
       <input type="hidden" id="image-id" value="{{img}}" name="image-id"/>
       <input type="hidden" id="object_id" value="" name="object_id"/>
@@ -127,7 +127,7 @@
   var paint;
   //Pick a random object to segment (Only done once)
   var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
-  createInstructionsDialog();
+  // createInstructionsDialog();
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
@@ -139,7 +139,7 @@
   function renderObjLoc(){ 
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = 'rgb(255,20,20)';
-    context.lineWidth=3;
+    context.lineWidth = 3;
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
     context.fillRect(canvas.width*object_locations[randkey][0] - 4, canvas.height*object_locations[randkey][1] - 4, 8,8);

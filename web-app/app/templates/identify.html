@@ -57,7 +57,7 @@
     
 <!-- 
   <div id="instructions" title="Task Instructions">
-    <p><h4><font face="garamond">You will be shown a single image, on which are marked a pair of points. For this pair of points, you have to judge which of the 2 points is deeper in the image (from the perspective of the camera). Select an option (you can use your keyboard for faster input), and click Next to move on to a new pair of points. Please choose carefully! If you find that making a judgment is extremely confusing, you can choose to mark the points as being at equal depth, but please do this sparingly if possible. You also have the ability to zoom into the image, to take a closer look at the points. <br><br>
+    <p><h4><font face="garamond"> Identify the object in the image by clicking on the center of the object and <br><br>
 
     You can go back to review your previous answers using the Previous button. There are a total of {{ numpoints }} pairs in this HIT.<br><br>
 
@@ -109,8 +109,7 @@
   
   imageObj.src = '{{ filename }}';
 
-  var clickX = -1;
-  var clickY = -1;
+  
   //var clickDrag = new Array(); 
   // var undoArray = new Array();
   var hoverActive = false;
@@ -125,7 +124,16 @@
   populateList(objects);
 
   // createInstructionsDialog();
-
+  function addClick(x, y, dragging) {
+    var user_input = window.prompt("What is this object called? (e.g. chair, dog collar)");
+    if (user_input == null || user_input == ""){
+      return;
+    }
+    $("#new-objects").append('<li class="editable-list" id=' + running_id + '><span style="font-family: courier;">' + user_input + '</span><input type="text" class="edit" style="display:none;font-family: courier;"/></li>');  
+    running_id += 1;
+    objX.push(x/canvas.width);
+    objY.push(y/canvas.height);
+  }
 
   function populateList(objs) {
     for (var p in objs) {
@@ -189,21 +197,12 @@
       }
     }
     // addClick(mouseX+70,mouseY+66);
-    addClick(mouseX,mouseY);
+    // addClick(mouseX,mouseY);
+    addClick(e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
     
     redraw();
   });
 
-  function addClick(x, y, dragging) {
-    var user_input = window.prompt("What is this object called? (e.g. chair, dog collar)");
-    if (user_input == null || user_input == ""){
-      return;
-    }
-    $("#new-objects").append('<li class="editable-list" id=' + running_id + '><span style="font-family: courier;">' + user_input + '</span><input type="text" class="edit" style="display:none;font-family: courier;"/></li>');  
-    running_id += 1;
-    objX.push(x/canvas.width);
-    objY.push(y/canvas.height);
-  }
 
   $("#panzoom").panzoom({
     $zoomIn: $(".zoom-in"),

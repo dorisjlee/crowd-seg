@@ -1,8 +1,7 @@
 id,image_id,name
-1,1,lamp
-2,1,chair
-3,1,cutting board
-4,1,fan
-5,1,oven
-6,1,countertop
-7,1,table
+1,1,book
+2,1,backpack
+3,1,spoon
+4,1,knife
+5,1,plate
+6,1,cup

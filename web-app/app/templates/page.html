@@ -39,18 +39,15 @@
    
     
 
-  <!-- <div id="instructions" title="Task Instructions">
-    <p><h4><font face="garamond">You will be shown a single image, on which are marked a pair of points. For this pair of points, you have to judge which of the 2 points is deeper in the image (from the perspective of the camera). Select an option (you can use your keyboard for faster input), and click Next to move on to a new pair of points. Please choose carefully! If you find that making a judgment is extremely confusing, you can choose to mark the points as being at equal depth, but please do this sparingly if possible. You also have the ability to zoom into the image, to take a closer look at the points. <br><br>
-
-    You can go back to review your previous answers using the Previous button. There are a total of {{ numpoints }} pairs in this HIT.<br><br>
-
+  <div id="instructions" title="Task Instructions">
+    <p><h4><font face="garamond">Please segment the image by drawing around the boundaries of the object denoted by the pointer. You can click and drag the points that makes up the bounding box. If you made a mistake, you can use the Undo button to go back to the previous step or Reset to start over again.<br><br>
     Here's an example as a starting point!<br><br>
 
-    <img src="{{ url_for('static', filename = 'example.png') }}" style="height:400px;width=400px;"><br><br>
+    <img src="{{ url_for('static', filename = 'segmentation_example.png') }}" style="height:242px"><br><br>
 
-    Notice how Point 2 is deeper in this image! Point 1 is on the couch, which is much closer to where the camera is standing, while Point 2 is on the wall behind.<br></font></h4></p>
-
-  </div> -->
+    The bounding box that you draw should be as close to the object boundary as possible but should contain the whole object. Here are some examples of bad bounding boxes. <br></font></h4></p>
+    <img src="{{ url_for('static', filename = 'segmentation_bad.png') }}" style="height:250px;"><br><br>
+  </div>
 
   <div id="end-dialog-message" title="Ready to submit?">
   </div>
@@ -130,7 +127,7 @@
   var paint;
   //Pick a random object to segment (Only done once)
   var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
-  // createInstructionsDialog();
+  createInstructionsDialog();
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
@@ -142,10 +139,11 @@
   function renderObjLoc(){ 
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = 'rgb(255,20,20)';
+    context.lineWidth=3;
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
-    context.fillRect(canvas.width*object_locations[randkey][0] - 2, canvas.height*object_locations[randkey][1] - 2, 4, 4);
-    context.strokeRect(canvas.width*object_locations[randkey][0] - 2, canvas.height*object_locations[randkey][1] - 2, 4, 4);
+    context.fillRect(canvas.width*object_locations[randkey][0] - 4, canvas.height*object_locations[randkey][1] - 4, 8,8);
+    context.strokeRect(canvas.width*object_locations[randkey][0] - 4, canvas.height*object_locations[randkey][1] - 4, 8,8);
     document.getElementById("objName").innerHTML=objects[randkey];
   }
   function redraw() {
@@ -180,8 +178,8 @@
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
-    clickX[activePoint] = Math.round(newX);
-    clickY[activePoint] = Math.round(newY);
+    clickX[activePoint] = newX/canvas.width;
+    clickY[activePoint] = newY/canvas.height;
     redraw();
     generateClipping();
   };

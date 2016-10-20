@@ -30,7 +30,7 @@
     </div>
   </div>
   
-    <canvas id="canvas" style="width:{{ wd }}px;height:{{ ht }}px;float: left;"></canvas>
+    <canvas id="canvas" style="float: left;"></canvas>
 
   
   <div style="margin-top: -35px;padding: 0.3cm;width: 45%;display: inline-block;">
@@ -96,7 +96,8 @@
 
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
-
+  canvas.setAttribute('width', '{{ wd }}'+'px');
+  canvas.setAttribute('height','{{ ht }}'+'px'); 
   var imageObj = new Image();
 
   imageObj.onload = function() {
@@ -106,6 +107,7 @@
     });
     context.drawImage(imageObj, 0, 0);
   };
+
   
   imageObj.src = '{{ filename }}';
 
@@ -175,10 +177,14 @@
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
+    console.log("nx : "+newX);
+    console.log("ny : "+newY);
     clickX[activePoint] =  newX/canvas.width;
     clickY[activePoint] =  newY/canvas.height;
     redraw();
   };
+  // console.log("cw : "+canvas.width);
+  // console.log("ch : "+canvas.height);
 
   $('#canvas').mouseup(function(e) {
     activePoint = null;
@@ -188,7 +194,12 @@
   $('#canvas').mousedown(function(e) {
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
-
+    console.log("oL:"+this.offsetLeft);
+    console.log("oT:"+this.offsetTop);
+    console.log("mouseX:"+mouseX);
+    console.log("mouseY:"+mouseY);
+    console.log("eX:"+e.pageX);
+    console.log("eY:"+e.pageY);
     for (var i = 0; i < clickX.length; i += 1) {
       dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
       if (dis < 6) {
@@ -198,8 +209,8 @@
       }
     }
     // addClick(mouseX+70,mouseY+66);
-    // addClick(mouseX,mouseY);
-    addClick(e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
+    addClick(mouseX,mouseY);
+    // addClick(mouseX, 0.9*mouseY);
     
     redraw();
   });

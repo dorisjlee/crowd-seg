@@ -1,7 +1,38 @@
 id,image_id,name
-1,1,book
-2,1,backpack
+1,1,backpack
+2,1,book
 3,1,spoon
-4,1,knife
-5,1,plate
-6,1,cup
+4,1,cup
+5,1,cake
+6,1,knife
+7,1,plate
+8,1,sugar
+9,3,dog
+10,3,car
+11,3,frisbee
+12,4,turtle plushy
+13,4,monitor
+14,4,waterbottle
+15,4,photo frame
+16,4,computer
+17,4,drink
+18,5,man
+19,5,glasses
+20,5,laptop
+21,5,chocolate
+22,5,candy
+23,5,bag
+24,5,bag
+25,5,woman
+26,5,woman
+27,5,bag
+28,5,chair
+29,6,flower
+30,6,flower
+31,6,flower
+32,6,vase
+33,6,vase
+34,6,vase
+35,7,helmet
+36,7,girl
+37,7,baseball bat

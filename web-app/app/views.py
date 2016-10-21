@@ -26,6 +26,7 @@ def segment(img):
 	if worker is None and render_data["worker_id"] != 'None':
 		db.session.add(models.Worker(turker=request.args.get("workerId")))
 		db.session.commit()
+	# print "img: "+img
 	image = models.Image.query.filter_by(filename=img).first()
 	if image is None:
 		db.session.add(models.Image(filename=img))
@@ -61,7 +62,6 @@ def identify(img):
 	if request.method == 'POST':
 		x_locs = json.loads(request.form['x-locs'])
 		y_locs = json.loads(request.form['y-locs'])
-		# img = json.loads(request.form['image-id'])
 		object_names = json.loads(request.form['obj-names'])
 		comment = json.loads(request.form['comment-input'])
 
@@ -118,6 +118,7 @@ def identify(img):
 
 @app.route('/identify/submit', methods=['GET','POST'])
 def submit():
+	print "inside identify submit"
 	render_data = {"worker_id": request.args.get("workerId"), 
 					"assignment_id": request.args.get("assignmentId"), 
 					"amazon_host": AMAZON_HOST, 
@@ -125,7 +126,9 @@ def submit():
 
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
+	print request.form['image-id']
 	img = json.loads(request.form['image-id'])
+	print "identify img-id: ", img
 	object_names = json.loads(request.form['obj-names'])
 	comment = json.loads(request.form['comment-input'])
 
@@ -146,6 +149,7 @@ def submit():
 
 @app.route('/identify/submit', methods=['GET'])
 def new_submit(x_locs,y_locs,img,object_names,comment):
+	print "new_submit"
 	render_data = {"worker_id": request.args.get("workerId"), 
 					"assignment_id": request.args.get("assignmentId"), 
 					"amazon_host": AMAZON_HOST, 
@@ -167,9 +171,14 @@ def segmentation_submit():
 
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
-	img = json.loads(request.form['image-id'])
+	print x_locs
+	print y_locs
 	object_id = json.loads(request.form['object_id'])
 	comment = json.loads(request.form['comment-input'])
+	print object_id
+	print comment
+	print request.form['image-id']
+	img = json.loads(request.form['image-id'])
 	# #Store all the collected data in the database
 	# assume that the worker and object id is given for each task 
 	worker_id =randint(100, 999) #for debugging purposes use random worker_id to ensure no UNIQUE violation
@@ -186,6 +195,6 @@ def segmentation_submit():
 	db.session.add(bounding_box)
 	db.session.commit()
 
-	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,comment=comment)) #img=img,
+	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,comment=comment)) #img=img,
 	resp.headers['x-frame-options'] = 'this_can_be_anything'
 	return resp

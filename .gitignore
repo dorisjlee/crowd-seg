@@ -2,5 +2,7 @@ mturk.py
 /flask/*
 ActiveHITs
 web-app/secret.py
+web-app/app/*.pyc
 */site-packages/*
+web-app/flask/lib/python2.7/site-packages/*
 *.pyc

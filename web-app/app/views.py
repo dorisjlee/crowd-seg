@@ -3,7 +3,7 @@ from app import app, db, models
 import json
 import os
 from random import randint
-
+LOCAL_TESTING = False
 DEV_ENVIROMENT_BOOLEAN = True
 #This allows us to specify whether we are pushing to the sandbox or live site.
 if DEV_ENVIROMENT_BOOLEAN:
@@ -143,16 +143,14 @@ def submit():
 		db.session.add(obj_location)
 		db.session.commit()
  	#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
-	# worker_id =randint(100, 999) 	  #request.args.get("workerId")
-	assignment_id = randint(100, 999) #request.args.get("assignmentId")
-	hit_id = randint(100, 999) 		#request.args.get("hitId")
+	if (LOCAL_TESTING):
+		# worker_id =randint(100, 999) 	  #request.args.get("workerId")
+		assignment_id = randint(100, 999) 
+		hit_id = randint(100, 999) 		
+	else: 
+		assignment_id = request.args.get("assignmentId")
+		hit_id =  request.args.get("hitId")
 	hit = models.HIT(assignment_id=assignment_id,hit_id=hit_id,object_id=999,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
-	# print image_id
-	# print assignment_id
-	# print hit_id
-	# print object_id
-	# print worker_id
-	# print hit
 	db.session.add(hit)
 	db.session.commit()
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
@@ -188,15 +186,17 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
-	# #Store all the collected data in the database
-	# assume that the worker and object id is given for each task 
+	# Store all the collected data in the database
+	if (LOCAL_TESTING):
+		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
+		worker_id =randint(100, 999) 
+		assignment_id = randint(100, 999) 
+		hit_id = randint(100, 999) 		
+	else: 
+		worker_id = request.args.get("workerId")
+		assignment_id = request.args.get("assignmentId")
+		hit_id =  request.args.get("hitId")
 
-	#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
-	worker_id =randint(100, 999) 	  #request.args.get("workerId")
-	assignment_id = randint(100, 999) #request.args.get("assignmentId")
-	hit_id = randint(100, 999) 		#request.args.get("hitId")
-	# worker_id = models.Worker.query.filter_by(turker=request.args.get("workerId")).first().id
-	# print "Worker id", worker_id
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
 	print "assignmentId: ",request.args.get("assignmentId")

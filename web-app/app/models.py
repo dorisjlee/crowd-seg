@@ -23,6 +23,18 @@ class Image(db.Model):
 
 	def __repr__(self):
 		return 'id=%d,img-name=%s' % (self.id,self.filename)
+class HIT(db.Model):
+	#Each identify or segment session, for identify the object_id is always 999
+	id = db.Column(db.Integer, primary_key = True)
+	assignment_id = db.Column(db.Integer)
+	hit_id = db.Column(db.Integer)
+	object_id = db.Column(db.Integer, db.ForeignKey('object.id'))
+	worker_id = db.Column(db.Integer, db.ForeignKey('worker.id'))
+	image_id = db.Column(db.Integer, db.ForeignKey('image.id'))
+	times = db.Column(db.String(150))
+	actions = db.Column(db.String(150))
+	def __repr__(self):
+		return 'assignment=%d,hit=%d, object_id=%d,worker=%d,img-id=%d,\n actions=%s,times=%s' % (self.assignment_id,self.hit_id,self.object_id,self.worker_id,self.image_id,self.actions,self.times)
 
 class Worker(db.Model):
 	id = db.Column(db.Integer, primary_key = True)

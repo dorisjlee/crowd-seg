@@ -73,6 +73,7 @@
   //Storing actions and timestamps for each click
   var actions = new Array();
   var times = new Array();
+
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
@@ -227,7 +228,6 @@
     clipContext.clip();
     clipContext.drawImage(imageObj, 0, 0);
   }
-
 
   $('#undo').click(function() {
     if (undoArray.length <= 0) {

@@ -74,6 +74,8 @@
   <!-- <form id = "endForm" action="{{ name.amazon_host }}" method="POST"> -->
   <form id = "endForm" action="{{ url_for('submit') }}" method="POST">
 <!--   <form id = "endForm" action="{{ url_for('identify',img=img) }}" method="POST"> -->
+      <input type="hidden" id="actions" value="" name="actions"/>
+      <input type="hidden" id="times" value="" name="times"/>
       <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
@@ -94,6 +96,10 @@
   var clickX = new Array();
   var clickY = new Array();
 
+  //Storing actions and timestamps for each click
+  var actions = new Array();
+  var times = new Array();
+
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
   canvas.setAttribute('width', '{{ wd }}'+'px');
@@ -106,6 +112,8 @@
       height: this.height
     });
     context.drawImage(imageObj, 0, 0);
+    actions.push("Initialize");
+    times.push(Date.now());
   };
 
   
@@ -177,8 +185,8 @@
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
-    console.log("nx : "+newX);
-    console.log("ny : "+newY);
+    // console.log("nx : "+newX);
+    // console.log("ny : "+newY);
     clickX[activePoint] =  newX/canvas.width;
     clickY[activePoint] =  newY/canvas.height;
     redraw();
@@ -192,6 +200,8 @@
   });
 
   $('#canvas').mousedown(function(e) {
+    actions.push("addClick");
+    times.push(Date.now());
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
     for (var i = 0; i < clickX.length; i += 1) {
@@ -249,6 +259,8 @@
     $("#end-dialog-message").html("");
     $("#end-dialog-message").append('<p><h4><font face="garamond">Please give us your feedback to help us improve this interface!</font></h4></p><textarea id="comments"></textarea>');
     $('#comments').val('');
+    actions.push("onSubmission");
+    times.push(Date.now());
   }
 
   function onKeyPress(event)
@@ -279,6 +291,8 @@
 
   function endDialog()
   {
+    actions.push("endDialog");
+    times.push(Date.now());
     $( "#end-dialog-message" ).dialog({
       resizable: false,
       height:400,
@@ -293,6 +307,8 @@
           });
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
+          $('input[name="times"]').val(JSON.stringify(times));
+          $('input[name="actions"]').val(JSON.stringify(actions));
           $('input[name="obj-names"]').val(JSON.stringify(object_names));
           $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
           $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
@@ -322,6 +338,8 @@
   });
 
   $("#instruct").click(function(){
+    actions.push("instructions");
+    times.push(Date.now());
     createInstructionsDialog();
   });
 

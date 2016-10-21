@@ -54,10 +54,9 @@
       <input type="hidden" id="object_id" value="" name="object_id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
-<!--       <input type="hidden" id="user-input" value="" name="user-input"/>
+      <input type="hidden" id="actions" value="" name="actions"/>
       <input type="hidden" id="times" value="" name="times"/>
-      <input type="hidden" id="zooms" value="" name="zooms"/>
-      <input type="hidden" id="choices" value="" name="choices"/> -->
+<!--       <input type="hidden" id="zooms" value="" name="zooms"/> -->
       <input type="hidden" id="comment-input" value="" name="comment-input"/>
       <input type="hidden" id="assignmentId" value="{{ name.assignment_id }}" name="assignmentId"/>
       <input type="hidden" id="workerId" value="{{ name.worker_id }}" name="workerId"/>
@@ -71,6 +70,9 @@
   var objects = JSON.parse('{{ objects|tojson }}');
   var object_locations = JSON.parse('{{ locs|tojson }}');
   
+  //Storing actions and timestamps for each click
+  var actions = new Array();
+  var times = new Array();
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
@@ -93,6 +95,8 @@
     });
     context.drawImage(imageObj, 0, 0);
     renderObjLoc();
+    actions.push("Initialize");
+    times.push(Date.now());
   };
   
   imageObj.src = '{{ filename }}';
@@ -190,6 +194,8 @@
   });
 
   $('#canvas').mousedown(function(e) {
+    actions.push("addClick");
+    times.push(Date.now());
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
 
@@ -237,12 +243,17 @@
     }
     redraw();
     generateClipping();
+    actions.push("undo");
+    times.push(Date.now());
   });
 
   $('#reset').click(function() {
     clickX = [];
     clickY = [];
     redraw();
+    generateClipping();
+    actions.push("reset");
+    times.push(Date.now());
   });
 
   // $("#canvasDiv").panzoom({
@@ -283,6 +294,8 @@
     $("#end-dialog-message").html("");
     $("#end-dialog-message").append('<p><h4><font face="garamond">Please give us your feedback to help us improve this interface!</font></h4></p><textarea id="comments"></textarea>');
     $('#comments').val('');
+    actions.push("onSubmission");
+    times.push(Date.now());
   }
 
   function onKeyPress(event)
@@ -304,6 +317,8 @@
 
   function endDialog()
   {
+    actions.push("endDialog");
+    times.push(Date.now());
     $( "#end-dialog-message" ).dialog({
       resizable: false,
       height:400,
@@ -315,10 +330,9 @@
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
           $('input[name="object_id"]').val(randkey);
           $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
-          // $('input[name="user-input"]').val(JSON.stringify(dict));
-          // $('input[name="times"]').val(JSON.stringify(times));
+          $('input[name="times"]').val(JSON.stringify(times));
+          $('input[name="actions"]').val(JSON.stringify(actions));
           // $('input[name="zooms"]').val(JSON.stringify(zooms));
-          // $('input[name="choices"]').val(JSON.stringify(choices));
           $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
           $("#endForm").submit();
           $( this ).dialog( "close" );
@@ -346,6 +360,8 @@
   });
 
   $("#instruct").click(function(){
+    actions.push("instructions");
+    times.push(Date.now());
     createInstructionsDialog();
   });
 

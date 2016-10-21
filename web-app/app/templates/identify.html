@@ -72,8 +72,8 @@
   <div id="end-dialog-message" title="Ready to submit?">
   </div>
   <!-- <form id = "endForm" action="{{ name.amazon_host }}" method="POST"> -->
-  <!-- <form id = "endForm" action="{{ url_for('submit') }}" method="POST"> -->
-  <form id = "endForm" action="{{ url_for('identify',img=img) }}" method="POST">
+  <form id = "endForm" action="{{ url_for('submit') }}" method="POST">
+<!--   <form id = "endForm" action="{{ url_for('identify',img=img) }}" method="POST"> -->
       <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
@@ -194,12 +194,6 @@
   $('#canvas').mousedown(function(e) {
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
-    console.log("oL:"+this.offsetLeft);
-    console.log("oT:"+this.offsetTop);
-    console.log("mouseX:"+mouseX);
-    console.log("mouseY:"+mouseY);
-    console.log("eX:"+e.pageX);
-    console.log("eY:"+e.pageY);
     for (var i = 0; i < clickX.length; i += 1) {
       dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
       if (dis < 6) {
@@ -301,6 +295,7 @@
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
           $('input[name="obj-names"]').val(JSON.stringify(object_names));
           $('input[name="comment-input"]').val(JSON.stringify($('#comments').val()));
+          $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
           $("#endForm").submit();
           $( this ).dialog( "close" );
           // alert("Just in case, this blacks out the screen");

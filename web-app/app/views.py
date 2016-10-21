@@ -1,7 +1,6 @@
 from flask import render_template, flash, redirect, request, make_response, send_from_directory, url_for
 from app import app, db, models
 import json
-import os
 from random import randint
 LOCAL_TESTING = False
 DEV_ENVIROMENT_BOOLEAN = True
@@ -14,9 +13,9 @@ else:
 
 @app.route('/<img>', methods=['GET', 'POST'])
 def segment(img):
-	render_data = {"worker_id": request.args.get("workerId"), 
-					"assignment_id": request.args.get("assignmentId"), 
-					"amazon_host": AMAZON_HOST, 
+	render_data = {"worker_id": request.args.get("workerId"),
+					"assignment_id": request.args.get("assignmentId"),
+					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 
 	filename = 'static/' + img + '.png'
@@ -54,9 +53,9 @@ def segment(img):
 
 @app.route('/identify/<img>', methods=['GET', 'POST'])
 def identify(img):
-	render_data = {"worker_id": request.args.get("workerId"), 
-					"assignment_id": request.args.get("assignmentId"), 
-					"amazon_host": AMAZON_HOST, 
+	render_data = {"worker_id": request.args.get("workerId"),
+					"assignment_id": request.args.get("assignmentId"),
+					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 
 	if request.method == 'POST':
@@ -79,10 +78,6 @@ def identify(img):
 		resp = make_response(render_template('submit.html',name=render_data))
 		resp.headers['x-frame-options'] = 'this_can_be_anything'
 		return resp
-		# url = url_for('new_submit',x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment)
-		# url = request.url.replace('http://', 'https://', 1)
-		# return redirect(url,code=307)
-
 	filename = '../static/' + img + '.png'
 	#Read objects that have already been identified from the database
 	worker = models.Worker.query.filter_by(turker=request.args.get("workerId")).first()
@@ -113,14 +108,12 @@ def identify(img):
 		#Our worker accepted the task
 		# resp = make_response(render_template('identify.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,objects=objects,locs=object_locations,img=img))
 		return render_template('identify.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,objects=objects,locs=object_locations,img=img)
-	# resp.headers['x-frame-options'] = 'this_can_be_anything'
-	# return resp
 
 @app.route('/identify/submit', methods=['GET','POST'])
 def submit():
-	render_data = {"worker_id": request.args.get("workerId"), 
-					"assignment_id": request.args.get("assignmentId"), 
-					"amazon_host": AMAZON_HOST, 
+	render_data = {"worker_id": request.args.get("workerId"),
+					"assignment_id": request.args.get("assignmentId"),
+					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 
 	x_locs = json.loads(request.form['x-locs'])
@@ -145,9 +138,9 @@ def submit():
  	#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 	if (LOCAL_TESTING):
 		# worker_id =randint(100, 999) 	  #request.args.get("workerId")
-		assignment_id = randint(100, 999) 
-		hit_id = randint(100, 999) 		
-	else: 
+		assignment_id = randint(100, 999)
+		hit_id = randint(100, 999)
+	else:
 		assignment_id = request.args.get("assignmentId")
 		hit_id =  request.args.get("hitId")
 	hit = models.HIT(assignment_id=assignment_id,hit_id=hit_id,object_id=999,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
@@ -160,9 +153,9 @@ def submit():
 @app.route('/identify/submit', methods=['GET'])
 def new_submit(x_locs,y_locs,img,object_names,comment):
 	print "new_submit"
-	render_data = {"worker_id": request.args.get("workerId"), 
-					"assignment_id": request.args.get("assignmentId"), 
-					"amazon_host": AMAZON_HOST, 
+	render_data = {"worker_id": request.args.get("workerId"),
+					"assignment_id": request.args.get("assignmentId"),
+					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
 	resp.headers['x-frame-options'] = 'this_can_be_anything'
@@ -174,9 +167,9 @@ def send_file(filename):
 
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
-	render_data = {"worker_id": request.args.get("workerId"), 
-					"assignment_id": request.args.get("assignmentId"), 
-					"amazon_host": AMAZON_HOST, 
+	render_data = {"worker_id": request.args.get("workerId"),
+					"assignment_id": request.args.get("assignmentId"),
+					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 
 	x_locs = json.loads(request.form['x-locs'])
@@ -189,10 +182,10 @@ def segmentation_submit():
 	# Store all the collected data in the database
 	if (LOCAL_TESTING):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
-		worker_id =randint(100, 999) 
-		assignment_id = randint(100, 999) 
-		hit_id = randint(100, 999) 		
-	else: 
+		worker_id =randint(100, 999)
+		assignment_id = randint(100, 999)
+		hit_id = randint(100, 999)
+	else:
 		worker_id = request.args.get("workerId")
 		assignment_id = request.args.get("assignmentId")
 		hit_id =  request.args.get("hitId")

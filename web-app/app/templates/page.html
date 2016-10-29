@@ -176,8 +176,10 @@
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
-    clickX[activePoint] = newX/canvas.width;
-    clickY[activePoint] = newY/canvas.height;
+    // clickX[activePoint] = newX/canvas.width;
+    // clickY[activePoint] = newY/canvas.height;
+    clickX[activePoint] = newX;
+    clickY[activePoint] = newY;
     redraw();
     generateClipping();
   };

@@ -1,1 +1,1 @@
-web: gunicorn app:app
+init: python db_create.py;cp db/labelled_pointer_app.db app.dbupgrade: python db_upgrade.pyweb: gunicorn app:app

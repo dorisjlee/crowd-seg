@@ -10,7 +10,7 @@ def save_db_as_csv():
 	Create CSV file of each table from app.db
 	'''
 	conn = sqlite3.connect(glob(expanduser('../web-app/app.db'))[0])
-	table_names = ["bounding_box","image","object","object_location","worker"]
+	table_names = ["bounding_box","image","object","object_location","worker","hit"]
 	for table_name in table_names :
 	    cursor = conn.cursor()
 	    cursor.execute("select * from {};".format(table_name))
@@ -30,7 +30,8 @@ def load_info():
 	object_location = pd.read_csv("object_location.csv")
 	object_tbl = object_info.merge(object_location,how="inner",left_on="id",right_on="object_id")
 	bb_info = pd.read_csv("bounding_box.csv")
-	return [img_info,object_tbl,bb_info]
+	hit_info = pd.read_csv("hit.csv")
+	return [img_info,object_tbl,bb_info,hit_info]
 
 def get_size(fname):
     #Open image for computing width and height of image 

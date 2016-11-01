@@ -1,11 +1,10 @@
+LOCAL=False
 WTF_CSRF_ENABLED = True
-from secret import SECRET_KEY
-from flask.ext.heroku import Heroku
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
-#SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/segment'
-heroku = Heroku(app)
+if LOCAL : SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/segment'
+
 SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
 

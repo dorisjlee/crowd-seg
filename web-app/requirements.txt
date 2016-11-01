@@ -33,3 +33,5 @@ Whoosh==2.7.2
 WTForms==2.1
 yarg==0.1.9
 flask-heroku==0.1.9
+psycopg2==2.6.1 
+Flask-Migrate==1.8.0

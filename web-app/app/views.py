@@ -143,7 +143,7 @@ def submit():
 	else:
 		assignment_id = request.args.get("assignmentId")
 		hit_id =  request.args.get("hitId")
-	hit = models.HIT(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
 	db.session.add(hit)
 	db.session.commit()
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
@@ -196,7 +196,7 @@ def segmentation_submit():
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
 	print "assignmentId: ",request.args.get("assignmentId")
 	print "hitId: ", request.args.get("hitId")
-	hit = models.HIT(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
 	db.session.add(bounding_box)
 	db.session.add(hit)
 	db.session.commit()

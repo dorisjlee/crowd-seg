@@ -33,11 +33,12 @@
   </div>
     <!-- <div id="panzoom"> -->
       <!-- <div id="panzoom" style="width:{{ wd }}px;height:{{ ht }}px;display: table-cell;"> -->
-      <div id="canvasDiv" style="display: table-cell;float: left;padding-top: 20px;padding-left: 80px;"></div>
-      <!-- </div> -->
-      <div id="clipped" class="clipParent" style="display: table-cell;padding-top: 20px;float: left;"></div>
-   
-<!--   <div id="instructions" title="Task Instructions">
+      <div style="display:inline-flex;">
+        <div id="canvasDiv" style="display: inline-block;float: left;padding-top: 20px;padding-left: 20px;"></div>
+        <!-- </div> -->
+        <div id="clipped" class="clipParent" style="display: inline-block;padding-top: 20px;float: left;"></div>
+      </div>
+  <div id="instructions" title="Task Instructions">
     <p><h4><font face="garamond">Please segment the image by drawing around the boundaries of the object denoted by the pointer. You can click and drag the points that makes up the bounding box. If you made a mistake, you can use the Undo button to go back to the previous step or Reset to start over again.<br><br>
     Here's an example as a starting point!<br><br>
 
@@ -45,7 +46,7 @@
 
     The bounding box that you draw should be as close to the object boundary as possible but should contain the whole object. Here are some examples of bad bounding boxes. <br></font></h4></p>
     <img src="{{ url_for('static', filename = 'segmentation_bad.png') }}" style="height:250px;"><br><br>
-  </div> -->
+  </div>
 
   <div id="end-dialog-message" title="Ready to submit?"></div>
 
@@ -124,7 +125,7 @@
   var paint;
   //Pick a random object to segment (Only done once)
   var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
-  // createInstructionsDialog();
+  createInstructionsDialog();
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);

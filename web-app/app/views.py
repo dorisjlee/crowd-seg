@@ -179,10 +179,12 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
-	# Store all the collected data in the database
+
+	worker_id = models.Worker.query.filter_by(turker=request.args.get("workerId")).first().id
+
 	if (LOCAL_TESTING or request.args.get("workerId") is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
-		worker_id =randint(100, 999)
+		# worker_id =randint(100, 999)
 		assignment_id = randint(100, 999)
 		hit_id = randint(100, 999)
 	else:

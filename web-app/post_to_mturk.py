@@ -42,7 +42,7 @@ with open('ActiveHITs','a') as f:
 	for fname in glob.glob("app/static/COCO_*.png")[:2]:
 		img_name = fname.split('/')[-1].split('.')[0]
 		if HIT_TYPE == "IDENTIFY":
-			url = "https://obscure-ridge-89314.herokuapp.com/identify/{}".format(img_name)
+			url = "https://crowd-segment.herokuapp.com/identify/{}".format(img_name)
 			questionform = ExternalQuestion(url, frame_height)
 			create_hit_result = connection.create_hit(
 				title="Mark objects on an image",
@@ -58,7 +58,7 @@ with open('ActiveHITs','a') as f:
 			f.write(hit_id + "\n")
 			print "Created HIT: ",hit_id
 		elif HIT_TYPE == "SEGMENT":
-			url = "https://obscure-ridge-89314.herokuapp.com/{}".format(img_name)
+			url = "https://crowd-segment.herokuapp.com/{}".format(img_name)
 			questionform = ExternalQuestion(url, frame_height)
 			create_hit_result = connection.create_hit(
 				title="Segment the object on an image",

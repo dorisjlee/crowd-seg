@@ -179,9 +179,10 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
-	worker = json.loads(request.form['workerId'])
 	print x_locs,object_id,img
+	worker = json.loads(request.form['workerId'])
 	print "worker:",worker
+	print "after worker"
 	if (LOCAL_TESTING or worker is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 		# worker_id =randint(100, 999)

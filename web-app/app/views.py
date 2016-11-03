@@ -13,7 +13,7 @@ else:
 
 @app.route('/<img>', methods=['GET', 'POST'])
 def segment(img):
-	print segment
+	print "segment"
 	render_data = {"worker_id": request.args.get("workerId"),
 					"assignment_id": request.args.get("assignmentId"),
 					"amazon_host": AMAZON_HOST,
@@ -171,11 +171,6 @@ def send_file(filename):
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
 	print "segmentation_submit"
-	render_data = {"worker_id": request.args.get("workerId"),
-					"assignment_id": request.args.get("assignmentId"),
-					"amazon_host": AMAZON_HOST,
-					"hit_id": request.args.get("hitId")}
-	print render_data
 	print request.args
 	print request.form
 	x_locs = json.loads(request.form['x-locs'])
@@ -186,7 +181,6 @@ def segmentation_submit():
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
 
-	worker_id = models.Worker.query.filter_by(turker=request.args.get("workerId")).first().id
 
 	if (LOCAL_TESTING or request.args.get("workerId") is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
@@ -194,14 +188,15 @@ def segmentation_submit():
 		assignment_id = randint(100, 999)
 		hit_id = randint(100, 999)
 	else:
-		worker_id = request.args.get("workerId")
-		assignment_id = request.args.get("assignmentId")
-		hit_id =  request.args.get("hitId")
+		workerId = json.loads(request.form['workerId'])
+		worker_id = models.Worker.query.filter_by(turker=workerId).first().id
+		assignment_id = json.loads(request.form['assignmentId'])
+		hit_id =  json.loads(request.form['hitId'])
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
-	print "assignmentId: ",request.args.get("assignmentId")
-	print "hitId: ", request.args.get("hitId")
+	print "assignmentId: ",assignment_id
+	print "hitId: ", hit_id
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
 	db.session.add(bounding_box)
 	db.session.add(hit)

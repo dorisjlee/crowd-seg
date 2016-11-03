@@ -210,8 +210,11 @@ def segmentation_submit():
 	print "assignmentId: ",assignment_id
 	print "hitId: ", hit_id
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	print "after HIT"
 	db.session.add(bounding_box)
+	print "BB:",bounding_box
 	db.session.add(hit)
+	print "hit:",hit
 	db.session.commit()
 	print "DB committed"
 	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,comment=comment)) #img=img,

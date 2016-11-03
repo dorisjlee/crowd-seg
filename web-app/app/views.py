@@ -202,7 +202,7 @@ def segmentation_submit():
 		print request.form['hitId']
 		assignment_id = request.form['assignmentId']
 		hit_id =  request.form['hitId']
-		print workerId,worker_id,assignment_id,hit_id
+		print worker_id,assignment_id,hit_id
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	print image_id

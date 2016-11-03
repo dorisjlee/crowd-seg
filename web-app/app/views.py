@@ -179,16 +179,23 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
+	worker = json.loads(request.form['workerId'])
 	print x_locs,object_id,img
-	if (LOCAL_TESTING):
+	print "worker:",worker
+	if (LOCAL_TESTING or worker is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 		# worker_id =randint(100, 999)
 		assignment_id = randint(100, 999)
 		hit_id = randint(100, 999)
 	else:
 		print "here"
-		worker = json.loads(request.form['workerId'])
-		worker_id = models.Worker.query.filter_by(turker=worker).first().id
+		try:
+			worker_id = models.Worker.query.filter_by(turker=worker).first().id
+		except:
+			db.session.add(models.Worker(turker=worker))
+			db.session.commit()
+			worker_id = models.Worker.query.filter_by(turker=worker).first().id
+		print worker_id
 		assignment_id = json.loads(request.form['assignmentId'])
 		hit_id =  json.loads(request.form['hitId'])
 		print workerId,worker_id,assignment_id,hit_id

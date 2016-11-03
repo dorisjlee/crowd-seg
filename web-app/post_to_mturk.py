@@ -39,7 +39,7 @@ qualifications.add(NumberHitsApprovedRequirement(comparator="GreaterThan", integ
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','a') as f:
 	f.write('New batch created on : '+time.ctime())
-	for fname in glob.glob("app/static/COCO_*.png")[:2]:
+	for fname in glob.glob("app/static/COCO_*.png")[:-2]:
 		img_name = fname.split('/')[-1].split('.')[0]
 		if HIT_TYPE == "IDENTIFY":
 			url = "https://crowd-segment.herokuapp.com/identify/{}".format(img_name)

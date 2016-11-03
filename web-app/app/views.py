@@ -198,6 +198,8 @@ def segmentation_submit():
 			db.session.commit()
 			worker_id = models.Worker.query.filter_by(turker=worker).first().id
 		print worker_id
+		print request.form['assignmentId']
+		print request.form['hitId']
 		assignment_id = request.form['assignmentId']
 		hit_id =  request.form['hitId']
 		print workerId,worker_id,assignment_id,hit_id

@@ -13,11 +13,12 @@ else:
 
 @app.route('/<img>', methods=['GET', 'POST'])
 def segment(img):
+	print segment
 	render_data = {"worker_id": request.args.get("workerId"),
 					"assignment_id": request.args.get("assignmentId"),
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
-
+	print render_data
 	filename = 'static/' + img + '.png'
 
 	#Read objects that have already been identified from the database
@@ -53,11 +54,12 @@ def segment(img):
 
 @app.route('/identify/<img>', methods=['GET', 'POST'])
 def identify(img):
+	print "identify"
 	render_data = {"worker_id": request.args.get("workerId"),
 					"assignment_id": request.args.get("assignmentId"),
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
-
+	print render_data
 	if request.method == 'POST':
 		x_locs = json.loads(request.form['x-locs'])
 		y_locs = json.loads(request.form['y-locs'])
@@ -111,11 +113,12 @@ def identify(img):
 
 @app.route('/identify/submit', methods=['GET','POST'])
 def submit():
+	print "submit"
 	render_data = {"worker_id": request.args.get("workerId"),
 					"assignment_id": request.args.get("assignmentId"),
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
-
+	print render_data
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
 	img = json.loads(request.form['image-id'])
@@ -167,11 +170,14 @@ def send_file(filename):
 
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
+	print "segmentation_submit"
 	render_data = {"worker_id": request.args.get("workerId"),
 					"assignment_id": request.args.get("assignmentId"),
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
-
+	print render_data
+	print request.args
+	print request.form
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
 	object_id = json.loads(request.form['object_id'])

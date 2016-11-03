@@ -188,10 +188,12 @@ def segmentation_submit():
 		assignment_id = randint(100, 999)
 		hit_id = randint(100, 999)
 	else:
+		print "here"
 		workerId = json.loads(request.form['workerId'])
 		worker_id = models.Worker.query.filter_by(turker=workerId).first().id
 		assignment_id = json.loads(request.form['assignmentId'])
 		hit_id =  json.loads(request.form['hitId'])
+		print workerId,worker_id,assignment_id,hit_id
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))

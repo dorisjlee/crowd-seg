@@ -171,7 +171,6 @@ def send_file(filename):
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
 	print "segmentation_submit"
-	print request.args
 	print request.form
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
@@ -180,8 +179,7 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
-
-
+	print x_locs,object_id,img
 	if (LOCAL_TESTING or request.args.get("workerId") is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 		# worker_id =randint(100, 999)
@@ -189,8 +187,8 @@ def segmentation_submit():
 		hit_id = randint(100, 999)
 	else:
 		print "here"
-		workerId = json.loads(request.form['workerId'])
-		worker_id = models.Worker.query.filter_by(turker=workerId).first().id
+		worker = json.loads(request.form['workerId'])
+		worker_id = models.Worker.query.filter_by(turker=worker).first().id
 		assignment_id = json.loads(request.form['assignmentId'])
 		hit_id =  json.loads(request.form['hitId'])
 		print workerId,worker_id,assignment_id,hit_id

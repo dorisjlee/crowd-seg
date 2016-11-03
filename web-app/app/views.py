@@ -181,7 +181,7 @@ def segmentation_submit():
 	img = json.loads(request.form['image-id'])
 	print x_locs,object_id,img
 	print request.form['workerId']
-	worker = json.loads(request.form['workerId'])
+	worker = request.form['workerId']
 	print "worker:",worker
 	print "after worker"
 	if (LOCAL_TESTING or worker is None):

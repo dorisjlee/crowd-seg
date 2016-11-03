@@ -34,7 +34,7 @@ class Hit(db.Model):
 	times = db.Column(db.String(5000))
 	actions = db.Column(db.String(5000))
 	def __repr__(self):
-		return 'assignment=%d,hit=%d, object_id=%d,worker=%d,img-id=%d,\n actions=%s,times=%s' % (self.assignment_id,self.hit_id,self.object_id,self.worker_id,self.image_id,self.actions,self.times)
+		return 'assignment=%s,hit=%s, object_id=%d,worker=%d,img-id=%d,\n actions=%s,times=%s' % (self.assignment_id,self.hit_id,self.object_id,self.worker_id,self.image_id,self.actions,self.times)
 
 class Worker(db.Model):
 	id = db.Column(db.Integer, primary_key = True)
@@ -52,4 +52,4 @@ class BoundingBox(db.Model):
 	y_locs = db.Column(db.String, index=True)
 
 	def __repr__(self):
-		return 'obj=%d,worker=%d,x=%1.3f,y=%1.3f' % (self.object_id,self.worker_id,self.x_locs,self.y_locs)
+		return 'obj=%d,worker=%d,x=%s,y=%s' % (self.object_id,self.worker_id,self.x_locs,self.y_locs)

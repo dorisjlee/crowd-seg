@@ -187,8 +187,8 @@ def segmentation_submit():
 	if (LOCAL_TESTING or worker is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 		# worker_id =randint(100, 999)
-		assignment_id = randint(100, 999)
-		hit_id = randint(100, 999)
+		assignment_id = str(randint(100, 999))
+		hit_id = str(randint(100, 999))
 	else:
 		print "here"
 		try:
@@ -197,28 +197,24 @@ def segmentation_submit():
 			db.session.add(models.Worker(turker=worker))
 			db.session.commit()
 			worker_id = models.Worker.query.filter_by(turker=worker).first().id
-		print worker_id
-		print request.form['assignmentId']
-		print request.form['hitId']
 		assignment_id = request.form['assignmentId']
 		hit_id =  request.form['hitId']
-		print worker_id,assignment_id,hit_id
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
-	print image_id
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
-	print "assignmentId: ",assignment_id
-	print "hitId: ", hit_id
+	# if LOCAL_TESTING:
+	# 	assignment_id="31QNSG6A5SL3UDM8Q2J4AUY4YG987X"
+	# 	hit_id="3V7ICJJAZA8MQ4521E05A08F2P3B48"
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
-	print "after HIT"
-	print bounding_box
 	db.session.add(bounding_box)
-	print "BB:",bounding_box
 	db.session.add(hit)
-	print "hit:",hit
 	db.session.commit()
 	print "DB committed"
+	render_data = {"worker_id": worker,
+					"assignment_id": assignment_id,
+					"amazon_host": AMAZON_HOST,
+					"hit_id": hit_id}
 	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,comment=comment)) #img=img,
 	print "made response"
-	resp.headers['x-frame-options'] = 'this_can_be_anything'
+	# resp.headers['x-frame-options'] = 'this_can_be_anything'
 	return resp

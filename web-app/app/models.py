@@ -26,8 +26,8 @@ class Image(db.Model):
 class Hit(db.Model):
 	#Each identify or segment session, for identify the object_id is always 999
 	id = db.Column(db.Integer, primary_key = True)
-	assignment_id = db.Column(db.Integer)
-	hit_id = db.Column(db.Integer)
+	assignment_id = db.Column(db.String(50))
+	hit_id = db.Column(db.String(50))
 	object_id = db.Column(db.Integer, db.ForeignKey('object.id'))
 	worker_id = db.Column(db.Integer, db.ForeignKey('worker.id'))
 	image_id = db.Column(db.Integer, db.ForeignKey('image.id'))

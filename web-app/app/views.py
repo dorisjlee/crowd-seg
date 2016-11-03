@@ -180,6 +180,7 @@ def segmentation_submit():
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
 	print x_locs,object_id,img
+	print request.form['workerId']
 	worker = json.loads(request.form['workerId'])
 	print "worker:",worker
 	print "after worker"

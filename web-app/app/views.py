@@ -207,7 +207,6 @@ def segmentation_submit():
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	print image_id
 	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
-	print bounding_box
 	print "assignmentId: ",assignment_id
 	print "hitId: ", hit_id
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))

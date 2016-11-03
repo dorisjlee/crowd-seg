@@ -27,7 +27,7 @@
     <div id = "buttonarea" style="padding:0.3cm;float:right;display:inline-block;">
       <button id="undo" type="button"> <font face="courier"> Undo [U] </font></button>
       <button id="reset" type="button"> <font face="courier"> Reset [R] </font></button>
-      <button id="submit">  <font face="courier">Submit [S]</font></button>
+      <button id="submitbtn">  <font face="courier">Submit [S]</font></button>
       <button id="instruct"><font face="courier">Instructions</font></button>
     </div>
   </div>
@@ -311,7 +311,7 @@
         $("#undo").get(0).click();
     }
     else if (event.which == 115){
-        $("#submit").click(onSubmission());
+        $("#submitbtn").click(onSubmission());
     }
   }
 
@@ -359,7 +359,7 @@
     e.stopPropagation(); 
   });
 
-  $("#submit").click(function(){
+  $("#submitbtn").click(function(){
     onSubmission();
   });
 

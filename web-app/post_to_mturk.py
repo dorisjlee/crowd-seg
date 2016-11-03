@@ -51,7 +51,7 @@ with open('ActiveHITs','a') as f:
 				duration = 1800,
 				max_assignments=20,
 				question=questionform,
-				reward=Price(amount=0.15),
+				reward=Price(amount=0.05),
 				lifetime=43200)#,
 				#qualifications=qualifications)
 			hit_id = str(create_hit_result[0].HITId)

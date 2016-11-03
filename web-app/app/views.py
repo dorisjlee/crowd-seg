@@ -213,7 +213,8 @@ def segmentation_submit():
 	db.session.add(bounding_box)
 	db.session.add(hit)
 	db.session.commit()
-
+	print "DB committed"
 	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,comment=comment)) #img=img,
+	print "made response"
 	resp.headers['x-frame-options'] = 'this_can_be_anything'
 	return resp

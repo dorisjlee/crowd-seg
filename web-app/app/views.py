@@ -155,11 +155,8 @@ def submit():
 		db.session.commit()
  	
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
-	print hit
 	db.session.add(hit)
-	print "HIT"
 	db.session.commit()
-	print "DB commit "
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
 	print "done"
 	return resp

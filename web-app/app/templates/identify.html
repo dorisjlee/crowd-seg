@@ -25,7 +25,7 @@
 
   <div id="wrapper" style="padding:0.3cm;">
    <h1 style=" display:inline;"><font face="garamond">Identify objects in the image below!</font></h1>
-    <div id = "buttonarea" style="padding:0.3cm;margin-right: 35px;float:right;display:inline-block;"> <button id="submit">  <font face="courier">Submit [S]</font></button>
+    <div id = "buttonarea" style="padding:0.3cm;margin-right: 35px;float:right;display:inline-block;"> <button id="submitbtn">  <font face="courier">Submit [S]</font></button>
       <button id="instruct"><font face="courier">Instructions</font></button>
     </div>
   </div>
@@ -281,7 +281,7 @@
         $("#undo").get(0).click();
     }
     else if (event.which == 115){
-        $("#submit").click(onSubmission());
+        $("#submitbtn").click(onSubmission());
     }
   }
 
@@ -334,7 +334,7 @@
     e.stopPropagation(); 
   });
 
-  $("#submit").click(function(){
+  $("#submitbtn").click(function(){
     onSubmission();
   });
 

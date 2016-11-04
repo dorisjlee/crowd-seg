@@ -23,8 +23,8 @@ connection = MTurkConnection(aws_access_key_id=AWS_ACCESS_KEY_ID,
 							 aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 							 host=AMAZON_HOST)
 
-HIT_TYPE = "SEGMENT" #or "IDENTIFY"
-
+#HIT_TYPE = "SEGMENT" #or "IDENTIFY"
+HIT_TYPE="IDENTIFY"
 print "Connected."
 #frame_height in pixels
 frame_height = 800

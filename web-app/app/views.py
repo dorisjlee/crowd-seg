@@ -119,6 +119,7 @@ def submit():
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 	print render_data
+	print "form:",request.form
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
 	img = json.loads(request.form['image-id'])
@@ -126,10 +127,24 @@ def submit():
 	comment = json.loads(request.form['comment-input'])
 	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
-
-	#Store all the collected data in the database
-	worker_id = models.Worker.query.filter_by(turker=request.args.get("workerId")).first().id
 	image_id = models.Image.query.filter_by(filename=img).first().id
+	
+	worker = request.form['workerId']
+	
+	if (LOCAL_TESTING or worker =='None'):
+		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
+		worker_id = str(randint(100, 999))
+		assignment_id = str(randint(100, 999))
+		hit_id = str(randint(100, 999))
+	else:
+		assignment_id = request.form['assignmentId']
+		hit_id =  request.form['hitId']
+	try:
+		worker_id = models.Worker.query.filter_by(turker=worker).first().id
+	except:
+		db.session.add(models.Worker(turker=worker))
+		db.session.commit()
+		worker_id = models.Worker.query.filter_by(turker=worker).first().id
 
 	for name,x,y in zip(object_names,x_locs,y_locs):
 		obj = models.Object(image_id=image_id,name=name)
@@ -138,19 +153,15 @@ def submit():
 		obj_location = models.ObjectLocation(object_id=obj.id,worker_id=worker_id,x_loc=x,y_loc=y)
 		db.session.add(obj_location)
 		db.session.commit()
- 	#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
-	if ( LOCAL_TESTING or (request.args.get("workerId") is None) ):
-		# worker_id =randint(100, 999) 	  #request.args.get("workerId")
-		assignment_id = randint(100, 999)
-		hit_id = randint(100, 999)
-	else:
-		assignment_id = request.args.get("assignmentId")
-		hit_id =  request.args.get("hitId")
+ 	
 	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	print hit
 	db.session.add(hit)
+	print "HIT"
 	db.session.commit()
+	print "DB commit "
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
-	resp.headers['x-frame-options'] = 'this_can_be_anything'
+	print "done"
 	return resp
 
 @app.route('/identify/submit', methods=['GET'])
@@ -170,8 +181,6 @@ def send_file(filename):
 
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
-	print "segmentation_submit"
-	print request.form
 	x_locs = json.loads(request.form['x-locs'])
 	y_locs = json.loads(request.form['y-locs'])
 	object_id = json.loads(request.form['object_id'])
@@ -179,18 +188,13 @@ def segmentation_submit():
  	times = json.loads(request.form['times'])
 	actions = json.loads(request.form['actions'])
 	img = json.loads(request.form['image-id'])
-	print x_locs,object_id,img
-	print request.form['workerId']
 	worker = request.form['workerId']
-	print "worker:",worker
-	print "after worker"
 	if (LOCAL_TESTING or worker is None):
 		#for debugging purposes use random worker_id to ensure no NULL or UNIQUE violation
 		# worker_id =randint(100, 999)
 		assignment_id = str(randint(100, 999))
 		hit_id = str(randint(100, 999))
 	else:
-		print "here"
 		try:
 			worker_id = models.Worker.query.filter_by(turker=worker).first().id
 		except:
@@ -209,12 +213,10 @@ def segmentation_submit():
 	db.session.add(bounding_box)
 	db.session.add(hit)
 	db.session.commit()
-	print "DB committed"
 	render_data = {"worker_id": worker,
 					"assignment_id": assignment_id,
 					"amazon_host": AMAZON_HOST,
 					"hit_id": hit_id}
 	resp = make_response(render_template('submit_segmentation.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,comment=comment)) #img=img,
-	print "made response"
 	# resp.headers['x-frame-options'] = 'this_can_be_anything'
 	return resp

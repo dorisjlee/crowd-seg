@@ -159,6 +159,7 @@ def submit():
 	db.session.commit()
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
 	print "done"
+	print resp
 	return resp
 
 @app.route('/identify/submit', methods=['GET'])

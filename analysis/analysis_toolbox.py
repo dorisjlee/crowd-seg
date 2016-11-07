@@ -30,12 +30,15 @@ def COCO_convert_png_to_jpg():
 		os.system("convert {0} {1}".format(fname, fname.split(".")[0]+".png"))
 
 def load_info():
-	img_info = pd.read_csv("image.csv")
-	object_info = pd.read_csv("object.csv")
-	object_location = pd.read_csv("object_location.csv")
+	path = "/Users/dorislee/Desktop/Fall2016/Research/seg/data/"
+	os.chdir(path)
+	print os.getcwd()
+	img_info = pd.read_csv("image.csv",skipfooter=1)
+	object_info = pd.read_csv("object.csv",skipfooter=1)
+	object_location = pd.read_csv("object_location.csv",skipfooter=1)
 	object_tbl = object_info.merge(object_location,how="inner",left_on="id",right_on="object_id")
-	bb_info = pd.read_csv("bounding_box.csv")
-	hit_info = pd.read_csv("hit.csv")
+	bb_info = pd.read_csv("bounding_box.csv",skipfooter=1)
+	hit_info = pd.read_csv("hit.csv",skipfooter=1)
 	return [img_info,object_tbl,bb_info,hit_info]
 
 def get_size(fname):

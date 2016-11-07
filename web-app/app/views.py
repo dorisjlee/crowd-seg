@@ -9,7 +9,8 @@ if DEV_ENVIROMENT_BOOLEAN:
 	AMAZON_HOST = "https://workersandbox.mturk.com/mturk/externalSubmit"
 else:
 	AMAZON_HOST = "https://www.mturk.com/mturk/externalSubmit"
-
+def stringify_list(lst):
+	return '"'+str(lst)+'"'
 
 @app.route('/<img>', methods=['GET', 'POST'])
 def segment(img):
@@ -125,8 +126,8 @@ def submit():
 	img = json.loads(request.form['image-id'])
 	object_names = json.loads(request.form['obj-names'])
 	comment = json.loads(request.form['comment-input'])
-	times = json.loads(request.form['times'])
-	actions = json.loads(request.form['actions'])
+	times = stringify_list(json.loads(request.form['times']))
+	actions = stringify_list(json.loads(request.form['actions']))
 	image_id = models.Image.query.filter_by(filename=img).first().id
 	
 	worker = request.form['workerId']
@@ -154,7 +155,7 @@ def submit():
 		db.session.add(obj_location)
 		db.session.commit()
  	
-	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=obj.id,worker_id=worker_id,image_id=image_id,times=times,actions=actions)
 	db.session.add(hit)
 	db.session.commit()
 	resp = make_response(render_template('submit.html',name=render_data,x_locs=x_locs,y_locs=y_locs,img=img,object_names=object_names,comment=comment))
@@ -179,12 +180,12 @@ def send_file(filename):
 
 @app.route('/segmentation/submit', methods=['GET','POST'])
 def segmentation_submit():
-	x_locs = json.loads(request.form['x-locs'])
-	y_locs = json.loads(request.form['y-locs'])
+	x_locs = stringify_list(json.loads(request.form['x-locs']))
+	y_locs = stringify_list(json.loads(request.form['y-locs']))
 	object_id = json.loads(request.form['object_id'])
 	comment = json.loads(request.form['comment-input'])
- 	times = json.loads(request.form['times'])
-	actions = json.loads(request.form['actions'])
+ 	times = stringify_list(json.loads(request.form['times']))
+	actions = stringify_list(json.loads(request.form['actions']))
 	img = json.loads(request.form['image-id'])
 	worker = request.form['workerId']
 	if (LOCAL_TESTING or worker is None):
@@ -203,11 +204,11 @@ def segmentation_submit():
 		hit_id =  request.form['hitId']
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
-	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=str(x_locs),y_locs=str(y_locs))
+	bounding_box= models.BoundingBox(object_id=object_id,worker_id=worker_id,x_locs=x_locs,y_locs=y_locs)
 	# if LOCAL_TESTING:
 	# 	assignment_id="31QNSG6A5SL3UDM8Q2J4AUY4YG987X"
 	# 	hit_id="3V7ICJJAZA8MQ4521E05A08F2P3B48"
-	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=str(times),actions=str(actions))
+	hit = models.Hit(assignment_id=assignment_id,hit_id=hit_id,object_id=object_id,worker_id=worker_id,image_id=image_id,times=times,actions=actions)
 	db.session.add(bounding_box)
 	db.session.add(hit)
 	db.session.commit()

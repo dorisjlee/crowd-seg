@@ -3,7 +3,7 @@ import time
 import glob
 from boto.mturk.connection import MTurkConnection
 from boto.mturk.question import ExternalQuestion
-from boto.mturk.qualification import Qualifications, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement, Requirement
+from boto.mturk.qualification import Qualifications, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement #, Requirement
 from boto.mturk.price import Price
 from secret import SECRET_KEY,ACCESS_KEY
 DEV_ENVIROMENT_BOOLEAN = True
@@ -23,8 +23,8 @@ connection = MTurkConnection(aws_access_key_id=AWS_ACCESS_KEY_ID,
 							 aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 							 host=AMAZON_HOST)
 
-#HIT_TYPE = "SEGMENT" #or "IDENTIFY"
-HIT_TYPE="IDENTIFY"
+HIT_TYPE = "SEGMENT"
+#HIT_TYPE="IDENTIFY"
 print "Connected."
 #frame_height in pixels
 frame_height = 800
@@ -39,7 +39,7 @@ qualifications.add(NumberHitsApprovedRequirement(comparator="GreaterThan", integ
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','a') as f:
 	f.write('New batch created on : '+time.ctime())
-	for fname in glob.glob("app/static/COCO_*.png")[:-2]:
+	for fname in glob.glob("app/static/COCO_*.png"):
 		img_name = fname.split('/')[-1].split('.')[0]
 		if HIT_TYPE == "IDENTIFY":
 			url = "https://crowd-segment.herokuapp.com/identify/{}".format(img_name)

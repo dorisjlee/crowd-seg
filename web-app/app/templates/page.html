@@ -107,9 +107,11 @@
   clipCanvas = document.createElement('canvas');
 
   clipCanvas.setAttribute('id', 'clipCanvas');
+  
   $(clipParent).prepend(clipCanvas);
   if (typeof G_vmlCanvasManager != 'undefined') {
     clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
+  }
   
   var clipContext = clipCanvas.getContext('2d');
 

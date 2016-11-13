@@ -5,15 +5,19 @@ from glob import glob
 from os.path import expanduser
 import pandas as pd 
 from PIL import Image
-def save_db_as_csv(postgres=True):
+def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
     '''
     Create CSV file of each table from app.db
+    db = "segment" (local) ,"crowd-segment" (heroku remote)
     '''
     path = "/Users/dorislee/Desktop/Fall2016/Research/seg/data/"
     table_names = ["bounding_box","image","object","object_location","worker","hit"]
     for table_name in table_names :
         if postgres:
-            os.system("psql segment  -F , --no-align  -c  'SELECT * FROM {0}' > {1}/{0}.csv".format(table_name,path))
+            if db=="crowd-segment" and connect==True:
+                # Connect onto the DB on Heroku 
+                os.system("bash herokuDBupdate.sh")
+            os.system("psql {2}  -F , --no-align  -c  'SELECT * FROM {0}' > {1}/{0}.csv".format(table_name,path,db))
         else:
             # sqlite
             conn = sqlite3.connect(glob(expanduser('../web-app/app.db'))[0])

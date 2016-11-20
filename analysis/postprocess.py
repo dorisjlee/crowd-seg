@@ -56,5 +56,6 @@ for hit in all_hits:
                 print "Problem with rejecting/approving: ", assignment.AssignmentId
                 error_log.write(assignment.AssignmentId+'\n')
 error_log.close()
-object_tbl.to_csv('../../data/object_tbl_mturk.csv')
-hit_info.to_csv('../../data/hit_mturk.csv')
+#Saved in /seg/data
+object_tbl.to_csv('object_tbl_mturk.csv')
+hit_info.to_csv('hit_mturk.csv')

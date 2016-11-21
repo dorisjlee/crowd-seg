@@ -12,6 +12,8 @@ else:
 def stringify_list(lst):
 	return '"'+str(lst)+'"'
 
+# @app.route('/<img>/<objkey>', methods=['GET', 'POST'])
+# def segment(img,objkey):
 @app.route('/<img>', methods=['GET', 'POST'])
 def segment(img):
 	print "segment"
@@ -21,7 +23,7 @@ def segment(img):
 					"hit_id": request.args.get("hitId")}
 	print render_data
 	filename = 'static/' + img + '.png'
-
+	# objkey=int(objkey)
 	#Read objects that have already been identified from the database
 	worker = models.Worker.query.filter_by(turker=request.args.get("workerId")).first()
 	if worker is None and render_data["worker_id"] != 'None':
@@ -34,20 +36,20 @@ def segment(img):
 		db.session.commit()
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
-
 	objects = models.Object.query.filter_by(image_id=image_id).order_by(models.Object.name).all()
 	#Read object locations for these objects
 	object_locations = models.ObjectLocation.query.filter((models.ObjectLocation.object_id.in_([x.id for x in objects]))).all()
 	if len(objects)!=0:
 		#Make this data easy to use
 		objects = {x.id:x.name for x in objects}
-		object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} #ASSUMES THAT EACH OBJECT IS MARKED BY EXACTLY 1 WORKER
-		print objects
-		print object_locations
-		randkey=objects.keys()[randint(0,len(objects)-1)]
-		obj = objects[randkey]
-		objloc = object_locations[randkey]
+		#ASSUMES THAT EACH OBJECT IS IDENTIFIED BY EXACTLY 1 WORKER
+		object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} 
+		objkey=objects.keys()[randint(0,len(objects)-1)]
+		
+		obj = objects[objkey]
+		objloc = object_locations[objkey]
 	else:
+		print "Weird case"
 		obj=""
 		objloc=""
 	#The following code segment can be used to check if the turker has accepted the task yet

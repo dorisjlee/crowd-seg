@@ -66,8 +66,8 @@
 
 <script>
   var accepted = '{{ accepted|tojson }}';
-  var object = JSON.parse('{{ object|tojson }}');
-  var object_location = JSON.parse('{{ loc|tojson }}');
+  var objects = JSON.parse('{{ objects|tojson }}');
+  var object_locations = JSON.parse('{{ locs|tojson }}');
   
   //Storing actions and timestamps for each click
   var actions = new Array();
@@ -107,7 +107,7 @@
   clipCanvas = document.createElement('canvas');
 
   clipCanvas.setAttribute('id', 'clipCanvas');
-
+  
   $(clipParent).prepend(clipCanvas);
   if (typeof G_vmlCanvasManager != 'undefined') {
     clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
@@ -123,8 +123,8 @@
   var hoverPoint = -1;
   var paint;
   //Pick a random object to segment (Only done once)
-  // var randkey=Object.keys(object)[Math.floor(Math.random()*Object.keys(object).length)];
-  
+  var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
+  createInstructionsDialog();
 
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
@@ -139,9 +139,9 @@
     context.lineWidth = 3;
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
-    context.fillRect( object_location[0] - 4,  object_location[1] - 4, 8,8);
-    context.strokeRect( object_location[0] - 4,  object_location[1] - 4, 8,8);
-    document.getElementById("objName").innerHTML=object;
+    context.fillRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
+    context.strokeRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
+    document.getElementById("objName").innerHTML=objects[randkey];
   }
   
   function redraw() {
@@ -331,7 +331,7 @@
         "Submit Results?": function() {
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
-          $('input[name="object_id"]').val(object);
+          $('input[name="object_id"]').val(randkey);
           $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
           $('input[name="times"]').val(JSON.stringify(times));
           $('input[name="actions"]').val(JSON.stringify(actions));

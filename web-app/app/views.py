@@ -39,26 +39,17 @@ def segment(img):
 	objects = models.Object.query.filter_by(image_id=image_id).order_by(models.Object.name).all()
 	#Read object locations for these objects
 	object_locations = models.ObjectLocation.query.filter((models.ObjectLocation.object_id.in_([x.id for x in objects]))).all()
-	if len(objects)!=0:
-		#Make this data easy to use
-		objects = {x.id:x.name for x in objects}
-		#ASSUMES THAT EACH OBJECT IS IDENTIFIED BY EXACTLY 1 WORKER
-		object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} 
-		objkey=objects.keys()[randint(0,len(objects)-1)]
-		
-		obj = objects[objkey]
-		objloc = object_locations[objkey]
-	else:
-		print "Weird case"
-		obj=""
-		objloc=""
+	#Make this data easy to use
+	objects = {x.id:x.name for x in objects}
+	object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} #ASSUMES THAT EACH OBJECT IS MARKED BY EXACTLY 1 WORKER
+
 	#The following code segment can be used to check if the turker has accepted the task yet
 	if request.args.get("assignmentId") == "ASSIGNMENT_ID_NOT_AVAILABLE":
 		#Our worker hasn't accepted the HIT (task) yet
-		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=False,object=obj,loc=objloc,img=img))
+		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=False,objects=objects,locs=object_locations,img=img))
 	else:
 		#Our worker accepted the task
-		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,object=obj,loc=objloc,img=img))
+		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,objects=objects,locs=object_locations,img=img))
 	resp.headers['x-frame-options'] = 'this_can_be_anything'
 	return resp
 

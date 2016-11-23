@@ -5,7 +5,7 @@ from glob import glob
 from os.path import expanduser
 import pandas as pd 
 from PIL import Image
-def save_db_as_csv(db="crowd-segment",connect=False,postgres=True):
+def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
     '''
     Create CSV file of each table from app.db
     db = "segment" (local) ,"crowd-segment" (heroku remote)
@@ -14,7 +14,6 @@ def save_db_as_csv(db="crowd-segment",connect=False,postgres=True):
     table_names = ["bounding_box","image","object","object_location","worker","hit"]
     for table_name in table_names :
         if postgres:
-            if connect: print "PLEASE RUN bash herokuDBupdate.sh manually with password: D8i5UgsQ3GA7NxSwCrRe1skPE6"
             if db=="crowd-segment" and connect==True:
                 # Connect onto the DB on Heroku 
                 os.system("bash herokuDBupdate.sh")

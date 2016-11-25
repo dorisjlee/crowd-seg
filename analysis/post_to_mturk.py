@@ -71,17 +71,17 @@ with open('ActiveHITs','a') as f:
 			print "max_assignments:", 30*numObj
 			url = "https://crowd-segment.herokuapp.com/{}".format(img_name)
 			questionform = ExternalQuestion(url, frame_height)
-			for _i in range(20*numObj):
-				create_hit_result = connection.create_hit(
-					title="Segment the object on an image",
-					description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
-					keywords=["segmentation", "perception", "image", "fast"],
-					duration = 1800,
-					max_assignments=1,
-					question=questionform,
-					reward=Price(amount=0.05),
-					lifetime=43200)#,
-					#qualifications=qualifications)
-				hit_id = str(create_hit_result[0].HITId)
-				f.write(hit_id + "\n")
-				print "Created HIT: ",hit_id
+
+			create_hit_result = connection.create_hit(
+				title="Segment the object on an image",
+				description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
+				keywords=["segmentation", "perception", "image", "fast"],
+				duration = 1800,
+				max_assignments=1,
+				question=questionform,
+				reward=Price(amount=0.05),
+				lifetime=43200)#,
+				#qualifications=qualifications)
+			hit_id = str(create_hit_result[0].HITId)
+			f.write(hit_id + "\n")
+			print "Created HIT: ",hit_id

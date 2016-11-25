@@ -48,7 +48,9 @@
 
   <div id="end-dialog-message" title="Ready to submit?"></div>
 
-  <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
+  <!-- <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
+   -->    
+  <form id = "endForm" action="{{ url_for('segment',img=img) }}" method="POST">
       <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/>
       <input type="hidden" id="object_id" value="" name="object_id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
@@ -66,13 +68,12 @@
 
 <script>
   var accepted = '{{ accepted|tojson }}';
-  var objects = JSON.parse('{{ objects|tojson }}');
-  var object_locations = JSON.parse('{{ locs|tojson }}');
+  var object = JSON.parse('{{ object|tojson }}');
+  var object_location = JSON.parse('{{ loc|tojson }}');
   
   //Storing actions and timestamps for each click
   var actions = new Array();
   var times = new Array();
-
   // var canvas = document.getElementById('canvas');
   var canvasDiv = document.getElementById('canvasDiv');
   canvas = document.createElement('canvas');
@@ -85,9 +86,7 @@
     canvas = G_vmlCanvasManager.initElement(canvas);
   }
   var context = canvas.getContext('2d');
-
   var imageObj = new Image();
-
   imageObj.onload = function() {
     $(canvas).attr({
       width: this.width,
@@ -100,21 +99,17 @@
   };
   
   imageObj.src = '{{ filename }}';
-
   // var clipCanvas = document.getElementById('clipCanvas');
   // var clipContext = clipCanvas.getContext('2d');
   var clipParent = document.getElementById('clipped');
   clipCanvas = document.createElement('canvas');
-
   clipCanvas.setAttribute('id', 'clipCanvas');
-  
   $(clipParent).prepend(clipCanvas);
   if (typeof G_vmlCanvasManager != 'undefined') {
     clipCanvas = G_vmlCanvasManager.initElement(clipCanvas);
   }
   
   var clipContext = clipCanvas.getContext('2d');
-
   var clickX = new Array();
   var clickY = new Array();
   //var clickDrag = new Array(); 
@@ -123,25 +118,23 @@
   var hoverPoint = -1;
   var paint;
   //Pick a random object to segment (Only done once)
-  var randkey=Object.keys(objects)[Math.floor(Math.random()*Object.keys(objects).length)];;
+  // var randkey=Object.keys(object)[Math.floor(Math.random()*Object.keys(object).length)];
   createInstructionsDialog();
-
   function addClick(x, y, dragging) {
     undoArray.push([-1, -1, -1]);
     // console.log(undoArray);
     clickX.push(x);
     clickY.push(y);
   }
-
   function renderObjLoc(){ 
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = 'rgb(255,20,20)';
     context.lineWidth = 3;
     pointerImg = new Image();
     pointerImg.src = canvas.toDataURL("../static/pointer.png");
-    context.fillRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
-    context.strokeRect( object_locations[randkey][0] - 4,  object_locations[randkey][1] - 4, 8,8);
-    document.getElementById("objName").innerHTML=objects[randkey];
+    context.fillRect( object_location[0] - 4,  object_location[1] - 4, 8,8);
+    context.strokeRect( object_location[0] - 4,  object_location[1] - 4, 8,8);
+    document.getElementById("objName").innerHTML=object;
   }
   
   function redraw() {
@@ -152,7 +145,6 @@
     context.fillStyle = 'rgb(255,255,255)';
     context.strokeStyle = "rgb(20,255,20)";
     context.lineWidth = 1;
-
     context.beginPath();
     context.moveTo(clickX[0], clickY[0]);
     for (var i = 0; i < clickX.length; i++) {
@@ -172,7 +164,6 @@
     context.fill();
     context.stroke();
   }
-
   move = function(e) {
     var newX = e.pageX - this.offsetLeft;
     var newY = e.pageY - this.offsetTop;
@@ -183,20 +174,16 @@
     redraw();
     generateClipping();
   };
-
-
   $('#canvas').mouseup(function(e) {
     $(this).off('mousemove');
     activePoint = null;
     $(this).on('mousemove', handleFreeMouseMove)
   });
-
   $('#canvas').mousedown(function(e) {
     actions.push("addClick");
     times.push(Date.now());
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
-
     for (var i = 0; i < clickX.length; i += 1) {
       dis = Math.sqrt(Math.pow(mouseX - clickX[i], 2) + Math.pow(mouseY - clickY[i], 2));
       if (dis < 6) {
@@ -206,19 +193,16 @@
         return false;
       }
     }
-
     addClick(e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
     redraw();
     generateClipping();
   });
-
   function generateClipping() {
     clipCanvas.setAttribute('width', canvas.getAttribute('width')+'px');
     clipCanvas.setAttribute('height',canvas.getAttribute('height')+'px');
     
     clipParent.setAttribute('width', canvas.getAttribute('width')+'px');
     clipParent.setAttribute('height',canvas.getAttribute('height')+'px');
-
     clipCanvas.width = clipCanvas.width; // Clears the canvas 
     clipContext.beginPath();
     clipContext.moveTo(clickX[0], clickY[0]);
@@ -231,7 +215,6 @@
     clipContext.clip();
     clipContext.drawImage(imageObj, 0, 0);
   }
-
   $('#undo').click(function() {
     if (undoArray.length <= 0) {
       return;
@@ -249,7 +232,6 @@
     actions.push("undo");
     times.push(Date.now());
   });
-
   $('#reset').click(function() {
     clickX = [];
     clickY = [];
@@ -258,7 +240,6 @@
     actions.push("reset");
     times.push(Date.now());
   });
-
   // $("#canvasDiv").panzoom({
   //   $zoomIn: $(".zoom-in"),
   //   $zoomOut: $(".zoom-out"),
@@ -269,7 +250,6 @@
   //   increment: 0.7,
   //   maxScale: 7.0
   // });
-
   function createInstructionsDialog(){
     $( "#instructions" ).dialog({
       resizable: true,
@@ -291,7 +271,6 @@
       }
     });
   }
-
   function onSubmission(){
     endDialog();
     $("#end-dialog-message").html("");
@@ -300,7 +279,6 @@
     actions.push("onSubmission");
     times.push(Date.now());
   }
-
   function onKeyPress(event)
   {
     if (event.which == 114) {
@@ -313,11 +291,9 @@
         $("#submitbtn").click(onSubmission());
     }
   }
-
   function clearContents(element) {
     element.value = '';
   }
-
   function endDialog()
   {
     actions.push("endDialog");
@@ -331,7 +307,7 @@
         "Submit Results?": function() {
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
-          $('input[name="object_id"]').val(randkey);
+          $('input[name="object_id"]').val(object);
           $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
           $('input[name="times"]').val(JSON.stringify(times));
           $('input[name="actions"]').val(JSON.stringify(actions));
@@ -353,25 +329,20 @@
   jQuery('#end-dialog-message').bind('keypress', function(e) {
     e.stopPropagation(); 
   });
-
   jQuery('#instructions').bind('keypress', function(e) {
     e.stopPropagation(); 
   });
-
   $("#submitbtn").click(function(){
     onSubmission();
   });
-
   $("#instruct").click(function(){
     actions.push("instructions");
     times.push(Date.now());
     createInstructionsDialog();
   });
-
   $(document).keypress(function(event){
     onKeyPress(event);
   });
-
   function handleFreeMouseMove(e) {
     var mouseX = e.pageX - this.offsetLeft;
     var mouseY = e.pageY - this.offsetTop;
@@ -393,14 +364,9 @@
       }
     }
   };
-
-
   $("#canvas").mousemove(function(e) {
     handleFreeMouseMove(e);
   });
-
-  createInstructionsDialog();
-
   </script>
 
 </html>

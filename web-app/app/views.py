@@ -12,9 +12,7 @@ else:
 def stringify_list(lst):
 	return '"'+str(lst)+'"'
 
-# @app.route('/<img>/<objkey>', methods=['GET', 'POST'])
-# def segment(img,objkey):
-@app.route('/<img>', methods=['GET', 'POST'])
+@app.route('/segment/<img>', methods=['GET', 'POST'])
 def segment(img):
 	print "segment"
 	render_data = {"worker_id": request.args.get("workerId"),
@@ -22,8 +20,8 @@ def segment(img):
 					"amazon_host": AMAZON_HOST,
 					"hit_id": request.args.get("hitId")}
 	print render_data
-	filename = 'static/' + img + '.png'
-	# objkey=int(objkey)
+	filename = '../static/' + img + '.png'
+
 	#Read objects that have already been identified from the database
 	worker = models.Worker.query.filter_by(turker=request.args.get("workerId")).first()
 	if worker is None and render_data["worker_id"] != 'None':
@@ -36,21 +34,30 @@ def segment(img):
 		db.session.commit()
 
 	image_id = models.Image.query.filter_by(filename=img).first().id
+
 	objects = models.Object.query.filter_by(image_id=image_id).order_by(models.Object.name).all()
 	#Read object locations for these objects
 	object_locations = models.ObjectLocation.query.filter((models.ObjectLocation.object_id.in_([x.id for x in objects]))).all()
+	print "objects: ",objects
+	print "object_locations: ",object_locations
+	
 	#Make this data easy to use
 	objects = {x.id:x.name for x in objects}
 	object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} #ASSUMES THAT EACH OBJECT IS MARKED BY EXACTLY 1 WORKER
-
+	print objects
+	print object_locations
+	randkey=objects.keys()[randint(0,len(objects)-1)]
+	obj = objects[randkey]
+	objloc = object_locations[randkey]
 	#The following code segment can be used to check if the turker has accepted the task yet
 	if request.args.get("assignmentId") == "ASSIGNMENT_ID_NOT_AVAILABLE":
 		#Our worker hasn't accepted the HIT (task) yet
-		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=False,objects=objects,locs=object_locations,img=img))
+		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=False,object=obj,loc=objloc,img=img))
 	else:
 		#Our worker accepted the task
-		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,objects=objects,locs=object_locations,img=img))
+		resp = make_response(render_template('page.html',name=render_data,filename=filename,ht=384,wd=512,accepted=True,object=obj,loc=objloc,img=img))
 	resp.headers['x-frame-options'] = 'this_can_be_anything'
+	print "here"
 	return resp
 
 @app.route('/identify/<img>', methods=['GET', 'POST'])
@@ -101,7 +108,7 @@ def identify(img):
 	#Make this data easy to use
 	objects = {x.id:x.name for x in objects}
 	object_locations = {x.object_id:(x.x_loc,x.y_loc) for x in object_locations} #ASSUMES THAT EACH OBJECT IS MARKED BY EXACTLY 1 WORKER
-
+	print "end identify"
 	#The following code segment can be used to check if the turker has accepted the task yet
 	if request.args.get("assignmentId") == "ASSIGNMENT_ID_NOT_AVAILABLE":
 		#Our worker hasn't accepted the HIT (task) yet

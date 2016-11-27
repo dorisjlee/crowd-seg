@@ -48,10 +48,10 @@
 
   <div id="end-dialog-message" title="Ready to submit?"></div>
 
-  <!-- <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
-   -->    
-  <form id = "endForm" action="{{ url_for('segment',img=img) }}" method="POST">
-      <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/>
+  <form id = "endForm" action="{{ url_for('segmentation_submit') }}" method="POST">
+  <!--     
+  <form id = "endForm" action="{{ url_for('segment',img=img,objId=14) }}" method="POST">
+   -->    <input type="hidden" id="image-id" value="{{ img }}" name="image-id"/>
       <input type="hidden" id="object_id" value="" name="object_id"/>
       <input type="hidden" id="x-locs" value="" name="x-locs"/>
       <input type="hidden" id="y-locs" value="" name="y-locs"/>
@@ -99,6 +99,8 @@
   };
   
   imageObj.src = '{{ filename }}';
+  console.log('img: '+ '{{ img }}')
+  console.log('objId: '+ '{{ objId }}')
   // var clipCanvas = document.getElementById('clipCanvas');
   // var clipContext = clipCanvas.getContext('2d');
   var clipParent = document.getElementById('clipped');
@@ -307,7 +309,7 @@
         "Submit Results?": function() {
           $('input[name="x-locs"]').val(JSON.stringify(clickX));
           $('input[name="y-locs"]').val(JSON.stringify(clickY));
-          $('input[name="object_id"]').val(object);
+          $('input[name="object_id"]').val('{{ objId }}');
           $('input[name="image-id"]').val(JSON.stringify("{{  img  }}"));
           $('input[name="times"]').val(JSON.stringify(times));
           $('input[name="actions"]').val(JSON.stringify(actions));

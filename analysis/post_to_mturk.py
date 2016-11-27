@@ -66,22 +66,26 @@ with open('ActiveHITs','a') as f:
 			f.write(hit_id + "\n")
 			print "Created HIT: ",hit_id
 		elif HIT_TYPE == "SEGMENT":
-			numObj = len(img_obj_tbl[img_obj_tbl.filename==img_name])
-			print numObj, "obj in image :",img_name
-			print "max_assignments:", 30*numObj
-			url = "https://crowd-segment.herokuapp.com/{}".format(img_name)
-			questionform = ExternalQuestion(url, frame_height)
-
-			create_hit_result = connection.create_hit(
-				title="Segment the object on an image",
-				description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
-				keywords=["segmentation", "perception", "image", "fast"],
-				duration = 1800,
-				max_assignments=1,
-				question=questionform,
-				reward=Price(amount=0.05),
-				lifetime=43200)#,
-				#qualifications=qualifications)
-			hit_id = str(create_hit_result[0].HITId)
-			f.write(hit_id + "\n")
-			print "Created HIT: ",hit_id
+			# numObj = len(img_obj_tbl[img_obj_tbl.filename==img_name])
+			# print numObj, "obj in image :",img_name
+			# print "max_assignments:", 30*numObj
+			objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
+			for objId in objId_lst:
+			# for _i in range(20*numObj):
+				print objId
+				url = "https://crowd-segment.herokuapp.com/segment/{0}/{1}/".format(img_name,objId)
+				print url
+				questionform = ExternalQuestion(url, frame_height)
+				create_hit_result = connection.create_hit(
+					title="Segment the object on an image",
+					description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
+					keywords=["segmentation", "perception", "image", "fast"],
+					duration = 1800,
+					max_assignments=30,
+					question=questionform,
+					reward=Price(amount=0.05),
+					lifetime=43200)#,
+					#qualifications=qualifications)
+				hit_id = str(create_hit_result[0].HITId)
+				f.write(hit_id + "\n")
+				print "Created HIT for img:{0}, objId:{1}: {2}".format(img_name,objId,hit_id)

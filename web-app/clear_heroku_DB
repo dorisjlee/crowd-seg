@@ -1,0 +1,3 @@
+heroku pg:psql --app crowd-segment
+DELETE FROM bounding_box;
+DELETE FROM hit;

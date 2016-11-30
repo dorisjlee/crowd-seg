@@ -1,21 +1,13 @@
 #!flask/bin/python
 import time
-import glob
+from analysis_toolbox import load_info
+from glob import glob
 from boto.mturk.connection import MTurkConnection
 from boto.mturk.question import ExternalQuestion
 from boto.mturk.qualification import Qualifications, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement #, Requirement
 from boto.mturk.price import Price
-from secret import SECRET_KEY,ACCESS_KEY
+from secret import SECRET_KEY,ACCESS_KEY,AMAZON_HOST
 import os
-from analysis_toolbox import *
-DEV_ENVIROMENT_BOOLEAN = True
-#This allows us to specify whether we are pushing to the sandbox or live site.
-if DEV_ENVIROMENT_BOOLEAN:
-    AMAZON_HOST = 'mechanicalturk.sandbox.amazonaws.com'
-    MastersQualID = '2F1KVCNHMVHV8E9PBUB2A4J79LU20F'
-else:
-    AMAZON_HOST = 'mechanicalturk.amazonaws.com'
-    MastersQualID = '2NDP2L92HECWY8NS8H3CK0CP5L9GHO'
 
 #Start Configuration Variables
 AWS_ACCESS_KEY_ID = ACCESS_KEY
@@ -45,8 +37,9 @@ img_obj_tbl = object_tbl.merge(img_info,how="inner",left_on="image_id",right_on=
 os.chdir("../web-app/app")
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','a') as f:
-	f.write('New batch created on : '+time.ctime())
-	for fname in glob("static/COCO_*.png")[:2]:
+    f.write('New batch created on : '+time.ctime())
+	#for fname in glob("static/COCO_*.png")[:3]:
+    for fname in glob("static/COCO_*.png")[3:]:
 		img_name = fname.split('/')[-1].split('.')[0]
 		print img_name
 		if HIT_TYPE == "IDENTIFY":
@@ -81,7 +74,7 @@ with open('ActiveHITs','a') as f:
 					description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
 					keywords=["segmentation", "perception", "image", "fast"],
 					duration = 1800,
-					max_assignments=30,
+					max_assignments=40,
 					question=questionform,
 					reward=Price(amount=0.05),
 					lifetime=43200)#,

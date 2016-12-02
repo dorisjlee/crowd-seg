@@ -37,9 +37,9 @@ img_obj_tbl = object_tbl.merge(img_info,how="inner",left_on="image_id",right_on=
 os.chdir("../web-app/app")
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','a') as f:
-    f.write('New batch created on : '+time.ctime())
-	#for fname in glob("static/COCO_*.png")[:3]:
-    for fname in glob("static/COCO_*.png")[3:]:
+	f.write('New batch created on : '+time.ctime())
+	for fname in glob("static/COCO_*.png")[:3]:
+	#for fname in glob("static/COCO_*.png")[3:]:
 		img_name = fname.split('/')[-1].split('.')[0]
 		print img_name
 		if HIT_TYPE == "IDENTIFY":

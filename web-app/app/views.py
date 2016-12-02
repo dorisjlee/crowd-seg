@@ -3,7 +3,7 @@ from app import app, db, models
 import json
 from random import randint
 LOCAL_TESTING = False
-DEV_ENVIROMENT_BOOLEAN = True
+DEV_ENVIROMENT_BOOLEAN = False
 #This allows us to specify whether we are pushing to the sandbox or live site.
 if DEV_ENVIROMENT_BOOLEAN:
 	AMAZON_HOST = "https://workersandbox.mturk.com/mturk/externalSubmit"

@@ -44,7 +44,7 @@ def MunkresEuclidean(bb1,bb2):
         value = matrix[row][column]
         total += value
 #         print '(%d, %d) -> %d' % (row, column, value)
-    return total
+    return total         
 
 def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean):
     '''

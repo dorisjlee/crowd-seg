@@ -8,7 +8,7 @@ from boto.mturk.qualification import Qualifications, PercentAssignmentsApprovedR
 from boto.mturk.price import Price
 from secret import SECRET_KEY,ACCESS_KEY,AMAZON_HOST
 import os
-
+import pandas as pd
 #Start Configuration Variables
 AWS_ACCESS_KEY_ID = ACCESS_KEY
 AWS_SECRET_ACCESS_KEY = SECRET_KEY
@@ -38,8 +38,7 @@ os.chdir("../web-app/app")
 #This url will be the url of your application, with appropriate GET parameters
 with open('ActiveHITs','a') as f:
 	f.write('New batch created on : '+time.ctime())
-	for fname in glob("static/COCO_*.png")[:3]:
-	#for fname in glob("static/COCO_*.png")[3:]:
+	for fname in glob("static/COCO_*.png"):
 		img_name = fname.split('/')[-1].split('.')[0]
 		print img_name
 		if HIT_TYPE == "IDENTIFY":
@@ -63,22 +62,26 @@ with open('ActiveHITs','a') as f:
 			# print numObj, "obj in image :",img_name
 			# print "max_assignments:", 30*numObj
 			objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
+			print os.getcwd()
+			BB_count_info = pd.read_csv("../../../data/BB_count_tbl.csv")
 			for objId in objId_lst:
 			# for _i in range(20*numObj):
 				print objId
 				url = "https://crowd-segment.herokuapp.com/segment/{0}/{1}/".format(img_name,objId)
-				print url
-				questionform = ExternalQuestion(url, frame_height)
-				create_hit_result = connection.create_hit(
-					title="Segment the object on an image",
-					description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
-					keywords=["segmentation", "perception", "image", "fast"],
-					duration = 1800,
-					max_assignments=40,
-					question=questionform,
-					reward=Price(amount=0.05),
-					lifetime=43200)#,
-					#qualifications=qualifications)
-				hit_id = str(create_hit_result[0].HITId)
-				f.write(hit_id + "\n")
-				print "Created HIT for img:{0}, objId:{1}: {2}".format(img_name,objId,hit_id)
+				maxAssignment = 40-int(BB_count_info[BB_count_info.id ==objId]["BB_count"])
+				print maxAssignment
+				if maxAssignment>0:
+					questionform = ExternalQuestion(url, frame_height)
+					create_hit_result = connection.create_hit(
+						title="Segment the object on an image",
+						description="We'll give you an image with a pointer to an object. You have to draw a bounding region around the boundary of the object in the image. There is 1 object per HIT. Our interface supports keyboard input for speed!",
+						keywords=["segmentation", "perception", "image", "fast"],
+						duration = 1800,
+						max_assignments=maxAssignment,
+						question=questionform,
+						reward=Price(amount=0.05),
+						lifetime=43200)#,
+						#qualifications=qualifications)
+					hit_id = str(create_hit_result[0].HITId)
+					f.write(hit_id + "\n")
+					print "Created HIT for img:{0}, objId:{1}: {2}".format(img_name,objId,hit_id)

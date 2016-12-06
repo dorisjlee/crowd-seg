@@ -56,16 +56,26 @@ for hit in all_hits:
                     connection.approve_assignment(assignment.AssignmentId)
                     print 'approved ', assignment.AssignmentId
                 else:
-                    print 'Putting into pending reject list :', assignment.AssignmentId
+                    #print 'Putting into pending reject list :', assignment.AssignmentId
+                    print 'Reject ',assignment.AssignmentId, 'only :', numClicks
                     bb = bb_info[(bb_info.worker_id==int(task.worker_id)) & (bb_info.object_id==int(task.object_id))]
                     BB ='"'+ bb.x_locs.get_values()[0]+'"'
                     reject_log.write('{0},{1},{2},{3},{4}\n'.format(assignment.AssignmentId,numClicks,BB,int(task.object_id),int(task.worker_id)))
-                    #hit_info = hit_info.set_value(task.index[0],'status',"rejected")
-                    #connection.reject_assignment(assignment.AssignmentId)
+                    hit_info = hit_info.set_value(task.index[0],'status',"rejected")
+                    connection.reject_assignment(assignment.AssignmentId)
             except MTurkRequestError:
                 #Problably already approved or rejected this assignment previously
-               print "Previously rejected or approved : ", assignment.AssignmentId
+               #print "Previously rejected or approved : ", assignment.AssignmentId
                error_log.write(assignment.AssignmentId+'\n')
+reject_log.close()
 error_log.close()
 object_tbl.to_csv('../../data/approved_object_tbl.csv')
 hit_info.to_csv('../../data/hit_mturk.csv')
+# Count the number of objects Annotated
+print 'Count the number of objects Annotated'
+import pandas as pd
+object_tbl['BB_count'] = pd.Series(np.zeros(len(object_tbl)), index=object_tbl.index)
+for hit in hit_info.iterrows():
+    objIdx = hit[1]['object_id']-1
+    object_tbl = object_tbl.set_value(objIdx,'BB_count', object_tbl._iloc[objIdx].BB_count+1)  
+object_tbl.to_csv("../../data/BB_count_tbl.csv")                  

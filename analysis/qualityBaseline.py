@@ -1,3 +1,4 @@
+import numpy as np
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]

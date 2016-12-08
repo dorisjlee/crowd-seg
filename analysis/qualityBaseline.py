@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import spatial
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]
@@ -29,7 +30,6 @@ def majority_vote(obj_x_locs,obj_y_locs,width,height):
 
 
 from munkres import Munkres, print_matrix
-
 def MunkresEuclidean(bb1,bb2):
     '''
     Given two worker's responses, 
@@ -37,16 +37,21 @@ def MunkresEuclidean(bb1,bb2):
     then find the best matching (min dist) config via Kuhn-Munkres
     '''
     matrix = spatial.distance.cdist(bb1,bb2,'euclidean')
+    # print "Mat: " 
+    # print np.ma.masked_equal(matrix,0)
+    # print np.shape(np.ma.masked_equal(matrix,0))
     m = Munkres()
-    indexes = m.compute(np.ma.masked_equal(matrix,0))
-
-    total = 0
-    for row, column in indexes:
-        value = matrix[row][column]
-        total += value
-#         print '(%d, %d) -> %d' % (row, column, value)
-    return total         
-
+    try:
+        indexes = m.compute(np.ma.masked_equal(matrix,0))
+        total = 0
+        for row, column in indexes:
+            value = matrix[row][column]
+            total += value
+    #         print '(%d, %d) -> %d' % (row, column, value)
+        return total         
+    except(ValueError):
+        print "bad"
+        return 0
 def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean):
     '''
     Given all worker's responses,
@@ -59,6 +64,9 @@ def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean):
         # Compare worker with another worker
         bb1 = np.array([obj_x_locs[i],obj_y_locs[i]]).T
         bb2  = np.array([obj_x_locs[i+1],obj_y_locs[i+1]]).T
+        # print bb1
+        # print bb2
+        # print dist(bb1,bb2)
         minDistList.append(dist(bb1,bb2))
     #worker's scores
-    return minDistList/max(minDistList)
+    return np.array(minDistList)/max(minDistList)

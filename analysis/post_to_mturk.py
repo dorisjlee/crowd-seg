@@ -39,6 +39,7 @@ os.chdir("../web-app/app")
 with open('ActiveHITs','a') as f:
 	f.write('New batch created on : '+time.ctime())
 	for fname in glob("static/COCO_*.png"):
+        # fname = "static/COCO_train2014_000000000127.png"
 		img_name = fname.split('/')[-1].split('.')[0]
 		print img_name
 		if HIT_TYPE == "IDENTIFY":
@@ -61,7 +62,8 @@ with open('ActiveHITs','a') as f:
 			# numObj = len(img_obj_tbl[img_obj_tbl.filename==img_name])
 			# print numObj, "obj in image :",img_name
 			# print "max_assignments:", 30*numObj
-			objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
+			# objId_lst = [10,12]
+            #objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
 			print os.getcwd()
 			BB_count_info = pd.read_csv("../../../data/BB_count_tbl.csv")
 			for objId in objId_lst:

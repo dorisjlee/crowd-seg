@@ -52,3 +52,31 @@ def get_size(fname):
 	width = im.size[0]
 	height = im.size[1]
 	return width, height
+def visualize_my_ground_truth_bb():
+    ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
+    worker_info = pd.read_csv("../../data/worker.csv",skipfooter=1)
+    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    for i in np.arange(len(img_info)):
+        img_name = img_info["filename"][i]
+        if 'COCO' in img_name:
+            fname = "../web-app/app/static/"+img_name+".png"
+            img=mpimg.imread(fname)
+            width,height = get_size(fname)
+            img_id = int(img_name.split('_')[-1])
+            plt.figure(figsize =(10,10))
+            plt.imshow(img)
+            plt.axis("off")
+
+            filtered_object_tbl = object_tbl[object_tbl["image_id"]==i+1]
+
+            #for oid,bbx_path,bby_path in zip(bb_info["object_id"],bb_info["x_locs"],bb_info["y_locs"]):
+            for bb in bb_info.iterrows():
+                oid = bb[1]["object_id"]
+                bbx_path= bb[1]["x_locs"]
+                bby_path= bb[1]["y_locs"]
+                if int(object_tbl[object_tbl.object_id==oid].image_id) ==i+1:
+    #                 worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+                    ground_truth_match = my_BBG[my_BBG.object_id==oid]
+                    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+                    plt.plot(x_locs,y_locs,'-',color='#f442df',linewidth=0.5)
+                    plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.01)

@@ -110,8 +110,9 @@ def simple_rectangle_test():
     print "Check ``precision``: ", precision(obj_x_locs,obj_y_locs) == 1./4
     print "Check ``recall``: ", recall(obj_x_locs,obj_y_locs) == 1./6
 
+from pycocotools.coco import COCO
+from analysis_toolbox import *
 def compute_my_COCO_BBvals():
-    from analysis_toolbox import *
     save_db_as_csv(connect=False)
     img_info,object_tbl,bb_info,hit_info = load_info()
     #Load COCO annotations 
@@ -140,7 +141,7 @@ def compute_my_COCO_BBvals():
                     worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
                     ground_truth_match = ground_truth[ground_truth.id==str(oid)]
                     COCO_id = int(ground_truth_match["COCO_annIds"])
-                    
+
                     #COCO-Annotations
                     for ann in anns:
                         if COCO_id==-1:
@@ -152,17 +153,42 @@ def compute_my_COCO_BBvals():
                                 coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
                                 obj_x_locs = [worker_x_locs,coco_x_locs]
                                 obj_y_locs = [worker_y_locs,coco_y_locs]
-                                bb_info = bb_info.set_value(bb[0],"COCO Majority Vote",majority_vote(obj_x_locs,obj_y_locs))
-                                #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean",DistAllWorkers(obj_x_locs,obj_y_locs))
-                                bb_info = bb_info.set_value(bb[0],"COCO Precision",precision(obj_x_locs,obj_y_locs))
-                                bb_info = bb_info.set_value(bb[0],"COCO Recall",recall(obj_x_locs,obj_y_locs))                
+                                bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
+                                bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
+                                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))                
+                                #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",DistAllWorkers(obj_x_locs,obj_y_locs))
                     my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
                     my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
                     obj_x_locs = [worker_x_locs,my_x_locs]
                     obj_y_locs = [worker_y_locs,my_y_locs]
-                    bb_info = bb_info.set_value(bb[0],"My Majority Vote",majority_vote(obj_x_locs,obj_y_locs))   
-                    bb_info = bb_info.set_value(bb[0],"My Precision",precision(obj_x_locs,obj_y_locs))
-                    bb_info = bb_info.set_value(bb[0],"My Recall",recall(obj_x_locs,obj_y_locs))
+                    bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
+                    bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
+                    bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
+                    #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",DistAllWorkers(obj_x_locs,obj_y_locs))
     # replace all NAN values with -1, these are entries for which we don't have COCO ground truth
     bb_info = bb_info.fillna(-1)
     bb_info.to_csv("computed_my_COCO_BBvals.csv")
+def visualize_metric_histograms():
+    bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',\
+                   'Precision [Self]','Recall [Self]','Jaccard [Self]']
+
+    NUM_COL = 3
+    NUM_ROW = 2
+    NUM_PLOTS = NUM_COL*NUM_ROW
+
+    fig, axs = plt.subplots(NUM_ROW,NUM_COL, figsize=(NUM_ROW*3,NUM_COL*2), sharex='col')
+    #fig.subplots_adjust(hspace = .5, wspace=.001)
+
+    axs = axs.ravel()
+
+    for i,metric in zip(range(len(metrics_lst)),metrics_lst):
+        metric_value = np.array(bb_info[metric][bb_info[metric]>0][bb_info[metric]<=1]) 
+        ax = axs[i]
+        ax.set_title(metric)
+        ax.hist(metric_value,bins=100)
+        ax.set_xlim(0,1.03)
+    fig.tight_layout()
+    fig.savefig('metric_histogram.pdf')
+if __name__ =="__main__":
+    compute_my_COCO_BBvals()

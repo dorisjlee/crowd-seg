@@ -1,59 +1,10 @@
 import numpy as np
 from scipy import spatial
+import matplotlib.pyplot as plt
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]
 # obj_y_locs = [[worker i response],[ground truth]]
-
-def majority_vote(obj_x_locs,obj_y_locs): 
-    '''
-    Jaccard Simmilarity or Overlap Method
-    used for PASCAL VOC challenge
-    ''' 
-    return intersection(obj_x_locs,obj_y_locs)/union(obj_x_locs,obj_y_locs)
-
-
-from munkres import Munkres, print_matrix
-def MunkresEuclidean(bb1,bb2):
-    '''
-    Given two worker's responses, 
-    Compares Euclidean distances of all points in the polygon, 
-    then find the best matching (min dist) config via Kuhn-Munkres
-    '''
-    matrix = spatial.distance.cdist(bb1,bb2,'euclidean')
-    # print "Mat: " 
-    # print np.ma.masked_equal(matrix,0)
-    # print np.shape(np.ma.masked_equal(matrix,0))
-    m = Munkres()
-    try:
-        indexes = m.compute(np.ma.masked_equal(matrix,0))
-        total = 0
-        for row, column in indexes:
-            value = matrix[row][column]
-            total += value
-    #         print '(%d, %d) -> %d' % (row, column, value)
-        return total         
-    except(ValueError):
-        print "bad"
-        return 0
-def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean):
-    '''
-    Given all worker's responses,
-    Perform pairwise distance comparison with all other workers
-    returns quality for each worker
-    #NOTE THIS NEEDS TO BE CHANGED TO INCORPORATE ALL PAIRWISE COMPARISONS
-    '''
-    minDistList=[]
-    for i in np.arange(len(obj_x_locs)-1):
-        # Compare worker with another worker
-        bb1 = np.array([obj_x_locs[i],obj_y_locs[i]]).T
-        bb2  = np.array([obj_x_locs[i+1],obj_y_locs[i+1]]).T
-        # print bb1
-        # print bb2
-        # print dist(bb1,bb2)
-        minDistList.append(dist(bb1,bb2))
-    #worker's scores
-    return np.array(minDistList)/max(minDistList)
 
 import ast
 def process_raw_locs(segmentation,COCO=False):
@@ -77,6 +28,18 @@ def process_raw_locs(segmentation,COCO=False):
     x_locs.append(x_locs[0])
     y_locs.append(y_locs[0])
     return x_locs,y_locs
+
+################################################
+##                                            ##
+##       SIMPLE AREA-BASED MEASURES           ##
+##                                            ##
+################################################
+def majority_vote(obj_x_locs,obj_y_locs): 
+    '''
+    Jaccard Simmilarity or Overlap Method
+    used for PASCAL VOC challenge
+    ''' 
+    return intersection(obj_x_locs,obj_y_locs)/union(obj_x_locs,obj_y_locs)
 from shapely.geometry import box,Polygon
 def intersection(obj_x_locs,obj_y_locs,debug=False):
     # Compute intersecting area
@@ -99,8 +62,109 @@ def precision(obj_x_locs,obj_y_locs):
 def recall(obj_x_locs,obj_y_locs):
     truth_bb = Polygon(zip(obj_x_locs[1],obj_y_locs[1]))
     truth_bb_area  = truth_bb.area
-    return intersection(obj_x_locs,obj_y_locs)/float(truth_bb_area)    
+    return intersection(obj_x_locs,obj_y_locs)/float(truth_bb_area)  
+################################################
+##                                            ##
+##          BOUNDARY-BASED METHODS            ##
+##                                            ##
+################################################
+from scipy.interpolate import splprep,splev
+def parametric_interpolate(obj_x_locs,obj_y_locs,numPts=50,PLOT=False):
+    '''
+    Parametric interpolation of points between polygon boundaries
+    Given obj_x_locs,obj_y_locs
+    return a new set of interpolated obj_x_locs,obj_y_locs interpolated on numPts 
+    '''
+    interpolated_obj_x_locs = []
+    interpolated_obj_y_locs = []
+    for i in range(len(obj_x_locs)):
+        x = obj_x_locs[i]
+        y = obj_y_locs[i]
+        # if numPts==0: numPts=len(x)*5
+        if len(x)<numPts:
+            tck, u =splprep([x,y],s=0,per=1)
+            u_new = np.linspace(u.min(),u.max(),numPts)
+            new_points = splev(u_new, tck,der=0)
+            if PLOT: 
+                plt.figure()
+                plt.plot(x, y, 'ro',label="N="+str(numPts))
+                plt.legend(loc="lower right")
+                plt.plot(new_points[0], new_points[1], 'r-')
+            interpolated_obj_x_locs.append(new_points[0])
+            interpolated_obj_y_locs.append(new_points[1])
+        else:
+            #interpolate only if number of points is less than numPts 
+            interpolated_obj_x_locs.append(obj_x_locs[i])
+            interpolated_obj_y_locs.append(obj_y_locs[i])
+    return interpolated_obj_x_locs,interpolated_obj_y_locs
+
+from scipy.spatial.distance import cdist,pdist
+from munkres import Munkres, print_matrix
+def MunkresEuclidean(bb1,bb2,PRINT=False):
+    '''
+    Given two worker's responses, 
+    Compares Euclidean distances of all points in the polygon, 
+    then find the best matching (min dist) config via Kuhn-Munkres
+    '''
+    matrix = spatial.distance.cdist(bb1,bb2,'euclidean')
+    
+    m = Munkres()
+    try:
+        indexes = m.compute(np.ma.masked_equal(matrix,0))
+        total = 0
+        for row, column in indexes:
+            value = matrix[row][column]
+            total += value
+            if PRINT: print '(%d, %d) -> %.2f' % (row, column, value)
+        return total         
+    except(ValueError):
+        print "bad"
+        return 0
+def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean,MAX_DIST=10000.,numPts = 50):
+    '''
+    Given all worker's responses,
+    Perform pairwise distance comparison with all other workers
+    returns quality for each worker
+    '''
+    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,numPts)
+
+    # Compare worker with ground truth worker
+    bb1 = zip(interpolated_obj_x_locs[i],interpolated_obj_y_locs[i])
+    bb2 = zip(interpolated_obj_x_locs[i+1],interpolated_obj_y_locs[i+1])
+
+    #worker's scores
+    return 1.-dist(bb1,bb2)/MAX_DIST
+
+
+################################################
+##                                            ##
+##                 TEST EXAMPLES              ##
+##                                            ##
+################################################
+def real_BB_test():
+    print "-----------------"
+    print "Real BB Test"
+
+    bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    bbg_info = pd.read_csv('my_ground_truth.csv')
+    oid = 8
+    worker =  bb_info[bb_info["object_id"]==oid].ix[73]
+    bbg = bbg_info[bb_info["object_id"]==oid].ix[0]
+    obj_x_locs = [ast.literal_eval(worker["x_locs"]),ast.literal_eval(bbg["x_locs"])]
+    obj_y_locs = [ast.literal_eval(worker["y_locs"]),ast.literal_eval(bbg["y_locs"])]
+    
+    print "Check ``majority_vote``: ",np.isclose(majority_vote(obj_x_locs,obj_y_locs),0.621613376145)
+    print "Check ``precision``: ",np.isclose(precision(obj_x_locs,obj_y_locs),0.954158717771)
+    print "Check ``recall``: ",np.isclose(recall(obj_x_locs,obj_y_locs),0.640749081612)
+
+    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,PLOT=True)
+    polygon1 = zip(interpolated_obj_x_locs[0],interpolated_obj_y_locs[0])
+    polygon2 = zip(interpolated_obj_x_locs[1],interpolated_obj_y_locs[1])
+    print "Check ``MunkresEuclidean``:",np.isclose(MunkresEuclidean(polygon1,polygon2,True),946.390562322)
+
 def simple_rectangle_test():
+    print "-----------------"
+    print "Simple Rectangle Test"
     # 2 simple overlapping rectangle test example 
     obj_x_locs=[[1,3,3,1],[2,5,5,2]]
     obj_y_locs=[[3,3,1,1],[2,2,0,0]]
@@ -109,6 +173,11 @@ def simple_rectangle_test():
     print "Check ``majority_vote``: ", majority_vote(obj_x_locs,obj_y_locs) == 1./9
     print "Check ``precision``: ", precision(obj_x_locs,obj_y_locs) == 1./4
     print "Check ``recall``: ", recall(obj_x_locs,obj_y_locs) == 1./6
+
+    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,True)
+    polygon1 = zip(interpolated_obj_x_locs[0],interpolated_obj_y_locs[0])
+    polygon2 = zip(interpolated_obj_x_locs[1],interpolated_obj_y_locs[1])
+    print "Check ``MunkresEuclidean``:",np.isclose(MunkresEuclidean(polygon1,polygon2),2*(np.sqrt(2)+np.sqrt(5)))
 
 from pycocotools.coco import COCO
 from analysis_toolbox import *
@@ -191,4 +260,13 @@ def visualize_metric_histograms():
     fig.tight_layout()
     fig.savefig('metric_histogram.pdf')
 if __name__ =="__main__":
-    compute_my_COCO_BBvals()
+    import sys
+    if len(sys.argv)>1:
+        if sys.argv[1]=='test':
+            simple_rectangle_test()
+            real_BB_test()
+        elif sys.argv[1]=='compute':
+            compute_my_COCO_BBvals()
+    else:    
+        print "Usage: python qualityBaseline.py test/compute"
+        compute_my_COCO_BBvals()

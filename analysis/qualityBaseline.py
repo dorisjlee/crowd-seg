@@ -80,9 +80,9 @@ def parametric_interpolate(obj_x_locs,obj_y_locs,numPts=50,PLOT=False):
     for i in range(len(obj_x_locs)):
         x = obj_x_locs[i]
         y = obj_y_locs[i]
-        # if numPts==0: numPts=len(x)*5
+        # if numPts==0: numPts=len(x)*2
         if len(x)<numPts:
-            tck, u =splprep([x,y],s=0,per=1)
+            tck, u =splprep(np.array([x,y]),s=0,per=1)
             u_new = np.linspace(u.min(),u.max(),numPts)
             new_points = splev(u_new, tck,der=0)
             if PLOT: 
@@ -100,13 +100,19 @@ def parametric_interpolate(obj_x_locs,obj_y_locs,numPts=50,PLOT=False):
 
 from scipy.spatial.distance import cdist,pdist
 from munkres import Munkres, print_matrix
-def MunkresEuclidean(bb1,bb2,PRINT=False):
+def MunkresEuclidean(obj_x_locs,obj_y_locs,numPts=50,PRINT=False):
     '''
     Given two worker's responses, 
     Compares Euclidean distances of all points in the polygon, 
     then find the best matching (min dist) config via Kuhn-Munkres
     '''
-    matrix = spatial.distance.cdist(bb1,bb2,'euclidean')
+    if obj_x_locs[0]==obj_x_locs[1] and obj_y_locs[0]==obj_y_locs[1] :
+        return 0
+    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,numPts=numPts,PLOT=PRINT)
+    polygon1 = zip(interpolated_obj_x_locs[0],interpolated_obj_y_locs[0])
+    polygon2 = zip(interpolated_obj_x_locs[1],interpolated_obj_y_locs[1])
+
+    matrix = spatial.distance.cdist(polygon1,polygon2,'euclidean')
     
     m = Munkres()
     try:
@@ -126,14 +132,13 @@ def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean,MAX_DIST=10000.
     Perform pairwise distance comparison with all other workers
     returns quality for each worker
     '''
-    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,numPts)
-
-    # Compare worker with ground truth worker
-    bb1 = zip(interpolated_obj_x_locs[i],interpolated_obj_y_locs[i])
-    bb2 = zip(interpolated_obj_x_locs[i+1],interpolated_obj_y_locs[i+1])
+    # interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,numPts)
+    # # Compare worker with ground truth worker
+    # bb1 = zip(interpolated_obj_x_locs[i],interpolated_obj_y_locs[i])
+    # bb2 = zip(interpolated_obj_x_locs[i+1],interpolated_obj_y_locs[i+1])
 
     #worker's scores
-    return 1.-dist(bb1,bb2)/MAX_DIST
+    return 1.-dist(obj_x_locs,obj_y_locs)/MAX_DIST
 
 
 ################################################
@@ -156,11 +161,7 @@ def real_BB_test():
     print "Check ``majority_vote``: ",np.isclose(majority_vote(obj_x_locs,obj_y_locs),0.621613376145)
     print "Check ``precision``: ",np.isclose(precision(obj_x_locs,obj_y_locs),0.954158717771)
     print "Check ``recall``: ",np.isclose(recall(obj_x_locs,obj_y_locs),0.640749081612)
-
-    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,PLOT=True)
-    polygon1 = zip(interpolated_obj_x_locs[0],interpolated_obj_y_locs[0])
-    polygon2 = zip(interpolated_obj_x_locs[1],interpolated_obj_y_locs[1])
-    print "Check ``MunkresEuclidean``:",np.isclose(MunkresEuclidean(polygon1,polygon2,True),946.390562322)
+    print "Check ``MunkresEuclidean``:",np.isclose(MunkresEuclidean(obj_x_locs,obj_y_locs,PRINT=True),946.390562322)
 
 def simple_rectangle_test():
     print "-----------------"
@@ -173,11 +174,8 @@ def simple_rectangle_test():
     print "Check ``majority_vote``: ", majority_vote(obj_x_locs,obj_y_locs) == 1./9
     print "Check ``precision``: ", precision(obj_x_locs,obj_y_locs) == 1./4
     print "Check ``recall``: ", recall(obj_x_locs,obj_y_locs) == 1./6
-
-    interpolated_obj_x_locs,interpolated_obj_y_locs = parametric_interpolate(obj_x_locs,obj_y_locs,True)
-    polygon1 = zip(interpolated_obj_x_locs[0],interpolated_obj_y_locs[0])
-    polygon2 = zip(interpolated_obj_x_locs[1],interpolated_obj_y_locs[1])
-    print "Check ``MunkresEuclidean``:",np.isclose(MunkresEuclidean(polygon1,polygon2),2*(np.sqrt(2)+np.sqrt(5)))
+    print "Check ``MunkresEuclidean [No Interpolation]``:",np.isclose(MunkresEuclidean(obj_x_locs,obj_y_locs,numPts=4,PRINT=True),2*(np.sqrt(2)+np.sqrt(5)))
+    print "Check ``MunkresEuclidean [N=50]``:",np.isclose(MunkresEuclidean(obj_x_locs,obj_y_locs,PRINT=True),87.9127740436)
 
 from pycocotools.coco import COCO
 from analysis_toolbox import *
@@ -208,6 +206,7 @@ def compute_my_COCO_BBvals():
                 bby_path= bb[1]["y_locs"]
                 if int(object_tbl[object_tbl.object_id==oid].image_id) ==i+1:
                     worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+                    worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
                     ground_truth_match = ground_truth[ground_truth.id==str(oid)]
                     COCO_id = int(ground_truth_match["COCO_annIds"])
 
@@ -220,19 +219,23 @@ def compute_my_COCO_BBvals():
     #                         print COCO_id
                             for annBB in ann["segmentation"]:
                                 coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
-                                obj_x_locs = [worker_x_locs,coco_x_locs]
-                                obj_y_locs = [worker_y_locs,coco_y_locs]
+                                #Remove duplicates
+                                coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
+                                obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
+                                obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
                                 bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
                                 bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
-                                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))                
-                                #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",DistAllWorkers(obj_x_locs,obj_y_locs))
+                                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
+                                bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
                     my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
                     my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
-                    obj_x_locs = [worker_x_locs,my_x_locs]
-                    obj_y_locs = [worker_y_locs,my_y_locs]
+                    my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
+                    obj_x_locs = [list(worker_x_locs),list(my_x_locs)]
+                    obj_y_locs = [list(worker_y_locs),list(my_y_locs)]
                     bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
                     bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
                     bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
+                    bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
                     #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",DistAllWorkers(obj_x_locs,obj_y_locs))
     # replace all NAN values with -1, these are entries for which we don't have COCO ground truth
     bb_info = bb_info.fillna(-1)

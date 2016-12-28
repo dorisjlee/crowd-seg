@@ -6,3 +6,9 @@ web-app/app/*.pyc
 */site-packages/*
 web-app/flask/lib/python2.7/site-packages/*
 *.pyc
+*.db
+*.csv
+*.log
+*.dump
+*.pdf
+*.sql

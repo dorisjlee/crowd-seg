@@ -19,7 +19,7 @@ To serve the webapp locally, turn on the local [Postgres server](https://www.pos
 
 The URL for the webapp is as follows: 
 
-​	https://<base-url>/<type>/<img-name>/<object-id>/
+​	``https://<base-url>/<type>/<img-name>/<object-id>/``
 
 - ``base-url`` : https://crowd-segment.herokuapp.com for production or http://localhost:5000/ for local testing
 - ``type``: ``identify``mode is a point-and-label interface that asks the user to label all objects in the image. ``segment``mode asks the user to draw a bounding box around a specified object in the image.
@@ -28,9 +28,9 @@ The URL for the webapp is as follows:
 
 For example, 
 
-​	https://localhost:5000/segment/COCO_train2014_000000000307/14/
+​	``https://localhost:5000/segment/COCO_train2014_000000000307/14/``
 
-​	https://crowd-segment.herokuapp.com/identify/COCO_train2014_000000000643
+​	``https://crowd-segment.herokuapp.com/identify/COCO_train2014_000000000643``
 
 ### Production
 

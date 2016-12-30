@@ -35,7 +35,7 @@ def COCO_convert_png_to_jpg():
 		os.system("convert {0} {1}".format(fname, fname.split(".")[0]+".png"))
 
 def load_info():
-	path = "/Users/dorislee/Desktop/Fall2016/Research/seg/data/"
+	path = "/Users/dorislee/Desktop/Research/seg/data/"
 	old_path = os.getcwd()
 	os.chdir(path)
 	img_info = pd.read_csv("image.csv",skipfooter=1)

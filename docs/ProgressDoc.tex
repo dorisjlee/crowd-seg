@@ -35,7 +35,7 @@ To compute the latent quantities $Q_w$,$D_t$, we propose an iterative EM-like al
 \section{Generative Process}
 \begin{figure}[ht]
 \centering
-\includegraphics[trim=1cm 5cm 1cm 5cm,width=0.8\linewidth]{generative_pgm.pdf}
+\includegraphics[trim=1cm 5cm 1cm 5cm,width=0.8\linewidth]{plots/generative_pgm.pdf}
 \caption{Proposed probabilistic graphical model for crowdsourcing image segmentation.}
 \end{figure}
 The generative model is inspired by \cite{Welinder2010}, the process is as follows:
@@ -70,7 +70,7 @@ We ran a preliminary experiment where each HIT consisted of one annotation task 
 
 \begin{figure}[ht]
 \centering
-\fbox{\includegraphics[width=0.9\linewidth]{interface.png}}
+\fbox{\includegraphics[width=0.9\linewidth]{plots/interface.png}}
 \caption{An example can be seen  \href{http://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/10/}{here}.}
 \label{interface}
 \end{figure}
@@ -119,8 +119,8 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 \subsection{Overall Distribution}
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.45\linewidth]{johnsonsu_fitted_metric_histogram.pdf}
-\includegraphics[width=0.45\linewidth]{powerlaw_fitted_metric_histogram.pdf}
+\includegraphics[width=0.45\linewidth]{plots/johnsonsu_fitted_metric_histogram.pdf}
+\includegraphics[width=0.45\linewidth]{plots/powerlaw_fitted_metric_histogram.pdf}
 \caption{Normalized histogram of metric values, fitted with a Johnson SU (Left) and Power law distribution(Right). }
 \label{metric_hist}
 \end{figure}
@@ -179,8 +179,15 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 %Since our metrics are all 
 %ground truth means that --- as 1. So effectively, we are measuring 1-f(x) 
 \subsection{Worker Distributions}
-\par Recall that $J_i$  is the set of all workers j that annotated the object-image, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
+\par Recall that $J_i$  is the set of all workers j that annotated the object-image i, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
 \par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. We pick a bin size of 20, that yields many functional fits. While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. Some of the non-Gaussianity may also be due to the small sample size in our prelimnary experiment (N=40 for each $J_i$ distribution).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.45\linewidth]{plots/J11Wide.png}
+\includegraphics[width=0.45\linewidth]{plots/J13Narrow.png}
+\caption{Proposed probabilistic graphical model for crowdsourcing image segmentation.}
+\end{figure}
 \subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
 \par From the Gaussian form of $\Phi$, we are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object(as a measure of boundary complexity) should depend on the standard deviation of the fitted Gaussian. While this assumption qualitatively holds true, the Pearson's correlation coefficient and linear fits shows that there is \textbf{no linear relationship between the number of points in an object and the standard deviation of the fitted Gaussian}.
 

@@ -1,6 +1,8 @@
 import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
+import time
+from tqdm import tqdm 
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]
@@ -124,8 +126,12 @@ def MunkresEuclidean(obj_x_locs,obj_y_locs,numPts=50,PRINT=False):
             if PRINT: print '(%d, %d) -> %.2f' % (row, column, value)
         return total         
     except(ValueError):
-        print "bad"
-        return 0
+        # When there are only two points
+        print "ValueError"
+        return -1
+    except(IndexError):
+        print "IndexError"
+        return -1
 def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean,MAX_DIST=10000.,numPts = 50):
     '''
     Given all worker's responses,
@@ -196,6 +202,7 @@ def simple_rectangle_test():
 
 from pycocotools.coco import COCO
 from analysis_toolbox import *
+from collections import OrderedDict
 def compute_my_COCO_BBvals():
     save_db_as_csv(connect=False)
     img_info,object_tbl,bb_info,hit_info = load_info()
@@ -209,54 +216,58 @@ def compute_my_COCO_BBvals():
     worker_info = pd.read_csv("../../data/worker.csv",skipfooter=1)
     my_BBG  = pd.read_csv("my_ground_truth.csv")
 
-    for i in np.arange(len(img_info)):
-        img_name = img_info["filename"][i]
-        if 'COCO' in img_name:
-            img_id = int(img_name.split('_')[-1])
-            filtered_object_tbl = object_tbl[object_tbl["image_id"]==i+1]
-            annIds = coco.getAnnIds(imgIds=img_id, iscrowd=None)
-            anns = coco.loadAnns(annIds)
-            #for oid,bbx_path,bby_path in zip(bb_info["object_id"],bb_info["x_locs"],bb_info["y_locs"]):
-            for bb in bb_info.iterrows():
-                oid = bb[1]["object_id"]
-                bbx_path= bb[1]["x_locs"]
-                bby_path= bb[1]["y_locs"]
-                if int(object_tbl[object_tbl.object_id==oid].image_id) ==i+1:
-                    worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
-                    worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
-                    ground_truth_match = ground_truth[ground_truth.id==str(oid)]
-                    COCO_id = int(ground_truth_match["COCO_annIds"])
+    for bb in tqdm(list(bb_info.iterrows())):
 
-                    #COCO-Annotations
-                    for ann in anns:
-                        if COCO_id==-1:
-                            #No BB for this object collected by MSCOCO
-                            pass
-                        elif ann['id'] == COCO_id: 
-    #                         print COCO_id
-                            for annBB in ann["segmentation"]:
-                                coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
-                                #Remove duplicates
-                                coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
-                                obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
-                                obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
-                                bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
-                                bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
-                                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
-                                bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-                    my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
-                    my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
-                    my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
-                    obj_x_locs = [list(worker_x_locs),list(my_x_locs)]
-                    obj_y_locs = [list(worker_y_locs),list(my_y_locs)]
-                    bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
-                    bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
-                    bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
-                    bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-                    #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",DistAllWorkers(obj_x_locs,obj_y_locs))
+        oid = bb[1]["object_id"]
+        #Image information 
+        image_id = int(object_tbl[object_tbl.object_id==oid].image_id)
+        img_name = img_info["filename"][image_id-1]
+        annIds = coco.getAnnIds(imgIds=image_id, iscrowd=None)
+        anns = coco.loadAnns(annIds)
+
+        bbx_path= bb[1]["x_locs"]
+        bby_path= bb[1]["y_locs"]
+        worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+        worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
+        ground_truth_match = ground_truth[ground_truth.id==str(oid)]
+        COCO_id = int(ground_truth_match["COCO_annIds"])
+
+        # Comparing with COCO-Annotations
+        for ann in anns:
+            if COCO_id==-1:
+                #No BB for this object collected by MSCOCO
+                pass
+            elif ann['id'] == COCO_id: 
+                for annBB in ann["segmentation"]:
+                    coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
+                    #Remove duplicates
+                    coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
+                    obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
+                    obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
+                    bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
+                    bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
+                    bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
+                    bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
+        # Comparing with Self ground truth
+        my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
+        my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
+        my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
+        obj_x_locs = [list(worker_x_locs),list(my_x_locs)]
+        obj_y_locs = [list(worker_y_locs),list(my_y_locs)]
+        bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
+        bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
+        bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
+        bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
+            #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",DistAllWorkers(obj_x_locs,obj_y_locs))
+    # except:
+    #     print "Something gone wrong here"
+    #     pass
     # replace all NAN values with -1, these are entries for which we don't have COCO ground truth
     bb_info = bb_info.fillna(-1)
     bb_info.to_csv("computed_my_COCO_BBvals.csv")
+    return bb_info
+
+
 def visualize_metric_histograms():
     bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
     metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',\
@@ -281,6 +292,7 @@ def visualize_metric_histograms():
     fig.savefig('metric_histogram.pdf')
 if __name__ =="__main__":
     import sys
+    start_time = time.time()
     if len(sys.argv)>1:
         if sys.argv[1]=='test':
             simple_rectangle_test()
@@ -290,3 +302,4 @@ if __name__ =="__main__":
     else:    
         print "Usage: python qualityBaseline.py test/compute"
         compute_my_COCO_BBvals()
+    print "---%f seconds---" % (time.time() - start_time)

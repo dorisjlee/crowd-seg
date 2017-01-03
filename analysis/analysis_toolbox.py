@@ -5,13 +5,14 @@ from glob import glob
 from os.path import expanduser
 import pandas as pd 
 from PIL import Image
+import matplotlib.pyplot as plt
 import numpy as np
 def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
 	'''
 	Create CSV file of each table from app.db
 	db = "segment" (local) ,"crowd-segment" (heroku remote)
 	'''
-	path = "/Users/dorislee/Desktop/Fall2016/Research/seg/data/"
+	path = "/Users/dorislee/Desktop/Research/seg/data/"
 	table_names = ["bounding_box","image","object","object_location","worker","hit"]
 	for table_name in table_names :
 		if postgres:
@@ -53,7 +54,36 @@ def get_size(fname):
 	width = im.size[0]
 	height = im.size[1]
 	return width, height
-def visualize_my_ground_truth_bb():
+import matplotlib.image as mpimg
+def visualize_ground_truth_bb(object_id,gtype='self'):
+    '''
+	Plot either the SELF ground truth BB for the object corresponding to the given object_id
+	#Still need to implement COCO later...
+	'''
+    img_info,object_tbl,bb_info,hit_info=load_info()
+    ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
+    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==object_id]["image_id"])]["filename"].iloc[0]
+    fname = "../web-app/app/static/"+img_name+".png"
+    img=mpimg.imread(fname)
+    width,height = get_size(fname)
+    img_id = int(img_name.split('_')[-1])
+    plt.figure(figsize =(10,10))
+    plt.imshow(img)
+    plt.axis("off")   
+
+    if gtype=='self':
+        ground_truth_match = my_BBG[my_BBG.object_id==object_id]
+    # elif gtype=='COCO':
+    #     ground_truth_match = my_BBG[my_BBG.object_id==object_id]
+    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    plt.plot(x_locs,y_locs,'-',color='#f442df',linewidth=2)
+    plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.5)
+    plt.savefig("bbg_object_{}.png".format(object_id))
+def visualize_all_ground_truth_bb():
+    '''
+	Plot all Ground truth bounding box drawn by me
+	'''
     ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
     worker_info = pd.read_csv("../../data/worker.csv",skipfooter=1)
     my_BBG  = pd.read_csv("my_ground_truth.csv")

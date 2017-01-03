@@ -16,14 +16,17 @@ connection = MTurkConnection(aws_access_key_id=AWS_ACCESS_KEY_ID,
                              host=AMAZON_HOST)
 print 'Connected to AMT'
 
-all_hits = [hit for hit in connection.get_all_hits()] #connection.get_reviewable_hits
+all_hits = [hit for hit in connection.get_reviewable_hits()]#connection.get_all_hits()] #connection.get_reviewable_hits
 for hit in all_hits:
     assignments = connection.get_assignments(hit.HITId)
+    print assignments
     for assignment in assignments:
+        print "Working on ", assignment
         try:
             connection.approve_assignment(assignment.AssignmentId)
             print 'approved ', assignment.AssignmentId
         except MTurkRequestError:
             #Problably already approved or rejected this assignment previously
+            print "already approved/rejected"
             pass
 

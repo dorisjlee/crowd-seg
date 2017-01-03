@@ -63,14 +63,14 @@ with open('ActiveHITs','a') as f:
 			# print numObj, "obj in image :",img_name
 			# print "max_assignments:", 30*numObj
 			# objId_lst = [10,12]
-            #objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
+			objId_lst = list(img_obj_tbl[img_obj_tbl.filename==img_name].object_id)
 			print os.getcwd()
 			BB_count_info = pd.read_csv("../../../data/BB_count_tbl.csv")
 			for objId in objId_lst:
 			# for _i in range(20*numObj):
 				print objId
 				url = "https://crowd-segment.herokuapp.com/segment/{0}/{1}/".format(img_name,objId)
-				maxAssignment = 40-int(BB_count_info[BB_count_info.id ==objId]["BB_count"])
+				maxAssignment = 41-int(BB_count_info[BB_count_info.id ==objId]["BB_count"])
 				print maxAssignment
 				if maxAssignment>0:
 					questionform = ExternalQuestion(url, frame_height)

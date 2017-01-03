@@ -140,7 +140,24 @@ def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean,MAX_DIST=10000.
     #worker's scores
     return 1.-dist(obj_x_locs,obj_y_locs)/MAX_DIST
 
-
+################################################
+##                                            ##
+##       CANNY-EDGE BASED METRIC              ##
+##                                            ##
+################################################
+from matplotlib import cm
+def plotContour(img_name,contour_lst,title=""):
+    plt.title(title)
+    img = plt.imread(img_name)
+    plt.gca().invert_yaxis()
+    plt.imshow(img,cmap= cm.Greys)
+    for c in contour_lst:
+        x,y = zip(*c[:,0])
+        plt.plot(x,y,color='cyan',linewidth=0.5)
+    dim = np.shape(img)
+    plt.xlim(0,dim[1])
+    plt.ylim(dim[0],0)
+    plt.savefig(title+".pdf")
 ################################################
 ##                                            ##
 ##                 TEST EXAMPLES              ##

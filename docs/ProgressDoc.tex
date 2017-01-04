@@ -184,9 +184,9 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.45\linewidth]{plots/J11Wide.png}
-\includegraphics[width=0.45\linewidth]{plots/J13Narrow.png}
-\caption{Proposed probabilistic graphical model for crowdsourcing image segmentation.}
+\includegraphics[width=0.47\linewidth]{plots/J11Wide.png}
+\includegraphics[width=0.47\linewidth]{plots/J13Narrow.png}
+\caption{Example $J_i$ distributions for a small, round-edged object (Right) and a medium-size, square-edged object (Left), qualitatively shows how task difficulty relates to width of Gaussians.}
 \end{figure}
 \subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
 \par From the Gaussian form of $\Phi$, we are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object(as a measure of boundary complexity) should depend on the standard deviation of the fitted Gaussian. While this assumption qualitatively holds true, the Pearson's correlation coefficient and linear fits shows that there is \textbf{no linear relationship between the number of points in an object and the standard deviation of the fitted Gaussian}.
@@ -209,7 +209,7 @@ Ground Truth &   0.03 &  -0.18 &  -0.03 &  -0.07 &   0.02 &  -0.07 \\
 \par \cite{Vittayakorn2011} proposes a bipartite-matching measure based on the Euclidean distance between two BBs. First, they randomly sample m=300 points along the annotation boundary, then compute all pairwise Euclidean distance. Then, the Kuhn-Munkres algorithm is used to match together the orientation of the two annotations, and returns the assignments that yields the minimum Euclidean. Finally, the score of an annotation i is computed as:
 \begin{equation}
 score = 1-\frac{dist_i}{max(dist)}
-\end{equation},where max(dist) is the maximum Euclidean distance of all the annotations computed in our dataset. Our implementation differs slightly in that we conduct a B-spline parametric interpolation of use m=50 points along the boundary rather than random sampling, in order to speed up the computation in the Munkres algorithm. These implementation details should have little effect on the Euclidean scores computed.
+\end{equation} where max(dist) is the maximum Euclidean distance of all the annotations computed in our dataset. Our implementation differs slightly in that we conduct a B-spline parametric interpolation of use m=50 points along the boundary rather than random sampling, in order to speed up the computation in the Munkres algorithm. These implementation details should have little effect on the Euclidean scores computed.
 
 \bibliographystyle{plain}
 \bibliography{reference}

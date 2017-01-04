@@ -204,6 +204,7 @@ from pycocotools.coco import COCO
 from analysis_toolbox import *
 from collections import OrderedDict
 def compute_my_COCO_BBvals():
+    print "Note: It will take about 2 hours to compute all metrics for all workers"
     save_db_as_csv(connect=False)
     img_info,object_tbl,bb_info,hit_info = load_info()
     #Load COCO annotations 
@@ -222,7 +223,8 @@ def compute_my_COCO_BBvals():
         #Image information 
         image_id = int(object_tbl[object_tbl.object_id==oid].image_id)
         img_name = img_info["filename"][image_id-1]
-        annIds = coco.getAnnIds(imgIds=image_id, iscrowd=None)
+        cocoimg_id = int(img_name.split('_')[-1])
+        annIds = coco.getAnnIds(imgIds=cocoimg_id, iscrowd=None)
         anns = coco.loadAnns(annIds)
 
         bbx_path= bb[1]["x_locs"]
@@ -238,17 +240,19 @@ def compute_my_COCO_BBvals():
                 #No BB for this object collected by MSCOCO
                 pass
             elif ann['id'] == COCO_id: 
-                for annBB in ann["segmentation"]:
-                    coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
-                    #Remove duplicates
-                    coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
-                    obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
-                    obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
-                    bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
-                    bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
-                    bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
-                    bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-        # Comparing with Self ground truth
+                print ann["segmentation"]
+                annBB =ann["segmentation"][0]
+                coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
+                #Remove duplicates
+                coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
+                obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
+                obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
+                bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
+                bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
+                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
+                bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
+                break
+        # Comparing with SELF ground truth
         my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
         my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
         my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
@@ -258,10 +262,7 @@ def compute_my_COCO_BBvals():
         bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
         bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
         bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-            #bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",DistAllWorkers(obj_x_locs,obj_y_locs))
-    # except:
-    #     print "Something gone wrong here"
-    #     pass
+            
     # replace all NAN values with -1, these are entries for which we don't have COCO ground truth
     bb_info = bb_info.fillna(-1)
     bb_info.to_csv("computed_my_COCO_BBvals.csv")

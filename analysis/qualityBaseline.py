@@ -36,6 +36,15 @@ def process_raw_locs(segmentation,COCO=False):
 ##       SIMPLE AREA-BASED MEASURES           ##
 ##                                            ##
 ################################################
+def compute_img_to_bb_area_ratio(img_name,worker_x_locs,worker_y_locs):
+    '''
+    Percentage of image area occupied by user's BB, proposed by Vittyakorn et al as a baseline
+    '''
+    fname = "../web-app/app/static/"+img_name+".png"
+    width,height = get_size(fname)
+    img_area = width*height
+    bb_poly = Polygon(zip(worker_x_locs,worker_y_locs))
+    return bb_poly.area/float(img_area)
 def majority_vote(obj_x_locs,obj_y_locs): 
     '''
     Jaccard Simmilarity or Overlap Method
@@ -152,13 +161,16 @@ def DistAllWorkers(obj_x_locs,obj_y_locs,dist = MunkresEuclidean,MAX_DIST=10000.
 ##                                            ##
 ################################################
 from matplotlib import cm
-def plotContour(img_name,contour_lst,title=""):
+def plotContour(img_name,contour_lst,title="",ctype='skimage'):
     plt.title(title)
     img = plt.imread(img_name)
     plt.gca().invert_yaxis()
     plt.imshow(img,cmap= cm.Greys)
     for c in contour_lst:
-        x,y = zip(*c[:,0])
+        if ctype=='skimage':
+            x,y = zip(*c)
+        elif ctype =='opencv' :
+            x,y = zip(*c[:,0])
         plt.plot(x,y,color='cyan',linewidth=0.5)
     dim = np.shape(img)
     plt.xlim(0,dim[1])
@@ -203,19 +215,29 @@ def simple_rectangle_test():
 from pycocotools.coco import COCO
 from analysis_toolbox import *
 from collections import OrderedDict
-def compute_my_COCO_BBvals():
-    print "Note: It will take about 2 hours to compute all metrics for all workers"
+def compute_my_COCO_BBvals(compute_metrics=['simple','area','dist']):
+    '''
+    Selectively compute metrics and store into computed_my_COCO_BBvals.csv
+    'simple': simple baselines [Point,Size]
+    'area': Area based metrics [Precision, Recall, Jaccard index]
+    'distance': Distance based metrics [MunkresEuclidean]
+    '''
+    if len(compute_metrics)==3: print "Note: It will take about 2 hours to compute all metrics for all workers"
     save_db_as_csv(connect=False)
+    #If we are recomputing everything, then load brand new bb_info table
     img_info,object_tbl,bb_info,hit_info = load_info()
-    #Load COCO annotations 
-    dataDir='../../coco/'
-    dataType='train2014'
-    annFile='%s/annotations/instances_%s.json'%(dataDir,dataType)
-    # initialize COCO api for instance annotations
-    coco=COCO(annFile)
-    ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
-    worker_info = pd.read_csv("../../data/worker.csv",skipfooter=1)
-    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    if len(compute_metrics)!=3:
+        #Reuse the table information already stored in computed_my_COCO_BBvals.csv
+        bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    else:
+        #Load COCO annotations 
+        dataDir='../../coco/'
+        dataType='train2014'
+        annFile='%s/annotations/instances_%s.json'%(dataDir,dataType)
+        # initialize COCO api for instance annotations
+        coco=COCO(annFile)
+        ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
+        my_BBG  = pd.read_csv("my_ground_truth.csv")
 
     for bb in tqdm(list(bb_info.iterrows())):
 
@@ -223,46 +245,60 @@ def compute_my_COCO_BBvals():
         #Image information 
         image_id = int(object_tbl[object_tbl.object_id==oid].image_id)
         img_name = img_info["filename"][image_id-1]
-        cocoimg_id = int(img_name.split('_')[-1])
-        annIds = coco.getAnnIds(imgIds=cocoimg_id, iscrowd=None)
-        anns = coco.loadAnns(annIds)
 
         bbx_path= bb[1]["x_locs"]
         bby_path= bb[1]["y_locs"]
         worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
         worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
-        ground_truth_match = ground_truth[ground_truth.id==str(oid)]
-        COCO_id = int(ground_truth_match["COCO_annIds"])
-
-        # Comparing with COCO-Annotations
-        for ann in anns:
-            if COCO_id==-1:
-                #No BB for this object collected by MSCOCO
-                pass
-            elif ann['id'] == COCO_id: 
-                print ann["segmentation"]
-                annBB =ann["segmentation"][0]
-                coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
-                #Remove duplicates
-                coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
-                obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
-                obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
-                bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
-                bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
-                bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
-                bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-                break
-        # Comparing with SELF ground truth
-        my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
-        my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
-        my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
-        obj_x_locs = [list(worker_x_locs),list(my_x_locs)]
-        obj_y_locs = [list(worker_y_locs),list(my_y_locs)]
-        bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
-        bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
-        bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
-        bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
-            
+        if ('area' in compute_metrics) or ('dist' in compute_metrics):
+            cocoimg_id = int(img_name.split('_')[-1])
+            annIds = coco.getAnnIds(imgIds=cocoimg_id, iscrowd=None)
+            anns = coco.loadAnns(annIds)
+            ground_truth_match = ground_truth[ground_truth.id==str(oid)]
+            COCO_id = int(ground_truth_match["COCO_annIds"])
+        #Simple Baseline Measures
+        if 'simple' in compute_metrics:
+            bb_info = bb_info.set_value(bb[0],"Num Points",len(worker_x_locs))
+            bb_info = bb_info.set_value(bb[0],"Area Ratio",compute_img_to_bb_area_ratio(img_name,worker_x_locs,worker_y_locs))
+        if ('area' in compute_metrics) or ('dist' in compute_metrics):
+            # Comparing with COCO-Annotations
+            for ann in anns:
+                if COCO_id==-1:
+                    #No BB for this object collected by MSCOCO
+                    pass
+                elif ann['id'] == COCO_id: 
+                    print ann["segmentation"]
+                    annBB =ann["segmentation"][0]
+                    coco_x_locs,coco_y_locs = process_raw_locs(annBB,COCO=True)
+                    #Remove duplicates
+                    coco_x_locs,coco_y_locs = zip(*list(OrderedDict.fromkeys(zip(coco_x_locs,coco_y_locs))))
+                    obj_x_locs = [list(worker_x_locs),list(coco_x_locs)]
+                    obj_y_locs = [list(worker_y_locs),list(coco_y_locs)]
+                    if ('area' in compute_metrics):
+                        bb_info = bb_info.set_value(bb[0],"Jaccard [COCO]",majority_vote(obj_x_locs,obj_y_locs))
+                        bb_info = bb_info.set_value(bb[0],"Precision [COCO]",precision(obj_x_locs,obj_y_locs))
+                        bb_info = bb_info.set_value(bb[0],"Recall [COCO]",recall(obj_x_locs,obj_y_locs))    
+                    if ('dist' in compute_metrics): bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [COCO]",MunkresEuclidean(obj_x_locs,obj_y_locs))
+                    break
+            # Comparing with SELF ground truth
+            my_ground_truth_match = my_BBG[my_BBG.object_id==oid]
+            my_x_locs,my_y_locs =  process_raw_locs([my_ground_truth_match["x_locs"].iloc[0],my_ground_truth_match["y_locs"].iloc[0]])
+            my_x_locs,my_y_locs = zip(*list(OrderedDict.fromkeys(zip(my_x_locs,my_y_locs))))
+            obj_x_locs = [list(worker_x_locs),list(my_x_locs)]
+            obj_y_locs = [list(worker_y_locs),list(my_y_locs)]
+            if ('area' in compute_metrics):
+                bb_info = bb_info.set_value(bb[0],"Jaccard [Self]",majority_vote(obj_x_locs,obj_y_locs))   
+                bb_info = bb_info.set_value(bb[0],"Precision [Self]",precision(obj_x_locs,obj_y_locs))
+                bb_info = bb_info.set_value(bb[0],"Recall [Self]",recall(obj_x_locs,obj_y_locs))
+            if ('dist' in compute_metrics): bb_info = bb_info.set_value(bb[0],"Munkres Euclidean [Self]",MunkresEuclidean(obj_x_locs,obj_y_locs))
+    if ('dist' in compute_metrics):
+        #Normalized Munkres Euclidean = NME
+        coco_dist = bb_info[bb_info['Munkres Euclidean [COCO]']!=-1]["Munkres Euclidean [COCO]"]
+        self_dist = bb_info[bb_info['Munkres Euclidean [Self]']!=-1]["Munkres Euclidean [Self]"]
+        bb_info["NME [COCO]"]= 1-coco_dist/coco_dist.max()
+        bb_info["NME [Self]"]= 1-self_dist/self_dist.max()
+    #Drop Unnamed columns (index from rewriting same file)
+    bb_info = bb_info[bb_info.columns[~bb_info.columns.str.contains('Unnamed:')]]
     # replace all NAN values with -1, these are entries for which we don't have COCO ground truth
     bb_info = bb_info.fillna(-1)
     bb_info.to_csv("computed_my_COCO_BBvals.csv")
@@ -299,7 +335,8 @@ if __name__ =="__main__":
             simple_rectangle_test()
             real_BB_test()
         elif sys.argv[1]=='compute':
-            compute_my_COCO_BBvals()
+            compute_metrics=sys.argv[2].split(',')
+            compute_my_COCO_BBvals(compute_metrics)
     else:    
         print "Usage: python qualityBaseline.py test/compute"
         compute_my_COCO_BBvals()

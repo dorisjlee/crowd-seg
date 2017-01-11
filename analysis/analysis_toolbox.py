@@ -7,6 +7,8 @@ import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
+from tabulate import tabulate
 def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
 	'''
 	Create CSV file of each table from app.db
@@ -132,29 +134,33 @@ def one_way_kolmogorov_smirnov(data,name,distr_name):
 	result = stats.kstest(data,distr_name)
 	print "{0} : D = {1} ; p ={2} ---> {3}".format(name,np.around(result[0],2),np.around(result[1],2),pcheck(result[1],"from {} distribution".format(distr_name)))
 
-def basic_stat(data1,name):
-	print "{0}: mu = {1}; std = {2}".format(name,np.around(mean(data1),3),np.around(std(data1),3))
+def basic_stat(data1,name,PRINT=False):
+	if PRINT: print "{0}: mu = {1}; std = {2}".format(name,np.around(mean(data1),3),np.around(std(data1),3))
 	return [name,np.around(mean(data1),3),np.around(std(data1),3)]
 
 def basic_stats(data1,data2,mode="double"):
 	print "Precision: mu = {0}; std = {1}".format(np.around(mean(data1),3),np.around(std(data1),3))
 	if mode=="double": print "Recall: mu = {0}; std = {1}".format(np.around(mean(data2),3),np.around(std(data2),3))
 
-def kolmogorov_smirnov(data1,data2,name):
+def kolmogorov_smirnov(data1,data2,name,PRINT=False):
 	'''
 	Two-way KS test . See if data come from the same distribution
 	'''
 	result = stats.ks_2samp(data1,data2)
-	if result[1]>0.05: print "{0} : D = {1} ; p ={2} ---> {3}".format(name,np.around(result[0],2),np.around(result[1],2),pcheck(result[1],"from same distribution"))
+	if result[1]>0.05 and PRINT: print "{0} : D = {1} ; p ={2} ---> {3}".format(name,np.around(result[0],2),np.around(result[1],2),pcheck(result[1],"from same distribution"))
 	return result
-def plot_fitted_worker_histo(fcn):
-    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',\
-                   'Precision [Self]','Recall [Self]','Jaccard [Self]']
-    NUM_COL = 3
-    NUM_ROW = 2
-    NUM_PLOTS = NUM_COL*NUM_ROW
+############################################################
+############   OVERALL DISTRIBUTION ANALYSIS        ########
+############################################################
 
-    fig, axs = plt.subplots(NUM_ROW,NUM_COL, figsize=(NUM_ROW*3,NUM_COL*1.5), sharex='col')
+def plot_fitted_worker_histo(fcn):
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
+               'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
+    NUM_PLOTS = len(metrics_lst)
+    NUM_ROW = 2
+    NUM_COL = NUM_PLOTS/NUM_ROW
+
+    fig, axs = plt.subplots(NUM_ROW,NUM_COL, figsize=(NUM_COL*2.5,NUM_ROW*3))#, sharex='col')
     stitle = fig.suptitle("Worker Metric Distribution [{}] ".format(fcn.name),fontsize=16,y=1.05)
 
     axs = axs.ravel()
@@ -164,15 +170,170 @@ def plot_fitted_worker_histo(fcn):
         ax = axs[i]
         ax.set_title(metric)
         #ax.hist(metric_value,bins=30)
-        ax.set_xlim(FILTER_CRITERION,1.03)
-
-
-        metric_value = np.array(bb_info[metric][bb_info[metric]>0][bb_info[metric]<=1]) 
+        if metric in ["Num Points"]:
+            metric_value = np.array(bb_info[metric])
+            ax.set_xlim(0,metric_value.max())
+        else:
+            #restrict range [0,1] for normalized measures
+            ax.set_xlim(0,1.03)
+            metric_value = np.array(bb_info[metric][bb_info[metric]>0][bb_info[metric]<=1]) 
         params = fcn.fit(metric_value)
-    #     histo,bin_edges = np.histogram(metric_value, 50, normed=1)
-    #     bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
-        n, bins, patches = ax.hist(metric_value, 40, normed=1, facecolor='blue', alpha=0.75)
+        n, bins, patches = ax.hist(metric_value, 50, normed=1, facecolor='blue', alpha=0.75)
         y = fcn.pdf(bins, *params)
         l = ax.plot(bins, y, 'r--', linewidth=2) 
     fig.tight_layout()
     fig.savefig('{}_fitted_metric_histogram.pdf'.format(fcn.name), bbox_inches='tight',bbox_extra_artists=[stitle])
+def compute_all_stats(FILTER_CRITERION=0.):
+    '''
+    Compute the basic stats of all metrics and store it in a table format (table_data)
+    '''    
+    table_data = []
+    for i,metric in zip(range(len(metrics_lst)),metrics_lst):
+        if metric in ["Num Points","Area Ratio"]:
+            metric_value = np.array(bb_info[metric])
+        else:
+            #restrict range [0,1] for normalized measures
+            metric_value = np.array(bb_info[metric][bb_info[metric]>FILTER_CRITERION][bb_info[metric]<=1]) 
+        table_data.append(basic_stat(metric_value,metric,PRINT=False))
+    if FILTER_CRITERION==0:
+        print tabulate(table_data,headers=["All","Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2f')
+    else:
+        print tabulate(table_data,headers=["Filter>{}".format(FILTER_CRITERION),"Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2f')
+############################################################
+############       J_I DISTRIBUTION ANALYSIS        ########
+############################################################
+
+def plot_all_Ji_hist(fcn,SHOW_PLOT=10):
+    '''
+    Plot all worker distributions for each object 
+    compute fitting coefficients for each Ji distribution
+    show SHOW_PLOT number of sample plots
+    '''
+    bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
+    object_id_lst  = list(set(obj_sorted_tbl.object_id))
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
+               'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
+    NUM_PLOTS = len(metrics_lst)
+    NUM_ROW = 2
+    NUM_COL = NUM_PLOTS/NUM_ROW
+    data_fit_stats=[]
+    for objid in object_id_lst:
+        if SHOW_PLOT>0:
+            fig, axs = plt.subplots(NUM_ROW,NUM_COL, figsize=(NUM_COL*2.5,NUM_ROW*3))
+            stitle = fig.suptitle("J{} Distribution ".format(objid),fontsize=16,y=1.05)
+            axs = axs.ravel()
+        # Ji_tbl (bb_info) is the set of all workers that annotated object i 
+        bb  = obj_sorted_tbl[obj_sorted_tbl["object_id"]==objid]
+        for i,metric in zip(range(len(metrics_lst)),metrics_lst):
+            if metric in ["Num Points"]:
+                metric_value = np.array(bb[metric])
+                pltmax=metric_value.max()
+            else:
+                #restrict range [0,1] for normalized measures
+                metric_value = np.array(bb[metric][bb[metric]>0][bb[metric]<=1]) 
+                pltmax=1
+                
+            params = fcn.fit(metric_value)
+            histo,bin_edges = np.histogram(metric_value, 40, normed=1)
+            bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
+            y = fcn.pdf(bins, *params)
+            RSS =sum((histo-y)**2)
+            ks_result = kolmogorov_smirnov(bins,y,fcn.name) #D-value and p-value
+            # object_id, Metric, mu, sd,RSS,D-value,p-value
+            data_stats  = [objid,metric,params[0],params[1],RSS,ks_result[0],ks_result[1]] 
+            #same as what you would get if you did basic_stats because in the MLE estimate for Gaussians, mu and sigma is equal to sample mean and sample sd
+            data_fit_stats.append(data_stats)
+            
+            if SHOW_PLOT>0:
+                ax = axs[i]
+                ax.set_title(metric)
+                if metric in ["Num Points"]:
+                    ax.set_xlim(0,metric_value.max())
+                else: 
+                    ax.set_xlim(0,1.03)
+                n, bins, patches = ax.hist(metric_value, 40, normed=1, range=(0,pltmax) ,facecolor='blue', alpha=0.75)
+                y = fcn.pdf(bins, *params)
+                l = ax.plot(bins, y, 'r--', linewidth=2) 
+
+        if SHOW_PLOT>0: fig.tight_layout()
+        SHOW_PLOT-=1
+    fit_results =pd.DataFrame(data_fit_stats,columns=["object_id", "Metric", "Mean", "SD","RSS","D-value","p-value"])
+    return fit_results
+def compute_all_fittings():
+    '''
+    Compute all fitting coefficients 
+    '''
+    bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
+               'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
+    exclude= ['division', 'skellam', 'nbinom', 'logser', 'erlang','dlaplace', 'hypergeom', 'bernoulli', 'levy_stable', 'zipf', 'rv_discrete', 'rv_frozen', 'boltzmann', 'rv_continuous', 'entropy', 'randint', 'poisson', 'geom', 'binom', 'planck', 'print_function']
+    data_fit_stats=[]
+    for i,metric in tqdm(zip(range(len(metrics_lst)),metrics_lst)):
+        if metric in ["Num Points"]:
+            metric_value = np.array(bb_info[metric])
+        else:
+            #restrict range [0,1] for normalized measures
+            metric_value = np.array(bb_info[metric][bb_info[metric]>0][bb_info[metric]<=1]) 
+        #Testing against various distributions 
+        for fcn_name in filter(lambda x: x not in exclude,dir(stats.distributions)[9:]):
+            # Based on MLE estimate for fitting
+            try:
+                fcn = getattr(scipy.stats,fcn_name)
+                params = fcn.fit(metric_value)
+                histo,bin_edges = np.histogram(metric_value, 50, normed=1)
+                bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
+                y = fcn.pdf(bins, *params)
+                RSS =sum((histo-y)**2)
+                ks_result = kolmogorov_smirnov(bins,y,fcn_name) #D-value and p-value
+                data_stats  = [metric,fcn_name,params,RSS]
+                data_stats.extend(ks_result)
+                data_fit_stats.append(data_stats)
+            except(AttributeError,NotImplementedError,TypeError):
+                #function has no fitting
+                print "Skipped", fcn_name
+    df_stats_tbl = pd.DataFrame(data_fit_stats,columns=["metric","Function Name", "Parameters","RSS","D-value","p-value"])
+    return df_stats_tbl
+
+def test_all_Ji_fit_fcn():
+    '''
+    Test all function form against all Ji distributions, then return the fitting coefficients table
+    '''
+    bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
+    obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
+    object_id_lst  = list(set(obj_sorted_tbl.object_id))
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
+               'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
+    exclude= ['division', 'skellam', 'nbinom', 'logser', 'erlang','dlaplace', 'hypergeom', 'bernoulli', 'levy_stable', 'zipf', 'rv_discrete', 'rv_frozen', 'boltzmann', 'rv_continuous', 'entropy', 'randint', 'poisson', 'geom', 'binom', 'planck', 'print_function']
+    NUM_PLOTS = len(metrics_lst)
+    NUM_ROW = 2
+    NUM_COL = NUM_PLOTS/NUM_ROW
+    data_fit_stats=[]
+    for objid in tqdm(object_id_lst):
+        # Ji_tbl (bb_info) is the set of all workers that annotated object i 
+        bb  = obj_sorted_tbl[obj_sorted_tbl["object_id"]==objid]
+        for i,metric in zip(range(len(metrics_lst)),metrics_lst):
+            if metric in ["Num Points"]:
+                metric_value = np.array(bb[metric])
+                pltmax=metric_value.max()
+            else:
+                #restrict range [0,1] for normalized measures
+                metric_value = np.array(bb[metric][bb[metric]>0][bb[metric]<=1]) 
+                pltmax=1
+
+            #Testing against various distributions 
+            for fcn_name in filter(lambda x: x not in exclude,dir(stats.distributions)[9:]):
+                fcn = getattr(stats,fcn_name)
+                params = fcn.fit(metric_value)
+                histo,bin_edges = np.histogram(metric_value, 40, normed=1)
+                bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
+                y = fcn.pdf(bins, *params)
+                RSS =sum((histo-y)**2)
+                ks_result = kolmogorov_smirnov(bins,y,fcn.name) #D-value and p-value
+                # object_id, Metric, mu, sd,RSS,D-value,p-value
+                data_stats  = [objid,fcn_name,metric,params[0],params[1],RSS,ks_result[0],ks_result[1]] 
+                #same as what you would get if you did basic_stats because in the MLE estimate for Gaussians, mu and sigma is equal to sample mean and sample sd
+                data_fit_stats.append(data_stats)
+    fit_results =pd.DataFrame(data_fit_stats,columns=["object_id","Function", "metric", "Mean", "SD","RSS","D-value","p-value"])
+    fit_results.to_csv("Ji_fit_results.csv")
+    return fit_results

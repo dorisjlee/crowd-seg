@@ -86,93 +86,94 @@ We ran a preliminary experiment where each HIT consisted of one annotation task 
 
 \begin{table}[h]
 \centering
+
 \begin{tabular}{lrr}
 \hline
- All              &   Mean &    SD \\
+ All              &   Mean &     SD \\
 \hline
- Precision [COCO] &  0.869 & 0.227 \\
- Recall [COCO]    &  0.897 & 0.132 \\
- Jaccard [COCO]   &  0.789 & 0.227 \\
- Precision [Self] &  0.864 & 0.206 \\
- Recall [Self]    &  0.901 & 0.145 \\
- Jaccard [Self]   &  0.785 & 0.219 \\
+ Precision [COCO] &  0.87  &  0.22  \\
+ Recall [COCO]    &  0.9   &  0.12  \\
+ Jaccard [COCO]   &  0.79  &  0.22  \\
+ NME [COCO]       &  0.94  &  0.12  \\
+ Num Points       & 26     & 19     \\
+ Precision [Self] &  0.86  &  0.21  \\
+ Recall [Self]    &  0.9   &  0.14  \\
+ Jaccard [Self]   &  0.78  &  0.22  \\
+ NME [Self]       &  0.94  &  0.13  \\
+ Area Ratio       &  0.063 &  0.089 \\
 \hline
 \end{tabular}
 \begin{tabular}{lrr}
 \hline
-Filtered                &   Mean &    SD \\
+ Filter\ensuremath{>}0.6       &   Mean &     SD \\
 \hline
- Precision [COCO] &  0.931 & 0.068 \\
- Recall [COCO]    &  0.917 & 0.07  \\
- Jaccard [COCO]   &  0.858 & 0.082 \\
- Precision [Self] &  0.918 & 0.076 \\
- Recall [Self]    &  0.925 & 0.073 \\
- Jaccard [Self]   &  0.858 & 0.086 \\
+ Precision [COCO] &  0.93  &  0.069 \\
+ Recall [COCO]    &  0.92  &  0.072 \\
+ Jaccard [COCO]   &  0.86  &  0.084 \\
+ NME [COCO]       &  0.96  &  0.055 \\
+ Num Points       & 26     & 19     \\
+ Precision [Self] &  0.92  &  0.076 \\
+ Recall [Self]    &  0.93  &  0.074 \\
+ Jaccard [Self]   &  0.86  &  0.086 \\
+ NME [Self]       &  0.96  &  0.053 \\
+ Area Ratio       &  0.063 &  0.089 \\
 \hline
 \end{tabular}
 \caption{Left: Statistics for all workers; Right: for good workers only [metric$\geq$0.6]}
 \label{basic_stat}
 \end{table}
 \subsection{Fitting Procedure}
-We are interested in figuring out what functional form these $\Phi$ functions are distributed as. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. We also explicitly enforce a fixed range so that each $\Delta x$  is the same. 
+We are interested in figuring out what functional form these $\Phi$ functions are distributed as. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. We also explicitly enforce a fixed range so that each $\Delta x$ bin in the histogram  is the same. 
 
 \subsection{Overall Distribution}
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.45\linewidth]{plots/johnsonsu_fitted_metric_histogram.pdf}
-\includegraphics[width=0.45\linewidth]{plots/powerlaw_fitted_metric_histogram.pdf}
-\caption{Normalized histogram of metric values, fitted with a Johnson SU (Left) and Power law distribution(Right). }
+\includegraphics[width=\linewidth]{plots/johnsonsu_fitted_metric_histogram.pdf}
+\caption{Normalized histogram of metric values, fitted with a Johnson SU distribution. }
 \label{metric_hist}
 \end{figure}
 
 
-\par For the overall distribution, we plot the metrics computed from all tasks submitted by all workers. The histogram distribution (fixed bin size =30) of these metrics resembles a long-tail, exponential-decaying distribution. There are many pdfs that fits one metric but not another. The distribution that yields the best fits for all metrics is the Johnson SU distribution, as summarized in Table \ref{jsu_tbl}. The Johnson SU distribution is a transformed Gaussian where the data $x\mapsto\gamma+\sigma \sinh^{-1}(\frac{x-\xi}{\lambda})$. This functional form of the $\Phi$ function may make the inference problem challenging.
-\par Another possible distribution for parametrizing $\Phi$ is a power law. The fitted parameters in Table \ref{jsu_tbl} shows that the power law distribution is highly skewed with high exponential powers. However, because the power law is monotonically increasing, it does not account for the downward drop for values close to one beyond the mode.
-\begin{table}[h]
+\par For the overall distribution, we plot the metrics computed from all tasks submitted by all workers. The histogram distribution (fixed bin size =50) of these metrics resembles a long-tail, exponential-decaying distribution. There are many pdfs that fits one metric but not another. The distribution that yields the best fits for all metrics is the Johnson SU distribution, as summarized in Table \ref{jsu_tbl}. The Johnson SU distribution is a transformed Gaussian where the data $x\mapsto\gamma+\sigma \sinh^{-1}(\frac{x-\xi}{\lambda})$. This functional form of the $\Phi$ function may make the inference problem challenging.
+\begin{table}[ht]
 \centering
 \begin{tabular}{llrrr}
 \hline
- Metric           & Function Name   &       RSS &   D-value &   p-value \\
+ metric           & Function Name   &       RSS &   D-value &   p-value \\
 \hline
- Jaccard [Self]   & johnsonsu       &   2.38743 &  0.3      &  0.108838 \\
- Jaccard [COCO]   & johnsonsu       &   5.74496 &  0.3      &  0.108838 \\
- Precision [COCO] & johnsonsb       &   6.3263  &  0.3      &  0.108838 \\
- Precision [Self] & gausshyper      &  10.6753  &  0.333333 &  0.054993 \\
- Recall [Self]    & frechet\_l       &  19.1872  &  0.266667 &  0.200325 \\
- Recall [Self]    & weibull\_max     &  19.1872  &  0.266667 &  0.200325 \\
- Recall [COCO]    & wald            & 140.256   &  0.266667 &  0.200325 \\
+ Precision [COCO] & beta            &  9.11     &      0.48 &  1.02e-05 \\
+ Recall [COCO]    & loggamma        &  4.56     &      0.46 &  2.76e-05 \\
+ Jaccard [COCO]   & gompertz        & 13.3      &      0.46 &  2.76e-05 \\
+ NME [COCO]       & cauchy          & 51.7      &      0.84 &  1.25e-16 \\
+ Num Points       & johnsonsb       &  0.000239 &      1    &  2.16e-23 \\
+ Precision [Self] & johnsonsu       &  6.83     &      0.34 &  0.00443  \\
+ Recall [Self]    & johnsonsu       &  5.49     &      0.42 &  0.000178 \\
+ Jaccard [Self]   & johnsonsu       &  4.57     &      0.28 &  0.0317   \\
+ NME [Self]       & cauchy          & 35.6      &      0.8  &  4.01e-15 \\
+ Area Ratio       & gengamma        & 27.1      &      0.34 &  0.00443  \\
 \hline
 \end{tabular}
-\caption{The RSS is a better measure of functional fit than p-value, so we use this for evaluating the best-fitting pdf for each measure This table summarizes the best-fitting function for each metric value.}
+\caption{Shapewise, the RSS is a better measure of functional fit than p-value, so we use this for evaluating the best-fitting pdf for each measure. This table summarizes the best-fitting function for each metric.}
 \end{table}
-\begin{table}[h]
+\begin{table}[ht]
 \centering
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrrrrr}
 \hline
- metric           &     RSS &   D-value &    p-value \\
+ metric           &      RSS &   D-value &   p-value &   $\xi$ &   $\lambda$ &   Shift &   Scale \\
 \hline
- Precision [COCO] & 5.32172 &  0.366667 & 0.0258563  \\
- Recall [COCO]    & 6.3324  &  0.433333 & 0.00460707 \\
- Jaccard [COCO]   & 5.74496 &  0.3      & 0.108838   \\
- Precision [Self] & 5.63803 &  0.366667 & 0.0258563  \\
- Recall [Self]    & 3.61587 &  0.433333 & 0.00460707 \\
- Jaccard [Self]   & 2.38743 &  0.3      & 0.108838   \\
-\hline
-\end{tabular}
-
-\begin{tabular}{lrrrrrr}
-\hline
- metric           &      RSS &   D-value &    p-value &            Power &            Shift &           Scale \\
-\hline
- Precision [COCO] & 73.7617  &  0.366667 & 0.0258563  &      1.59361e+07 &     -4.15389e+06 &     4.15389e+06 \\
- Recall [COCO]    &  4.9709  &  0.433333 & 0.00460707 &      1.82255e+07 &     -1.88288e+06 &     1.88289e+06 \\
- Jaccard [COCO]   & 12.677   &  0.466667 & 0.00174595 &      3.28257     &      0.420069    &     0.562608    \\
- Precision [Self] & 12.155   &  0.366667 & 0.0258563  &      7.71049e+06 &     -1.01398e+06 &     1.01399e+06 \\
- Recall [Self]    &  5.20468 &  0.466667 & 0.00174595 &   4050.15        &   -402.114       &   403.114       \\
- Jaccard [Self]   & 18.1984  &  0.333333 & 0.054993   & 185958           & -39975.9         & 39976.9         \\
+ Precision [COCO] & 10       &      0.36 &   0.0021  &  5.2 &     0.75 &  1      & 0.00011 \\
+ Recall [COCO]    &  7       &      0.44 &   7.2e-05 &  5.9 &     1.1  &  1      & 0.00062 \\
+ Jaccard [COCO]   & 14       &      0.3  &   0.017   &  5.6 &     1.1  &  0.99   & 0.0017  \\
+ NME [COCO]       &  2.2e+02 &      0.7  &   1.1e-11 &  1.3 &     0.61 &  0.99   & 0.0032  \\
+ Num Points       &  0.00044 &      1    &   2.2e-23 & -6.2 &     1.2  &  0.8    & 0.21    \\
+ Precision [Self] &  6.8     &      0.34 &   0.0044  &  5.6 &     0.84 &  1      & 0.00018 \\
+ Recall [Self]    &  5.5     &      0.42 &   0.00018 &  5.5 &     0.91 &  1      & 0.00029 \\
+ Jaccard [Self]   &  4.6     &      0.28 &   0.032   &  1.6 &     0.95 &  0.96   & 0.039   \\
+ NME [Self]       &  1.1e+02 &      0.64 &   7.8e-10 &  1.2 &     0.61 &  0.99   & 0.0037  \\
+ Area Ratio       & 30       &      0.32 &   0.0089  & -4.9 &     0.78 & -0.0002 & 0.00012 \\
 \hline
 \end{tabular}
-\caption{Johnson SU, power law fitting results}
+\caption{Johnson SU fitting coefficients.}
 \label{jsu_tbl}
 \end{table}
 %\subsubsection{Testing Assumption 2: }
@@ -180,7 +181,7 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 %ground truth means that --- as 1. So effectively, we are measuring 1-f(x) 
 \subsection{Worker Distributions}
 \par Recall that $J_i$  is the set of all workers j that annotated the object-image i, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
-\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. We pick a bin size of 20, that yields many functional fits. While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. Some of the non-Gaussianity may also be due to the small sample size in our prelimnary experiment (N=40 for each $J_i$ distribution).
+\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. We pick a bin size of 20, that yields many functional fits. While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution).
 
 \begin{figure}[ht]
 \centering
@@ -213,4 +214,5 @@ score = 1-\frac{dist_i}{max(dist)}
 
 \bibliographystyle{plain}
 \bibliography{reference}
+Code is available on \href{https://github.com/dorisjlee/crowd-seg}{Github}
 \end{document}

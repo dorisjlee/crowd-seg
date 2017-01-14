@@ -123,8 +123,7 @@ We ran a preliminary experiment where each HIT consisted of one annotation task 
 \label{basic_stat}
 \end{table}
 \subsection{Fitting Procedure}
-We are interested in figuring out what functional form these $\Phi$ functions are distributed as. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. We also explicitly enforce a fixed range so that each $\Delta x$ bin in the histogram  is the same. 
-
+We are interested in figuring out what functional form these $\Phi$ functions are distributed as. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. 
 \subsection{Overall Distribution}
 \begin{figure}[ht]
 \centering
@@ -132,9 +131,7 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 \caption{Normalized histogram of metric values, fitted with a Johnson SU distribution. }
 \label{metric_hist}
 \end{figure}
-
-
-\par For the overall distribution, we plot the metrics computed from all tasks submitted by all workers. The histogram distribution (fixed bin size =50) of these metrics resembles a long-tail, exponential-decaying distribution. There are many pdfs that fits one metric but not another. The distribution that yields the best fits for all metrics is the Johnson SU distribution, as summarized in Table \ref{jsu_tbl}. The Johnson SU distribution is a transformed Gaussian where the data $x\mapsto\gamma+\sigma \sinh^{-1}(\frac{x-\xi}{\lambda})$. This functional form of the $\Phi$ function may make the inference problem challenging.
+\par For the overall distribution, we plot the metrics computed from all tasks submitted by all workers. The histogram distribution (fixed bin size =50) of these metrics resembles a long-tail, exponential-decaying distribution. There are many pdfs that fits one metric but not another. The distribution that yields the best fits for many metrics is the Johnson SU distribution, as summarized in Table \ref{jsu_tbl}. The Johnson SU distribution is a transformed Gaussian where the data $x\mapsto\gamma+\sigma \sinh^{-1}(\frac{x-\xi}{\lambda})$. 
 \begin{table}[ht]
 \centering
 \begin{tabular}{llrrr}
@@ -181,7 +178,34 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 %ground truth means that --- as 1. So effectively, we are measuring 1-f(x) 
 \subsection{Worker Distributions}
 \par Recall that $J_i$  is the set of all workers j that annotated the object-image i, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
-\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. We pick a bin size of 20, that yields many functional fits. While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution).
+\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. Since our data is N=40, we pick a bin size of 30. Due to the large number of $J_i$ distributions, we conducted the fitting procedure on a smaller candidate set of more interpretable functional forms.
+\footnote{Gaussian, Johnson SU, Power law, Pareto, and t-distributions} Table \ref{all_Ji_fit} summarizes the best functional fit for each metric. 
+\begin{table}[ht]
+\centering
+\begin{tabular}{llrrrrr}
+\hline
+ Function   & metric           &   Mean &     SD &       RSS &   D-value &   p-value \\
+\hline
+ t          & Precision [COCO] &  1.52  &  0.962 &  14.9     &     0.7   &  2.62e-07 \\
+ exponpow   & Jaccard [COCO]   &  8.24  &  0.397 &  10.2     &     0.633 &  4.64e-06 \\
+ exponpow   & Precision [Self] &  2.7   &  0.715 &   9.12    &     0.733 &  5.59e-08 \\
+ johnsonsu  & Recall [Self]    &  0.951 &  0.601 &  11.9     &     0.5   &  0.000616 \\
+ johnsonsu  & NME [Self]       &  0.637 &  0.946 & 142       &     0.5   &  0.000616 \\
+ t          & Num Points       & 41.3   & 56.9   &   0.00092 &     1     &  1.8e-14  \\
+ johnsonsu  & Area Ratio       &  0.888 &  0.459 & 111       &     0.433 &  0.00461  \\
+ t          & Recall [COCO]    &  1.01  &  0.986 &   6.21    &     0.8   &  2.05e-09 \\
+ exponpow   & Jaccard [Self]   &  3.85  &  0.886 &  10.3     &     0.9   &  8.38e-12 \\
+ johnsonsu  & NME [COCO]       &  0.775 &  0.369 & 117       &     0.733 &  5.59e-08 \\
+\hline
+\end{tabular}
+\caption{Best functional fit (as determined by RSS) for all objects $J_i$ distribution.}
+\label{all_Ji_fit}
+\end{table}
+While the Gaussian does not yield the best fit, it yields a more interpretable and may be easier for inference. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution). We are interested in  assessing whether it can be a ``good-enough'' fit based on RSS. When looking at the 
+
+%While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. 
+
+This functional form of the $\Phi$ function may make the inference problem challenging.
 
 \begin{figure}[ht]
 \centering
@@ -190,9 +214,7 @@ We are interested in figuring out what functional form these $\Phi$ functions ar
 \caption{Example $J_i$ distributions for a small, round-edged object (Right) and a medium-size, square-edged object (Left), qualitatively shows how task difficulty relates to width of Gaussians.}
 \end{figure}
 \subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
-\par From the Gaussian form of $\Phi$, we are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object(as a measure of boundary complexity) should depend on the standard deviation of the fitted Gaussian. While this assumption qualitatively holds true, the Pearson's correlation coefficient and linear fits shows that there is \textbf{no linear relationship between the number of points in an object and the standard deviation of the fitted Gaussian}.
-
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \begin{tabular}{lrrrrrr}
 \hline
@@ -204,6 +226,9 @@ Ground Truth &   0.03 &  -0.18 &  -0.03 &  -0.07 &   0.02 &  -0.07 \\
 \end{tabular}
 \caption{Pearson's linear correlation coefficient when compared to $\texttt{Average}$ (average number of points in BB drawn by all worker) and  $\texttt{Ground Truth}$ (number of points in BB drawn by me). [C],[S] short for [COCO] and [Self].}
 \end{table}
+\par From ----, we see that the number points  measure ---, follows a Gaussian, since this is a measure ---- based only 
+\par From the Gaussian form of $\Phi$, we are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object(as a measure of boundary complexity) should depend on the standard deviation of the fitted Gaussian. While this assumption qualitatively holds true, the Pearson's correlation coefficient and linear fits shows that there is \textbf{no linear relationship between the number of points in an object and the standard deviation of the fitted Gaussian}.
+
 \subsection{Beyond Area-based $\Phi$ functions}
 \par While precision, recall, and majority-vote are simple metrics, since they are bounded by [0,1], metrics computed against BBG should always be 1. In addition these projection functions do not capture the full resolution of the bounding box.  
 \subsubsection{Euclidean Distance Score}

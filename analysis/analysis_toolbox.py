@@ -135,12 +135,12 @@ def one_way_kolmogorov_smirnov(data,name,distr_name):
 	print "{0} : D = {1} ; p ={2} ---> {3}".format(name,np.around(result[0],2),np.around(result[1],2),pcheck(result[1],"from {} distribution".format(distr_name)))
 
 def basic_stat(data1,name,PRINT=False):
-	if PRINT: print "{0}: mu = {1}; std = {2}".format(name,np.around(mean(data1),3),np.around(std(data1),3))
-	return [name,np.around(mean(data1),3),np.around(std(data1),3)]
+	if PRINT: print "{0}: mu = {1}; std = {2}".format(name,np.around(np.mean(data1),3),np.around(np.std(data1),3))
+	return [name,np.around(np.mean(data1),3),np.around(np.std(data1),3)]
 
 def basic_stats(data1,data2,mode="double"):
-	print "Precision: mu = {0}; std = {1}".format(np.around(mean(data1),3),np.around(std(data1),3))
-	if mode=="double": print "Recall: mu = {0}; std = {1}".format(np.around(mean(data2),3),np.around(std(data2),3))
+	print "Precision: mu = {0}; std = {1}".format(np.around(np.mean(data1),3),np.around(np.std(data1),3))
+	if mode=="double": print "Recall: mu = {0}; std = {1}".format(np.around(np.mean(data2),3),np.around(np.std(data2),3))
 
 def kolmogorov_smirnov(data1,data2,name,PRINT=False):
 	'''
@@ -152,8 +152,8 @@ def kolmogorov_smirnov(data1,data2,name,PRINT=False):
 ############################################################
 ############   OVERALL DISTRIBUTION ANALYSIS        ########
 ############################################################
-
-def plot_fitted_worker_histo(fcn):
+bb_info = pd.read_csv("computed_my_COCO_BBvals.csv")
+def plot_fitted_worker_histo(fcn,FILTER_CRITERION=0):
     metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
                'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
     NUM_PLOTS = len(metrics_lst)
@@ -188,6 +188,8 @@ def compute_all_stats(FILTER_CRITERION=0.):
     Compute the basic stats of all metrics and store it in a table format (table_data)
     '''    
     table_data = []
+    metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
+               'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]    
     for i,metric in zip(range(len(metrics_lst)),metrics_lst):
         if metric in ["Num Points","Area Ratio"]:
             metric_value = np.array(bb_info[metric])
@@ -196,14 +198,15 @@ def compute_all_stats(FILTER_CRITERION=0.):
             metric_value = np.array(bb_info[metric][bb_info[metric]>FILTER_CRITERION][bb_info[metric]<=1]) 
         table_data.append(basic_stat(metric_value,metric,PRINT=False))
     if FILTER_CRITERION==0:
-        print tabulate(table_data,headers=["All","Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2f')
+        print tabulate(table_data,headers=["All","Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2g')
     else:
-        print tabulate(table_data,headers=["Filter>{}".format(FILTER_CRITERION),"Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2f')
+        print tabulate(table_data,headers=["Filter>{}".format(FILTER_CRITERION),"Mean","SD"],showindex="False",tablefmt='latex',floatfmt='.2g')
 ############################################################
 ############       J_I DISTRIBUTION ANALYSIS        ########
 ############################################################
 
-def plot_all_Ji_hist(fcn,SHOW_PLOT=10):
+import matplotlib.ticker as ticker
+def plot_all_Ji_hist(fcn,SHOW_PLOT=10,NBINS=30):
     '''
     Plot all worker distributions for each object 
     compute fitting coefficients for each Ji distribution
@@ -223,19 +226,17 @@ def plot_all_Ji_hist(fcn,SHOW_PLOT=10):
             fig, axs = plt.subplots(NUM_ROW,NUM_COL, figsize=(NUM_COL*2.5,NUM_ROW*3))
             stitle = fig.suptitle("J{} Distribution ".format(objid),fontsize=16,y=1.05)
             axs = axs.ravel()
+
         # Ji_tbl (bb_info) is the set of all workers that annotated object i 
         bb  = obj_sorted_tbl[obj_sorted_tbl["object_id"]==objid]
         for i,metric in zip(range(len(metrics_lst)),metrics_lst):
             if metric in ["Num Points"]:
                 metric_value = np.array(bb[metric])
-                pltmax=metric_value.max()
             else:
                 #restrict range [0,1] for normalized measures
                 metric_value = np.array(bb[metric][bb[metric]>0][bb[metric]<=1]) 
-                pltmax=1
-                
             params = fcn.fit(metric_value)
-            histo,bin_edges = np.histogram(metric_value, 40, normed=1)
+            histo,bin_edges = np.histogram(metric_value, NBINS, normed=1)
             bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
             y = fcn.pdf(bins, *params)
             RSS =sum((histo-y)**2)
@@ -244,15 +245,32 @@ def plot_all_Ji_hist(fcn,SHOW_PLOT=10):
             data_stats  = [objid,metric,params[0],params[1],RSS,ks_result[0],ks_result[1]] 
             #same as what you would get if you did basic_stats because in the MLE estimate for Gaussians, mu and sigma is equal to sample mean and sample sd
             data_fit_stats.append(data_stats)
-            
+
             if SHOW_PLOT>0:
                 ax = axs[i]
                 ax.set_title(metric)
-                if metric in ["Num Points"]:
-                    ax.set_xlim(0,metric_value.max())
-                else: 
-                    ax.set_xlim(0,1.03)
-                n, bins, patches = ax.hist(metric_value, 40, normed=1, range=(0,pltmax) ,facecolor='blue', alpha=0.75)
+                start = metric_value.min()
+                end = metric_value.max()
+                logdx = np.log10(abs(end-start))
+                if logdx<=-2:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),3))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+                elif logdx<=-1.5:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),4))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+                elif logdx<=-1:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),4))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                elif logdx<=-0.5:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),4))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+                elif logdx<=0:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),5))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
+                elif logdx<=1:
+                    ax.set_xticks(np.linspace(metric_value.min(),metric_value.max(),6))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2g'))
+                n, bins, patches = ax.hist(metric_value, NBINS, normed=1,facecolor='blue', alpha=0.75)
                 y = fcn.pdf(bins, *params)
                 l = ax.plot(bins, y, 'r--', linewidth=2) 
 
@@ -295,16 +313,20 @@ def compute_all_fittings():
     df_stats_tbl = pd.DataFrame(data_fit_stats,columns=["metric","Function Name", "Parameters","RSS","D-value","p-value"])
     return df_stats_tbl
 
-def test_all_Ji_fit_fcn():
+def test_all_Ji_fit_fcn(fcns_to_test="all",NBINS=30,RAND_SAMPLING=5):
     '''
     Test all function form against all Ji distributions, then return the fitting coefficients table
+    RAND_SAMPLING controls the number of objects that gets tested, running this on all 23 object will cause memory crash
     '''
+    if fcns_to_test=="all":
+        exclude= ['division', 'skellam', 'nbinom', 'logser', 'erlang','dlaplace', 'hypergeom', 'bernoulli', 'levy_stable', 'zipf', 'rv_discrete', 'rv_frozen', 'boltzmann', 'rv_continuous', 'entropy', 'randint', 'poisson', 'geom', 'binom', 'planck', 'print_function']
+        fcns_to_test = filter(lambda x: x not in exclude,dir(stats.distributions)[9:])
     bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
     obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
     object_id_lst  = list(set(obj_sorted_tbl.object_id))
     metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
                'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
-    exclude= ['division', 'skellam', 'nbinom', 'logser', 'erlang','dlaplace', 'hypergeom', 'bernoulli', 'levy_stable', 'zipf', 'rv_discrete', 'rv_frozen', 'boltzmann', 'rv_continuous', 'entropy', 'randint', 'poisson', 'geom', 'binom', 'planck', 'print_function']
+    if RAND_SAMPLING : object_id_lst = np.random.choice(object_id_lst,RAND_SAMPLING)
     NUM_PLOTS = len(metrics_lst)
     NUM_ROW = 2
     NUM_COL = NUM_PLOTS/NUM_ROW
@@ -322,10 +344,10 @@ def test_all_Ji_fit_fcn():
                 pltmax=1
 
             #Testing against various distributions 
-            for fcn_name in filter(lambda x: x not in exclude,dir(stats.distributions)[9:]):
+            for fcn_name in fcns_to_test:
                 fcn = getattr(stats,fcn_name)
                 params = fcn.fit(metric_value)
-                histo,bin_edges = np.histogram(metric_value, 40, normed=1)
+                histo,bin_edges = np.histogram(metric_value, NBINS, normed=1)
                 bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
                 y = fcn.pdf(bins, *params)
                 RSS =sum((histo-y)**2)

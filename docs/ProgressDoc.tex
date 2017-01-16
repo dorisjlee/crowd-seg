@@ -82,12 +82,6 @@ score = 1-\frac{dist_i}{max(dist)}
 \paragraph{Contrast-based: } These methods examine how close is BB to regions of contrasts detected by CV algorithms (saliency maps, Bayesian Matting) or edge detectors. A major problem when implementing these methods is group and match CV regions to BB annotations, since CV methods often yield over-segmented regions.
 \section{Preliminary Experiment}
 We ran a preliminary experiment where each HIT consisted of one annotation task for a specific pre-labelled object in the image, as shown in Fig.\ref{interface}. There is a total of 46 objects in 9 images from the MSCOCO dataset\cite{Lin2014}. These objects and images are intentionally chosen so that they represent a variety of image difficulty (based on object clutter-ness) and potential logical error and level of ambiguity. The average number of objects annotations that each worker completed was 10.16. The average time to complete each HIT is 83.96 seconds and workers are compensated for 5 cents per HIT.  For each object, we collected annotations from a total of 40 independent workers.
-\begin{figure}[ht]
-\centering
-\fbox{\includegraphics[width=0.9\linewidth]{plots/interface.png}}
-\caption{An example can be seen  \href{http://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/10/}{here}.}
-\label{interface}
-\end{figure}
 \subsection{Data Observations}
 \begin{itemize}
 \item \textbf{Basic statistical summary:}
@@ -161,7 +155,7 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 \label{GaussRSSBox}
 \end{figure}
 \subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
-We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each experiment the results for this analysis will probably not be very generalizable. 
+We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each category the results for this analysis will probably not be very generalizable. 
 \bibliographystyle{plain}
 \bibliography{reference}
 
@@ -250,9 +244,14 @@ We are interested in testing our hypothesis that if work quality exhibits a larg
 \end{table}
 
 \newpage
-
 \section{Data Examples}
-Code is available on \href{https://github.com/dorisjlee/crowd-seg}{Github}. Web-app is hosted \href{https://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/12/}{here}.
+\begin{figure}[ht!]
+\centering
+\fbox{\includegraphics[width=0.9\linewidth]{plots/interface.png}}
+\caption{An example interface for the segmentation webapp can be seen  \href{http://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/10/}{here}.}
+\label{interface}
+\end{figure}
+Visualizations for all the object annotations could be found \href{http://nbviewer.jupyter.org/github/dorisjlee/crowd-seg/blob/master/analysis/2017_01_16_Visualize_all_bb_results.ipynb}{here}.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\linewidth]{plots/task_ambiguous_cases.pdf}

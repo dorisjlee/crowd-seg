@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from tabulate import tabulate
+from qualityBaseline import *
 def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
 	'''
 	Create CSV file of each table from app.db
@@ -57,11 +58,12 @@ def get_size(fname):
 	height = im.size[1]
 	return width, height
 import matplotlib.image as mpimg
-def visualize_ground_truth_bb(object_id,gtype='self'):
+def visualize_bb_objects(object_id,gtypes=['worker','self']):
     '''
-	Plot either the SELF ground truth BB for the object corresponding to the given object_id
-	#Still need to implement COCO later...
-	'''
+    Plot BB for the object corresponding to the given object_id
+    #Still need to implement COCO later...
+    gtypes: list specifying the types of BB to be plotted (worker=all worker's annotation, 'self'=self BBG)
+    '''
     img_info,object_tbl,bb_info,hit_info=load_info()
     ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
     my_BBG  = pd.read_csv("my_ground_truth.csv")
@@ -70,18 +72,27 @@ def visualize_ground_truth_bb(object_id,gtype='self'):
     img=mpimg.imread(fname)
     width,height = get_size(fname)
     img_id = int(img_name.split('_')[-1])
-    plt.figure(figsize =(10,10))
+    plt.figure(figsize =(7,7))
     plt.imshow(img)
     plt.axis("off")   
-
-    if gtype=='self':
+    plt.xlim(0,width)
+    plt.ylim(height,0)
+    plt.title("Object {0} [{1}]".format(object_id,object_tbl[object_tbl.object_id==object_id]["name"].iloc[0]))
+#         plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.5)
+    if 'worker' in gtypes:
+        bb_objects = bb_info[bb_info["object_id"]==object_id]
+        for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"]):
+            xloc,yloc = process_raw_locs([x,y])
+            plt.plot(xloc,yloc,'-',color='#f442df',linewidth=1)
+            plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
+    if 'self' in gtypes:
         ground_truth_match = my_BBG[my_BBG.object_id==object_id]
+        x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+        plt.plot(x_locs,y_locs,'-',color='#0000ff',linewidth=4)
     # elif gtype=='COCO':
     #     ground_truth_match = my_BBG[my_BBG.object_id==object_id]
-    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
-    plt.plot(x_locs,y_locs,'-',color='#f442df',linewidth=2)
-    plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.5)
-    plt.savefig("bbg_object_{}.png".format(object_id))
+    plt.savefig("bb_object_{}.pdf".format(object_id))
+
 def visualize_all_ground_truth_bb():
     '''
 	Plot all Ground truth bounding box drawn by me

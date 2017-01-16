@@ -2,6 +2,7 @@
 \usepackage[margin=1in,letterpaper]{geometry}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage[titletoc,title]{appendix}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \hypersetup{
@@ -150,42 +151,23 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 
 \subsection{Worker Distributions}
 \par Recall that $J_i$  is the set of all workers j that annotated the object-image i, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
-\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. Since our data is N=40, we pick a bin size of 30. Due to the large number of $J_i$ distributions, we conducted the fitting procedure on a smaller candidate set of more interpretable functional forms.
-\footnote{Gaussian, Johnson SU, Power law, Pareto, and t-distributions} Table \ref{all_Ji_fit} summarizes the best functional fit for each metric. 
-\par While the Gaussian does not yield the best fit, it yields a more interpretable and may be easier for inference. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution). We are interested in  assessing whether it can be a ``good-enough'' fit based on RSS. 
-\par The boxplot of ----- in Fig.
-\texttt{Num Points}
-
-%While the Gaussian is not a perfect fit (the average RSS  is 746.91, and only 64\% of the 282 $J_i$ metric distributions are distributed as a Gaussian as defined by the KS-test), we are interested in the Gaussian results since the parameters are more interpretable and it potentially easier for the inference problem. 
-
-
+\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. Since our data is N=40, we pick a bin size of 30. Due to the large number of $J_i$ distributions, we conducted the fitting procedure on a smaller candidate set of more interpretable functional forms\footnote{Gaussian, Johnson SU, Power law, Pareto, and t-distributions}. Table \ref{all_Ji_fit} summarizes the best functional fit for each metric. 
+\par Many of the best-fitting functional form of $\Phi$ in Table \ref{all_Ji_fit} may make the inference problem challenging.  While the Gaussian does not yield the best fit, it is a more interpretable $\Phi$ function and may be easier for inference. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution). We are interested in assessing whether it can be a ``good-enough'' fit based on RSS. 
+\par Fig.\ref{GaussRSSBox} shows a boxplot of the RSS based on the Gaussian fits for all the $J_i$ distributions. We could see that the number of control points have several orders of magnitude lower RSS than other metrics. This makes sense because \texttt{Num Points} is the only metric that measures \textit{only} how carefully drawn the BB is, which would in theory match with a spread in worker dexterity. All other metrics (except \texttt{Area Ratio}) are confounded by potential BB mismatch or task ambiguity mistakes because of normalization or comparison against a gold standard BB. 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.47\linewidth]{plots/J11Wide.png}
-\includegraphics[width=0.47\linewidth]{plots/J13Narrow.png}
-\caption{Example $J_i$ distributions for a small, round-edged object (Right) and a medium-size, square-edged object (Left), qualitatively shows how task difficulty relates to width of Gaussians.}
+\includegraphics[width=0.6\linewidth]{plots/GaussianRSSBoxplot.pdf}
+\caption{The boxplot shows the spread of RSS for all $J_i$ distribution based on Gaussian fits.}
+\label{GaussRSSBox}
 \end{figure}
 \subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
-\begin{table}[ht]
-\centering
-\begin{tabular}{lrrrrrr}
-\hline
-                              &   Precision[C] &   Recall[C] &   Jaccard[C] &   Precision[S] &   Recall[S] &   Jaccard[S] \\
-\hline
- Average             &   0.19 &  -0.17 &   0.11 &   0.20 &   0.25 &   0.04 \\
-Ground Truth &   0.03 &  -0.18 &  -0.03 &  -0.07 &   0.02 &  -0.07 \\
-\hline
-\end{tabular}
-\caption{Pearson's linear correlation coefficient when compared to $\texttt{Average}$ (average number of points in BB drawn by all worker) and  $\texttt{Ground Truth}$ (number of points in BB drawn by me). [C],[S] short for [COCO] and [Self].}
-\end{table}
-\par Many of the best-fitting functional form of $\Phi$ in Table \ref{all_Ji_fit} may make the inference problem challenging.  From Fig.  ----. we see that the number points  measure ---, follows a Gaussian, since this is a measure ---- based only the detexterity of the worker rather than the logical errors of the BB drawn
-We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object(as a measure of boundary complexity) should depend on the standard deviation of the fitted Gaussian. While this assumption qualitatively holds true, the Pearson's correlation coefficient and linear fits shows that there is \textbf{no linear relationship between the number of points in an object and the standard deviation of the fitted Gaussian}.
+We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each experiment the results for this analysis will probably not be very generalizable. 
 \bibliographystyle{plain}
 \bibliography{reference}
 
 \newpage
-\appendix
-\section{Tables}
+\begin{appendices}
+\section{Best-fit summaries}
 \begin{table}[ht]
 \centering
 \begin{tabular}{llrrr}
@@ -251,7 +233,31 @@ We are interested in testing our hypothesis that if work quality exhibits a larg
 \caption{Best functional fit (as determined by RSS) for all objects $J_i$ distribution.}
 \label{all_Ji_fit}
 \end{table}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrrrrrrrr}
+\hline
+          &   P [C] &   R [C] &   J [C] &   NME [C] &   NumPt &   P [C] &   R [S] &   J [S] &   NME [S] &   Area \\
+\hline
+ R [Norm] &    0.05 &   -0.27 &   -0.11 &      0.32 &    0.84 &    0.18 &   -0.36 &   -0.05 &      0.27 &   0.60 \\
+ p[Norm]  &    0.85 &    0.30 &    0.67 &      0.22 &    0.00 &    0.49 &    0.15 &    0.87 &      0.29 &   0.01 \\
+ R [JSU]  &    0.31 &    0.02 &    0.03 &     -0.12 &   -0.26 &    0.47 &   -0.19 &    0.61 &      0.51 &   0.27 \\
+ p [JSU]  &    0.22 &    0.95 &    0.90 &      0.64 &    0.31 &    0.05 &    0.47 &    0.01 &      0.04 &   0.29 \\
+\hline
+\end{tabular}
+\caption{Pearson's linear correlation coefficient when comparing the average number of points in BB drawn by all worker(as an indicator for task difficulty) and the standard deviation of the worker distribution (against \texttt{JSU} and \texttt{Norm} distributions). [C],[S] short for [COCO] and [Self].}
+\label{assum3}
+\end{table}
 
-Code is available on \href{https://github.com/dorisjlee/crowd-seg}{Github}. Web-app is hosted on \href{https://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/12/}{here}
+\newpage
 
+\section{Data Examples}
+Code is available on \href{https://github.com/dorisjlee/crowd-seg}{Github}. Web-app is hosted \href{https://crowd-segment.herokuapp.com/segment/COCO_train2014_000000000127/12/}{here}.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{plots/task_ambiguous_cases.pdf}
+\caption{Selected task ambiguous object that is exlucded in the task difficulty analysis. }
+\end{figure}
+
+\end{appendices}
 \end{document}

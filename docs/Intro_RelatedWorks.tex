@@ -1,0 +1,39 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in,letterpaper]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage[titletoc,title]{appendix}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks = true,
+    citecolor={black},
+    linkcolor={red}
+}
+\usepackage{titling}
+\posttitle{\par\end{center}}
+\setlength{\droptitle}{0pt}
+\begin{document}
+\title{Related Works}
+\author{\today}
+\date{}
+\vspace{-50pt}
+\maketitle
+\vspace{-70pt}
+
+\section{Computer vision approach}
+- CV only approaches: graph cuts, CRFs
+- hybrids: supervised segmentation
+Interactive segmentation methods are often used when automated algorithms do not provide a fine enough level of segmentation for the desired application, or merging oversegmented regions.
+\section{Continous extensions to Welinder et al}
+\cite{Welinder2010} examines the binary case of image labelling. 
+multi-choice 
+
+\section{Problems with existing approaches}
+\begin{itemize}
+\item Existing work quality metrics does not \textit{generate} a best segmentation region, it identifies the best segmentation as the best-scored annotations, thus requiring a large pool of candidate annotation to chose from. Consider an extreme scenario where we have two user annotation of a dumbbell, user 1's gives a perfect annotation of the left side of the dumbell and horrible annotation of the right side, and user 2 gives the perfect annotation of the right but not the left. We want a cost-effective model where the best annotations each worker's annotation are preserved and each worker improves the ``ground-truth" annotation. Ultimately, we are interested in obtaining instance-level segmentation by combining the worker responses, rather than how good each worker are.	
+\end{itemize}
+\bibliographystyle{plain}
+\bibliography{reference}
+
+\end{document}

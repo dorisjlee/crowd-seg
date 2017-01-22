@@ -3,12 +3,14 @@ from scipy import spatial
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm 
+import ast
+
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]
 # obj_y_locs = [[worker i response],[ground truth]]
 
-import ast
+
 def process_raw_locs(segmentation,COCO=False):
     '''
     Given a raw string of x and y coordinates, process it
@@ -212,10 +214,18 @@ def simple_rectangle_test():
     print "Check ``MunkresEuclidean [No Interpolation]``:",np.isclose(MunkresEuclidean(obj_x_locs,obj_y_locs,numPts=4,PRINT=True),2*(np.sqrt(2)+np.sqrt(5)))
     print "Check ``MunkresEuclidean [N=50]``:",np.isclose(MunkresEuclidean(obj_x_locs,obj_y_locs,PRINT=True),87.9127740436)
 
-from pycocotools.coco import COCO
-from analysis_toolbox import *
-from collections import OrderedDict
+def get_size(fname):
+    from PIL import Image
+    #Open image for computing width and height of image 
+    im = Image.open(fname)
+    width = im.size[0]
+    height = im.size[1]
+    return width, height
+
 def compute_my_COCO_BBvals(compute_metrics=['simple','area','dist']):
+    from analysis_toolbox import *
+    from pycocotools.coco import COCO
+    from collections import OrderedDict
     '''
     Selectively compute metrics and store into computed_my_COCO_BBvals.csv
     'simple': simple baselines [Point,Size]

@@ -4,12 +4,12 @@ import sqlite3
 from glob import glob
 from os.path import expanduser
 import pandas as pd 
-from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from tabulate import tabulate
 from qualityBaseline import *
+import scipy
 def save_db_as_csv(db="crowd-segment",connect=True,postgres=True):
 	'''
 	Create CSV file of each table from app.db
@@ -50,13 +50,6 @@ def load_info():
 	hit_info = pd.read_csv("hit.csv",skipfooter=1)
 	os.chdir(old_path)
 	return [img_info,object_tbl,bb_info,hit_info]
-
-def get_size(fname):
-	#Open image for computing width and height of image 
-	im = Image.open(fname)
-	width = im.size[0]
-	height = im.size[1]
-	return width, height
 import matplotlib.image as mpimg
 def visualize_bb_objects(object_id,gtypes=['worker','self']):
     '''
@@ -163,8 +156,9 @@ def kolmogorov_smirnov(data1,data2,name,PRINT=False):
 ############################################################
 ############   OVERALL DISTRIBUTION ANALYSIS        ########
 ############################################################
-bb_info = pd.read_csv("computed_my_COCO_BBvals.csv")
+
 def plot_fitted_worker_histo(fcn,FILTER_CRITERION=0):
+    bb_info = pd.read_csv("computed_my_COCO_BBvals.csv")
     metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
                'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
     NUM_PLOTS = len(metrics_lst)
@@ -198,6 +192,7 @@ def compute_all_stats(FILTER_CRITERION=0.):
     '''
     Compute the basic stats of all metrics and store it in a table format (table_data)
     '''    
+    bb_info = pd.read_csv("computed_my_COCO_BBvals.csv")
     table_data = []
     metrics_lst = ['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points",\
                'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]    
@@ -322,6 +317,7 @@ def compute_all_fittings():
                 #function has no fitting
                 print "Skipped", fcn_name
     df_stats_tbl = pd.DataFrame(data_fit_stats,columns=["metric","Function Name", "Parameters","RSS","D-value","p-value"])
+    df_stats_tbl.to_csv("overall_fit_results.csv")
     return df_stats_tbl
 
 def test_all_Ji_fit_fcn(fcns_to_test="all",NBINS=30,RAND_SAMPLING=5):
@@ -368,5 +364,7 @@ def test_all_Ji_fit_fcn(fcns_to_test="all",NBINS=30,RAND_SAMPLING=5):
                 #same as what you would get if you did basic_stats because in the MLE estimate for Gaussians, mu and sigma is equal to sample mean and sample sd
                 data_fit_stats.append(data_stats)
     fit_results =pd.DataFrame(data_fit_stats,columns=["object_id","Function", "metric", "Mean", "SD","RSS","D-value","p-value"])
+    #Drop Unnamed columns (index from rewriting same file)
+    fit_results = fit_results[fit_results.columns[~fit_results.columns.str.contains('Unnamed:')]]
     fit_results.to_csv("Ji_fit_results.csv")
     return fit_results

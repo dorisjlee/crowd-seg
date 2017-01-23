@@ -368,3 +368,16 @@ def test_all_Ji_fit_fcn(fcns_to_test="all",NBINS=30,RAND_SAMPLING=5):
     fit_results = fit_results[fit_results.columns[~fit_results.columns.str.contains('Unnamed:')]]
     fit_results.to_csv("Ji_fit_results.csv")
     return fit_results
+def RSSBoxplot(fit_results,fcn_name):
+    data_lst = []
+    for metric in metrics_lst:
+        data = np.array(fit_results[fit_results["Metric"]==metric].RSS)
+        data_lst.append(data)
+    fig,ax = plt.subplots()
+    ax.set_yscale('log')
+    plt.boxplot(data_lst)
+    plt.ylim(0,1e6)
+    plt.ylabel("{} fit RSS".format(fcn_name),fontsize=12)
+    p = ax.set_xticklabels([metrics_lst[i] for i in range(len(metrics_lst))], rotation=25,ha='right',fontsize=12)
+    plt.tight_layout()
+    plt.savefig("{}RSSBoxplot.pdf".format(fcn_name))    

@@ -223,6 +223,7 @@ def get_size(fname):
     return width, height
 
 def compute_my_COCO_BBvals(compute_metrics=['simple','area','dist']):
+    compute_metrics=['Precision [COCO]','Recall [COCO]','Jaccard [COCO]',"NME [COCO]","Num Points", 'Precision [Self]','Recall [Self]','Jaccard [Self]',"NME [Self]","Area Ratio"]
     from analysis_toolbox import *
     from pycocotools.coco import COCO
     from collections import OrderedDict
@@ -346,6 +347,7 @@ if __name__ =="__main__":
             real_BB_test()
         elif sys.argv[1]=='compute':
             compute_metrics=sys.argv[2].split(',')
+            print compute_metrics
             compute_my_COCO_BBvals(compute_metrics)
     else:    
         print "Usage: python qualityBaseline.py test/compute"

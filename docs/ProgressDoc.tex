@@ -46,7 +46,7 @@ The generative model is inspired by \cite{Welinder2010}, the process is as follo
 \item $z_i$ is hidden variable that completely describes the ground truth BB from the image (e.g. set of all points in $BB_G$).
 \item  $\phi_j$ is some descriptive image-related quantity extracted from $BB_G$ This can either be a 1-D scalar aggregate or a multidimensional quantity. (e.g. boundary complexity of the image boundary)
 \item $J_i$ is the set of all workers j that annotated the object-image. 
-\item $D_i$ is the task difficulty of object-image i.  The $\phi_j$ image summary is determined by both the objective description of $BB_G$ ($z_i$) and the difficulty of the task. The task difficulty is a measure of how far off are most of the worker's responses compared to $BB_G$.  
+\item $D_i$ is the task difficulty of object-image i.  The $\phi_i$ image summary is determined by both the objective description of $BB_G$ ($z_i$) and the difficulty of the task. The task difficulty is a measure of how far off are most of the worker's responses compared to $BB_G$.  
 \begin{equation}
 D_i = \sum_{j\in J_i} dist(\phi_j,\phi_i)
 \end{equation}
@@ -54,9 +54,9 @@ Here, we can model the distribution of $\phi_i$ as :
 $$p(\phi_i|z_i) = N(\phi_i;z_i,D_i^2)$$
 This agrees with our intuition that in a distribution of image descriptions for all workers, the larger the spread means that the task is difficult. The distribution is centered around $z_i$ (i.e. complete description of $BB_G$).
 \end{itemize}
-\item By definition, we assume here that task difficulty is completely a result of the image itself and independent of any worker qualities. The worker j is described by the quality of work that he produces parameterized as $q_i$. We can also try to model user expertise, but this is less important in salient, common-object segmentation. If we chose to take the prior appraoch, we assume that $q_i$ only parameterizes the vision-related quantities affecting worker j's judgement on $\phi_{ij}$.
+\item By definition, we assume here that task difficulty is completely a result of the image itself and independent of any worker qualities. $q_{ij}$ is the quality of worker j for object i evaluated against $BB_{G,i}$. We can also try to model user expertise, but this is less important in salient, common-object segmentation. If we chose to take the prior appraoch, we assume that $q_{ij}$ only parameterizes the vision-related quantities affecting worker j's judgement on $\phi_{ij}$.
 \begin{equation}
-q_j = dist(\phi_{ij},\phi_i)
+q_{ij} = dist(\phi_{ij},\phi_i)
 \end{equation}
 \item Both the characteristics of the ground truth BB ($\phi_i$) and the worker's ability to segment the image ($q_i$) would determine how the worker would percieve the image($\phi_{ij}$) and what worker's BB would look like ($z_{ij}$).
 %\item Finally, the characteristics of the BB drawn by worker i is just a summary of the BB drawn by worker i ($BB_i$)
@@ -143,19 +143,20 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 %If a worker's response differs greatly from the ground truth, then work quality ($Q_w$) is low. 
 %If many of the worker's response differs greatly from ground truth for a particular image, then task difficulty ($D_t$) is high.
 
-\subsection{Worker Distributions}
+\subsection{Object-level Distributions}
 \par Recall that $J_i$  is the set of all workers j that annotated the object-image i, we are interested in finding out how these workers are distributed in order to deduce worker quality. 
-\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. Since our data is N=40, we pick a bin size of 30. Due to the large number of $J_i$ distributions, we conducted the fitting procedure on a smaller candidate set of more interpretable functional forms\footnote{Gaussian, Johnson SU, Power law, Pareto, and t-distributions}. Table \ref{all_Ji_fit} summarizes the best functional fit for each metric. 
-\par Many of the best-fitting functional form of $\Phi$ in Table \ref{all_Ji_fit} may make the inference problem challenging.  While the Gaussian does not yield the best fit, it is a more interpretable $\Phi$ function and may be easier for inference. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution). We are interested in assessing whether it can be a ``good-enough'' fit based on RSS. 
-\par Fig.\ref{GaussRSSBox} shows a boxplot of the RSS based on the Gaussian fits for all the $J_i$ distributions. We could see that the number of control points have several orders of magnitude lower RSS than other metrics. This makes sense because \texttt{Num Points} is the only metric that measures \textit{only} how carefully drawn the BB is, which would in theory match with a spread in worker dexterity. All other metrics (except \texttt{Area Ratio}) are confounded by potential BB mismatch or task ambiguity mistakes because of normalization or comparison against a gold standard BB. 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.6\linewidth]{plots/GaussianRSSBoxplot.pdf}
-\caption{The boxplot shows the spread of RSS for all $J_i$ distribution based on Gaussian fits.}
-\label{GaussRSSBox}
-\end{figure}
-\subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
-We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each category the results for this analysis will probably not be very generalizable. 
+\par In the data fitting procedure, the bin size is an important hyperparameter. When the bin size is small, the histogram is very smoothed, so many different functional forms can be fitted. Since our data is N=40, we pick a bin size of 30. Due to the large number of $J_i$ distributions, we conducted the fitting procedure on a smaller candidate set of more interpretable functional forms\footnote{Based on our overall function fitting results: Gaussian, Johnson SU/SB, Cauchy, Beta, Loggamma, generalized gamma, Gompertz and t-distributions}.
+\par  Table \ref{all_Ji_fit} summarizes the best functional fit for each metric, based on the average RSS across all $J_i$ distributions. The magnitude of RSS for the fitted function of each metric is very different. If we examine a rankings, the RSS difference between the top few best-fit functions is minimal and usually contain the Johnson SU distribution, so the Johnson SU distribution is a sufficiently good description of these $\Phi$ metrics. 
+%\par Many of the best-fitting functional form of $\Phi$ in Table \ref{all_Ji_fit} may make the inference problem challenging. While the Gaussian does not yield the best fit, it is a more interpretable $\Phi$ function and may be easier for inference. Some of the non-Gaussianity may also be due to the small sample size in our preliminary experiment (N$\approx$40 for each $J_i$ distribution). We are interested in assessing whether it can be a ``good-enough'' fit based on RSS. 
+%\par  Fig.\ref{GaussRSSBox} shows a boxplot of the RSS based on the Gaussian fits for all the $J_i$ distributions. We could see that the number of control points have several orders of magnitude lower RSS than other metrics. This makes sense because \texttt{Num Points} is the only metric that measures \textit{only} how carefully drawn the BB is, which would in theory match with a spread in worker dexterity. All other metrics (except \texttt{Area Ratio}) are confounded by potential BB mismatch or task ambiguity mistakes because of normalization or comparison against a gold standard BB. 
+%\begin{figure}[ht]
+%\centering
+%\includegraphics[width=0.6\linewidth]{plots/GaussianRSSBoxplot.pdf}
+%\caption{The boxplot shows the spread of RSS for all $J_i$ distribution based on Gaussian fits.}
+%\label{GaussRSSBox}
+%\end{figure}
+%\subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
+%We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each category the results for this analysis will probably not be very generalizable. 
 \bibliographystyle{plain}
 \bibliography{reference}
 
@@ -173,10 +174,10 @@ We are interested in testing our hypothesis that if work quality exhibits a larg
  Jaccard [COCO]   & gompertz        & 13.3      &      0.46 &  2.76e-05 \\
  NME [COCO]       & cauchy          & 51.7      &      0.84 &  1.25e-16 \\
  Num Points       & johnsonsb       &  0.000239 &      1    &  2.16e-23 \\
- Precision [Self] & johnsonsu       &  6.83     &      0.34 &  0.00443  \\
- Recall [Self]    & johnsonsu       &  5.49     &      0.42 &  0.000178 \\
+ Precision [Self] & johnsonsu       &  6.02     &      0.34 &  0.00443  \\
+ Recall [Self]    & johnsonsu       &  5.07     &      0.42 &  0.000178 \\
  Jaccard [Self]   & johnsonsu       &  4.57     &      0.28 &  0.0317   \\
- NME [Self]       & cauchy          & 35.6      &      0.8  &  4.01e-15 \\
+ NME [Self]       & johnsonsb       & 30.3      &      0.74 &  5.31e-13 \\
  Area Ratio       & gengamma        & 27.1      &      0.34 &  0.00443  \\
 \hline
 \end{tabular}
@@ -208,23 +209,23 @@ We are interested in testing our hypothesis that if work quality exhibits a larg
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{llrrrrr}
+\begin{tabular}{llr}
 \hline
- Function   & metric           &   Mean &     SD &       RSS &   D-value &   p-value \\
+ metric           & Function   &       RSS \\
 \hline
- t          & Precision [COCO] &  1.52  &  0.962 &  14.9     &     0.7   &  2.62e-07 \\
- exponpow   & Jaccard [COCO]   &  8.24  &  0.397 &  10.2     &     0.633 &  4.64e-06 \\
- exponpow   & Precision [Self] &  2.7   &  0.715 &   9.12    &     0.733 &  5.59e-08 \\
- johnsonsu  & Recall [Self]    &  0.951 &  0.601 &  11.9     &     0.5   &  0.000616 \\
- johnsonsu  & NME [Self]       &  0.637 &  0.946 & 142       &     0.5   &  0.000616 \\
- t          & Num Points       & 41.3   & 56.9   &   0.00092 &     1     &  1.8e-14  \\
- johnsonsu  & Area Ratio       &  0.888 &  0.459 & 111       &     0.433 &  0.00461  \\
- t          & Recall [COCO]    &  1.01  &  0.986 &   6.21    &     0.8   &  2.05e-09 \\
- exponpow   & Jaccard [Self]   &  3.85  &  0.886 &  10.3     &     0.9   &  8.38e-12 \\
- johnsonsu  & NME [COCO]       &  0.775 &  0.369 & 117       &     0.733 &  5.59e-08 \\
+ Area Ratio       & johnsonsu  & 273751.49 \\
+ Jaccard [COCO]   & johnsonsu  &    675.65 \\
+ Jaccard [Self]   & cauchy     &    250.42 \\
+ NME [COCO]       & johnsonsu  &  27439.87 \\
+ NME [Self]       & johnsonsu  &  10812.98 \\
+ Num Points       & cauchy     &      0.06 \\
+ Precision [COCO] & johnsonsu  &   4570.24 \\
+ Precision [Self] & johnsonsu  &   1414.98 \\
+ Recall [COCO]    & johnsonsu  &    452.79 \\
+ Recall [Self]    & beta       &    902.61 \\
 \hline
 \end{tabular}
-\caption{Best functional fit (as determined by RSS) for all objects $J_i$ distribution.}
+\caption{Best functional fit for each metric, as determined by average RSS across all objects in the $J_i$ distribution.}
 \label{all_Ji_fit}
 \end{table}
 \begin{table}[ht]

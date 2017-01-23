@@ -50,14 +50,19 @@ def load_info():
 	hit_info = pd.read_csv("hit.csv",skipfooter=1)
 	os.chdir(old_path)
 	return [img_info,object_tbl,bb_info,hit_info]
+
 import matplotlib.image as mpimg
-def visualize_bb_objects(object_id,gtypes=['worker','self']):
+def visualize_bb_objects(object_id,gtypes=['worker','self'],single=False,bb_info=""):
     '''
     Plot BB for the object corresponding to the given object_id
     #Still need to implement COCO later...
     gtypes: list specifying the types of BB to be plotted (worker=all worker's annotation, 'self'=self BBG)
     '''
-    img_info,object_tbl,bb_info,hit_info=load_info()
+    if not single:
+        img_info,object_tbl,bb_info,hit_info=load_info()
+    else:
+        img_info,object_tbl,bb_info_bad,hit_info=load_info()
+    
     ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==object_id]["image_id"])]["filename"].iloc[0]
@@ -76,16 +81,34 @@ def visualize_bb_objects(object_id,gtypes=['worker','self']):
         bb_objects = bb_info[bb_info["object_id"]==object_id]
         for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"]):
             xloc,yloc = process_raw_locs([x,y])
-            plt.plot(xloc,yloc,'-',color='#f442df',linewidth=1)
-            plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
+            if single:
+                plt.plot(xloc,yloc,'-',color='#f442df',linewidth=4)
+            else:
+                plt.plot(xloc,yloc,'-',color='#f442df',linewidth=1)
+                plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
     if 'self' in gtypes:
         ground_truth_match = my_BBG[my_BBG.object_id==object_id]
         x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
-        plt.plot(x_locs,y_locs,'-',color='#0000ff',linewidth=4)
+        if single:
+            plt.plot(x_locs,y_locs,'--',color='#0000ff',linewidth=2)
+        else: 
+            plt.plot(x_locs,y_locs,'-',color='#0000ff',linewidth=4)
     # elif gtype=='COCO':
     #     ground_truth_match = my_BBG[my_BBG.object_id==object_id]
-    plt.savefig("bb_object_{}.pdf".format(object_id))
-
+    if not single:plt.savefig("bb_object_{}.pdf".format(object_id))
+def visualize_bb_worker(worker_id,gtypes=['worker','self']):
+    '''
+    Plot BB for the object corresponding to the given object_id
+    #Still need to implement COCO later...
+    gtypes: list specifying the types of BB to be plotted (worker=all worker's annotation, 'self'=self BBG)
+    '''
+    img_info,object_tbl,bb_info,hit_info=load_info()
+    ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
+    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    filtered_bb_info=bb_info[bb_info["worker_id"]==worker_id]
+    for object_id in list(filtered_bb_info.object_id):
+        visualize_bb_objects(object_id,single=True,gtypes=gtypes,bb_info=filtered_bb_info)
+    plt.savefig("bb_worker_{0}_object_{1}.pdf".format(worker_id,object_id))
 def visualize_all_ground_truth_bb():
     '''
 	Plot all Ground truth bounding box drawn by me

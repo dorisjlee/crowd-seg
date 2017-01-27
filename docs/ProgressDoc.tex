@@ -1,9 +1,13 @@
 \documentclass[12pt]{article}
 \usepackage[margin=1in,letterpaper]{geometry}
 \usepackage{amsmath}
+\usepackage{mathrsfs} 
 \usepackage{amsfonts}
 \usepackage[titletoc,title]{appendix}
 \usepackage{graphicx}
+\usepackage{floatrow}
+% Table float box with bottom caption, box width adjusted to content
+\newfloatcommand{capbtabbox}{table}[][\FBwidth]
 \usepackage{hyperref}
 \hypersetup{
     colorlinks = true,
@@ -13,6 +17,10 @@
 \usepackage{titling}
 \posttitle{\par\end{center}}
 \setlength{\droptitle}{0pt}
+\usepackage[numbers]{natbib}
+\newcommand\citeay[1]{%
+  \citeauthor{#1}~(\citeyear{#1})}
+
 \begin{document}
 \title{Crowd Segmentation Progress}
 \author{\today}
@@ -30,62 +38,81 @@
 \begin{enumerate}
 \item In literature, there are scoring functions that require ``ground truth" and ones that are ``unsupervised". 
 \item If a worker's response differs greatly from the ground truth, then work quality ($Q_w$) is low. 
-\item If most of the workers' response differ greatly from ground truth for a particular image, then task difficulty ($D_t$) should be high. As a corollary, if the spread of the $J_i$ distribution is large, then $D_t$ should also be high.
+\item If most of the workers' response differ greatly from ground truth for a particular image, then task difficulty ($D_t$) should be high. As a corollary, if the spread of the worker distribution ($J_i$) is large, then $D_t$ should also be high.
 \end{enumerate}
 To compute the latent quantities $Q_w$,$D_t$, we propose an iterative EM-like algorithm, where at every step, we assume that the ground truth bounding box ($BB_G$) is the current estimate of the maximum likelihood region. The maximum likelihood region is constructed by adding in sub-regions from a tile-graph. 
-\section{Generative Process}
-\begin{figure}[ht]
-\centering
-\includegraphics[trim=1cm 5cm 1cm 5cm,width=0.8\linewidth]{plots/generative_pgm.pdf}
-\caption{Proposed probabilistic graphical model for crowdsourcing image segmentation.}
-\end{figure}
-The generative model is inspired by \cite{Welinder2010}, the process is as follows:
+\section{Model}
+\subsection{Definitions}
+%\begin{figure}[ht]
+%\centering
+%\includegraphics[trim=1cm 5cm 1cm 5cm,width=0.8\linewidth]{plots/generative_pgm.pdf}
+%\caption{Proposed probabilistic graphical model for crowdsourcing image segmentation.}
+%\end{figure}
+The model is inspired by the image-labelling model from \cite{MDWWelinder2010} with modifications for the segmentation task as follows:
 \begin{itemize}
 \item A task is defined by an object-image pair i : 
 \begin{itemize}
-\item $z_i$ is hidden variable that completely describes the ground truth BB from the image (e.g. set of all points in $BB_G$).
-\item  $\phi_j$ is some descriptive image-related quantity extracted from $BB_G$ This can either be a 1-D scalar aggregate or a multidimensional quantity. (e.g. boundary complexity of the image boundary)
+\item $z_i$ is hidden variable that completely describes the ground truth BB from the image (e.g. set of all points in $BB_G$). $z_j$ is the BB drawn by worker j.
+\item  $\phi_j$ is some descriptive image-related quantity extracted from worker BB $z_j$. This can either be a 1-D scalar aggregate or a multidimensional quantity. (e.g. boundary complexity of the image boundary) Sometimes, these summarization functions require a comparison against the ground truth $z_j$, so more generically we denote $\phi_j$ as $\phi_{ij}$
 \item $J_i$ is the set of all workers j that annotated the object-image. 
-\item $D_i$ is the task difficulty of object-image i.  The $\phi_i$ image summary is determined by both the objective description of $BB_G$ ($z_i$) and the difficulty of the task. The task difficulty is a measure of how far off are most of the worker's responses compared to $BB_G$.  
+\item $D_i$ is the task difficulty of object-image i. The $\phi_i$ image summary  of object i's ground truth BB $z_i$. The task difficulty is a dependent variable measuring how far off are most of the worker's responses ($z_j$) compared to $z_i$.  
 \begin{equation}
-D_i = \sum_{j\in J_i} dist(\phi_j,\phi_i)
+D_i = \sum_{j\in J_i} dist(\phi_{ij},\phi_i)
+\label{task_difficulty}
 \end{equation}
-Here, we can model the distribution of $\phi_i$ as :
-$$p(\phi_i|z_i) = N(\phi_i;z_i,D_i^2)$$
-This agrees with our intuition that in a distribution of image descriptions for all workers, the larger the spread means that the task is difficult. The distribution is centered around $z_i$ (i.e. complete description of $BB_G$).
 \end{itemize}
-\item By definition, we assume here that task difficulty is completely a result of the image itself and independent of any worker qualities. $q_{ij}$ is the quality of worker j for object i evaluated against $BB_{G,i}$. We can also try to model user expertise, but this is less important in salient, common-object segmentation. If we chose to take the prior appraoch, we assume that $q_{ij}$ only parameterizes the vision-related quantities affecting worker j's judgement on $\phi_{ij}$.
+\item We assume, by definition, that task difficulty is completely a result of the image itself and independent of any worker qualities. $q_{ij}$ is the quality of worker j for object i evaluated against $z_i$\footnote{We can also try to model user expertise separate from $q_{ij}$ which define only the vision-related quantities related to worker j's judgement on $\phi_{ij}$, but this is less important in salient, common-object segmentation.}.
 \begin{equation}
 q_{ij} = dist(\phi_{ij},\phi_i)
+\label{worker_quality}
 \end{equation}
-\item Both the characteristics of the ground truth BB ($\phi_i$) and the worker's ability to segment the image ($q_i$) would determine how the worker would percieve the image($\phi_{ij}$) and what worker's BB would look like ($z_{ij}$).
+\item Both the characteristics of the ground truth BB ($\phi_i$) and the worker's ability to segment the image ($q_j$) would determine how the worker would perceive the image($\phi_{ij}$) and the BB drawn by the worker ($z_{j}$) would look like.
 %\item Finally, the characteristics of the BB drawn by worker i is just a summary of the BB drawn by worker i ($BB_i$)
 \end{itemize}
+\subsection{Generative process}
+\begin{itemize}
+\item To determine the quality of a worker ($q_j$), we can take some type of aggregate over all tasks performed by the workers. Averaging is a good aggregate functions because the number of tasks performed by each worker can vary a lot:
+\begin{equation}
+q_j = \frac{1}{\text{Total \# tasks by worker j}}\sum_i q_{ij}
+\end{equation}
+This direct technique to finding $q_j$ is used in the analysis in Sec.\ref{qi_analysis}
+\item Alternatively, we can also model $q_{ij}$ as a random variable drawn from a distribution. Since the task difficulty and worker quality does not  completely determine the quality of bounding box that a worker would draw next. Therefore, the distribution of $\phi_{ij}$ given a new bounding box $z_{j}$ can be described as:
+\begin{equation}
+p(\phi_{ij}|z_{j}) = f(\phi_i;q_{j'},D_i)
+\end{equation}
+where $j'$ includes all object labelled by worker j up to object i.
+\end{itemize}
+% how the worker performs historically$q_{j'}$
+%is determined by both the objective description of $z_i$
+% and the difficulty of the task. 
+%Here, we can model the distribution of $\phi_i$ as :
+%$$p(\phi_i|z_i) = N(\phi_i;z_i,D_i^2)$$
+%This agrees with our intuition that in a distribution of image descriptions for all workers, the larger the spread means that the task is difficult. The distribution is centered around $z_i$ (i.e. complete description of $BB_G$).
+
 \section{Metrics for $\Phi$ Functions}
-\par There are two sets of annotations that we used as ground truth comparison for computing these metrics: gold-standard annotations cross-matched with MSCOCO (\texttt{[COCO]}) and detailed annotation boundaries drawn by me with the same web interface (\texttt{[Self]}). Note that some of the COCO annotations lack exact cross matches. The metrics computed for objects that are not in the COCO database are flagged and not used for computing the evaluation metrics. However, inexact annotations of the same object (e.g. book-labeled object with only book cover annotation) is still incorporated in the computed metrics. The evaluation metrics can be grouped into three categories: 
-\paragraph{Area-based: } These methods include precision, recall, area ratio or boundary complexity. 
+\par $\Phi$ is a function that summarizes a given bounding box, where $\phi_i=\Phi(z_i)$ or $\phi_{ij}=\Phi(z_i,z_j)$. When the $\Phi$ metric requires a comparison against ground truth, there are two sets of annotations that we have used for computing these metrics: gold-standard annotations cross-matched with MSCOCO (\texttt{[COCO]}) and detailed annotation boundaries drawn by me with the same web interface (\texttt{[Self]}). Note that some of the COCO annotations lack exact cross matches. The metrics computed for objects that are not in the COCO database are flagged and not used for computing the evaluation metrics. However, inexact annotations of the same object (e.g. book-labeled object with only book cover annotation) is still incorporated in the computed metrics. The evaluation metrics can be grouped into three categories: 
+\paragraph{Area-based: } These methods include precision, recall, area ratio or boundary complexity. These measures take into account the intersection, $\mathcal{I}=area(z_i\cup z_j)$, or union, $\mathcal{U}=area(z_i\cap z_j)$, between the user and the ground truth bounding boxes.
 \begin{align}
-\texttt{Precision} = \frac{area(BB_i\cup T)}{area(T)} \\
-\texttt{Recall} = \frac{area(BB_i\cup T)}{area(BB_i)} \\
-\texttt{Jaccard} = \frac{area(BB_i\cap T)}{area(BB_i \cup T)}
+\texttt{Precision} = \frac{\mathcal{I}}{area(z_i)} \\
+\texttt{Recall} = \frac{\mathcal{I}}{area(z_j)} \\
+\texttt{Jaccard} = \frac{\mathcal{U}}{\mathcal{I}}
 \end{align}
 Area ratio is a simple baseline proposed by  \cite{Vittayakorn2011} based on the intuition that larger objects should be easier to annotate than smaller objects, so larger annotations should be better than smaller ones.
 \begin{equation}
-\texttt{Area ratio}=\frac{area(BB_i)}{\text{Total image area}}
+\texttt{Area ratio}=\frac{area(z_i)}{\text{Total image area}}
 \end{equation}
-\paragraph{Boundary-based:} \par While precision, recall, and majority-vote are simple metrics, since they are bounded by [0,1], metrics computed against BBG should always be 1. In addition these projection functions do not capture the full resolution of the bounding box.  
-\par \cite{Vittayakorn2011} proposes a bipartite-matching measure based on the Euclidean distance between two BBs. First, they randomly sample m=300 points along the annotation boundary, then compute all pairwise Euclidean distance. Then, the Kuhn-Munkres algorithm is used to match together the orientation of the two annotations, and returns the assignments that yields the minimum Euclidean. Finally, the normalized score ($\texttt{NME}$) of an annotation i is computed as:
+\paragraph{Boundary-based:} \par While precision, recall, and majority-vote are simple metrics, since they are bounded by [0,1], the metrics computed against ground truth should always be 1. In addition these projection functions do not capture the full resolution of the bounding box.  \cite{Vittayakorn2011} surveys the quality evaluation metrics for image segmentation  and proposes a bipartite-matching measure based on the Euclidean distance between two BBs. First, they randomly sample m=300 points along the annotation boundary, then compute all pairwise Euclidean distance. Then, the Kuhn-Munkres algorithm is used to match together the orientation of the two annotations, and returns the assignments that yields the minimum Euclidean. Finally, the normalized score ($\texttt{NME}$) of an annotation i is computed as:
 \begin{equation}
 score = 1-\frac{dist_i}{max(dist)}
 \end{equation} where max(dist) is the maximum Euclidean distance of all the annotations computed in our dataset. Our implementation differs slightly in that we conduct a B-spline parametric interpolation of use m=50 points along the boundary rather than random sampling, in order to speed up the computation in the Munkres algorithm. These implementation details should have little effect on the Euclidean scores computed.
-\par  Another simple baseline used by \cite{Vittayakorn2011} is simple a unnormalized count of the number of control points in a user's annotation (\texttt{Num Points}), based on the intuition that a more carefully-annotated would result in a better annotation. Since some objects may have inherently simple geometries that could be well-annotated with a small number of control point, to account for the object's boundary complexity, one possible derived measure could be to normalize by the max number of control point) of the particular object.\footnote{Since this is a constant for each object i, it would not affect the form of the $J_i$ distribution.} 
+\par  Another baseline used by \cite{Vittayakorn2011} is a simple, unnormalized count of the number of points drawn by the users to construct the bounding box (\texttt{Num Points}), based on the intuition that a more carefully-annotated would result in a better annotation. Since some objects may have inherently simple geometries that could be well-annotated with a small number of control point, to account for the object's boundary complexity, one possible derived measure could be to normalize by the max number of control point) of the particular object.\footnote{Since this is a constant for each object i, it would not affect the form of the $J_i$ distribution.} 
 \paragraph{Contrast-based: } These methods examine how close is BB to regions of contrasts detected by CV algorithms (saliency maps, Bayesian Matting) or edge detectors. A major problem when implementing these methods is group and match CV regions to BB annotations, since CV methods often yield over-segmented regions.
 \section{Preliminary Experiment}
 We ran a preliminary experiment where each HIT consisted of one annotation task for a specific pre-labelled object in the image, as shown in Fig.\ref{interface}. There is a total of 46 objects in 9 images from the MSCOCO dataset\cite{Lin2014}. These objects and images are intentionally chosen so that they represent a variety of image difficulty (based on object clutter-ness) and potential logical error and level of ambiguity. The average number of objects annotations that each worker completed was 10.16. The average time to complete each HIT is 83.96 seconds and workers are compensated for 5 cents per HIT.  For each object, we collected annotations from a total of 40 independent workers.
 \subsection{Data Observations}
 \begin{itemize}
 \item \textbf{Basic statistical summary:}
-Most workers makes decent annotation that closely follows the ground-truth BB, since the mean is close to one and standard deviation is large for most metrics.  The annotations with metric scores significantly below a threshold are likely mistakes due to task ambiguity and ground-truth mismatches, as we can see that applying work quality filter significantly improves the mean and SD.
+Since the mean is close to one, most workers make decent annotation that closely follows the ground-truth BB.  While the standard deviation is large for most metrics in the unfiltered results (shown on left of Table \ref{basic_stat}), applying work quality filter significantly decreases the standard deviation, indicating that annotations with metric scores below a threshold are likely mistakes due to task ambiguity or ground-truth mismatches, rather than imprecise annotations.
 \begin{table}[h]
 \centering
 \begin{tabular}{lrr}
@@ -124,7 +151,7 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 \label{basic_stat}
 \end{table}
 \item Both the number of tasks each worker takes on and average time in a task follows a Pareto-like, long-tail distribution, which is typical for crowdsourcing applications.
-\item \textbf{Data Fitting Procedure:} We are interested in figuring out what functional form these $\Phi$ functions are distributed as. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. 
+\item \textbf{Data Fitting Procedure:} We are interested in figuring out what functional form of $\Phi$ looks like. We fitted the histograms against 84 different probability distribution functions\footnote{Most of the functions in  \href{https://docs.scipy.org/doc/scipy/reference/stats.html}{scipy.stats}:\tiny{[alpha, anglit, arcsine, beta, betaprime, bradford, burr, cauchy, chi, chi2, cosine, dgamma, dweibull, expon, exponpow, exponweib, f, fatiguelife, fisk, foldcauchy, foldnorm, frechet\_l, frechet\_r, gamma, gausshyper, genexpon, genextreme, gengamma, genhalflogistic, genlogistic, genpareto, gilbrat, gompertz, gumbel\_l, gumbel\_r, halfcauchy, halflogistic, halfnorm, hypsecant, invgamma, invgauss, invweibull, johnsonsb, johnsonsu, ksone, kstwobign, laplace, levy, levy\_l, loggamma, logistic, loglaplace, lognorm, lomax, maxwell, mielke, nakagami, ncf, nct, ncx2, norm, pareto, pearson3, powerlaw, powerlognorm, powernorm, rayleigh, rdist, recipinvgauss, reciprocal, rice, semicircular, t, triang, truncexpon, truncnorm, tukeylambda, uniform, vonmises, vonmises\_line, wald, weibull\_max, weibull\_min, wrapcauchy]}}, using the maximum-likelihood estimators of these distributions. Then, a  Kolmogorov-Smirnov test  assessed the statistical significance of whether the fitted function and the data follow the same distribution. We quantify the best fits using minimal residual sum-of-square (RSS) and the p-value resulting from the KS-test.  To preserve the tails of these distributions, no filtering for selecting good workers only was done in the fitting procedure. 
 \end{itemize}
 \subsection{Overall Distribution}
 \begin{figure}[ht]
@@ -157,7 +184,48 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 %\end{figure}
 %\subsubsection{Testing Assumption 3: Influence of task difficulty on spread}
 %We are interested in testing our hypothesis that if work quality exhibits a large spread, that means that the object i is probably very hard to annotate. If we exclude difficult task due to task ambiguity, we hypothesize that the number of points in the image object (as a measure of boundary complexity) should depend on the standard deviation of the fitted distribution (Gaussian or Johnson SU). As summarized in Table \ref{assum3}, the Pearson's test shows that there is \textit{very little evidence for linear correlation} between the number of points in an object and the standard deviation of the fitted function. One potential reason for this is that the number of points is not a good metric of task difficulty, since we know that there are other types of error that could make a task difficult (small object area and task ambiguity) A potential next step would be to look at how the data for selected object subpopulations that are prone to each errors type would behave, but due to the small number of objects in each category the results for this analysis will probably not be very generalizable. 
-\bibliographystyle{plain}
+\subsection{Task difficulty Distributions}
+We compute the task difficulty according to Eq.\ref{task_difficulty} for all metrics and all objects.  In order to check if the task difficulty agrees with our intuition on which tasks are difficult, we manually labelled our tasks into the three types of errors that workers are prone to make (task ambiguity, small area, and complex boundary)\footnote{Each task can be in more than one category.} We defined the easy tasks as the ones that are neither in any of the error-prone categories, and the overall category contains all 47 tasks.  As shown in Fig.\ref{diff_hist} and Table \ref{di_tbl}, the easy tasks have the lowest average difficulties. Then, of all the error categories, ambiguous tasks makes the task most difficult, followed by hard-to-annotated tasks due to small area and complex boundaries.
+\begin{figure}[ht!]
+\begin{floatrow}
+\ffigbox{%
+ \includegraphics[width=1.1\linewidth]{plots/difficulty_histo.pdf}
+}{%
+ \caption{The distribution of task difficulty, with bin size of 10.}
+ \label{diff_hist}
+}
+\capbtabbox{%
+  \begin{tabular}{lr}
+\hline
+                  &   Avrg task difficulty \\
+\hline
+ Easy             &                 565.96 \\
+ Overall          &                 655.52 \\
+ Complex boundary &                 673.96 \\
+ Small area       &                 852.85 \\
+ Ambiguous        &                 903.96 \\
+\hline
+\end{tabular}
+}{% 
+\caption{Average difficulty per category.}
+  \label{di_tbl}
+}
+\end{floatrow}
+\end{figure}
+
+
+\subsection{Worker Quality Distributions\label{qi_analysis}}
+We compute the task difficulty according to Eq.\ref{worker_quality}. We check that users who have high average quality scores often draw erroneous bounding boxes and that workers with low quality scores have consistently accurate bounding boxes\footnote{Note this is opposite from the colloquial notion of ``high-quality`` and ``low-quality``, we can avoid this confusion by transforming the quality score with 1-x or 1/x.}. Fig.\ref{Wqual} shows that the functional form of the worker quality distribution  most resemble a t-distribution.
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/worker_difficulty.pdf}
+\caption{While most of the good quality workers have well-annotated BBs (such as the top left plot), some chosen examples highlights a problematic aspect of using a single metric for measuring work quality from $\phi$ metrics being  incomplete 1-D summaries of the worker's bounding box. For instance, two BB with the same \texttt{NumPts} may resemble very different polygons (top right), and that total recall does not mean that the two bounding box perfectly aligns(top middle). Among the bad workers(bottom middle and right), we have also seen examples where a worker would consistently make the same type of mistake, possibly ignoring the instruction to annotate around the pointed object. }
+\end{figure}
+\section{Related Works}
+\par Despite several large-scale efforts to collect image segmentation from crowds\cite{Lin2014,MartinFTM01,Torralba2010,pascal-voc-2012}, most have relied on simple area-based metrics to quantify their segmentation data quality. Research on quality evaluation of crowd segmentation often make use of heuristic approaches such as quantifying the user types and their clickstream behaviour to determine work quality\cite{Cabezas2015,Sameki2015}. Others have also made use of computer vision features to determine where the annotations should be located, in order to compare against the crowd annotations \cite{Vittayakorn2011,Russakovsky2015}.
+\par \citeay{Dawid1979} is the first work that used the EM algorithm to model an individual's biases and skills in the absence of ground truth data, by using a confusion matrix. \citeay{OCWelinder2010} proposes a general model that separately models annotator quality and the biases applied to binary, multivalued and continuous annotations. \citeay{MDWWelinder2010} develops a multidimensional concept of worker qualities and task difficulties by considering object-presence labelling as a noise generation process. The objective truth label is captured by a multidimensional quantity of task-specific measurements and deformed by worker and image related noise, the noisy vector obtained after this process is projected onto the vector of user expertise (which summarizes how well the user percieves each of these measurements), and finally the score is binarized into an inferred label. Many have extended this line of work beyond binary classifications by developing EM-like approaches that works on multiple-choice \cite{Karger2013} as well as free-form responses \cite{Lin2012}. 
+\par However, even though EM algorithms assign probabilities regarding  \textit{how good a worker's bounding box is}, for the task of object segmentation, we are ultimately more interested the end goal of \textit{what is the best bounding box that we can get from these data}. Even though the annotation probabilities are sufficient for determining the best binary-labels, image information such as overlapping areas would be useful and not account for in these algorithms. We suspect that this is why many area-based metrics are still more commonly used in practice than EM approaches.
+\bibliographystyle{plainnat}
 \bibliography{reference}
 
 \newpage
@@ -253,10 +321,28 @@ Most workers makes decent annotation that closely follows the ground-truth BB, s
 \label{interface}
 \end{figure}
 Visualizations for all the object annotations could be found \href{http://nbviewer.jupyter.org/github/dorisjlee/crowd-seg/blob/master/analysis/2017_01_16_Visualize_all_bb_results.ipynb}{here}.
-\begin{figure}[ht]
+\begin{figure}[ht!]
 \centering
 \includegraphics[width=\linewidth]{plots/task_ambiguous_cases.pdf}
-\caption{Selected task ambiguous object that is exlucded in the task difficulty analysis. }
+\caption{Selected task ambiguous object that is excluded in the task difficulty analysis. }
+\end{figure}
+
+
+
+\section{Additional Plots}
+% Fig.\ref{qvsqplot} also shows that, in general, the more task accomplished by the worker, the better the quality of their work, which suggests potential learning effects of the task. 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/quality_vs_quantity.pdf}
+\caption{ When a worker completes many tasks, their work quality is fairly good on average(Right region of plot). If the worker only completes a few tasks, they can either draw one very good bounding box (Bottom left), or they may draw a really bad one(Top left). In the small number of tasks case, the spread in work quality is large. }
+\label{qvsqplot}
+\end{figure}
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.8\linewidth]{plots/Wqual_dist.pdf}
+\caption{The normalized histogram with bin size of 500 fits best to a t-distribution, with RSS of 0.38. These trends are simmilar to the results in Figure 6c of \cite{OCWelinder2010}.}
+\label{Wqual}
 \end{figure}
 
 \end{appendices}

@@ -404,3 +404,32 @@ def RSSBoxplot(fit_results,fcn_name):
     p = ax.set_xticklabels([metrics_lst[i] for i in range(len(metrics_lst))], rotation=25,ha='right',fontsize=12)
     plt.tight_layout()
     plt.savefig("{}RSSBoxplot.pdf".format(fcn_name))    
+import warnings
+warnings.filterwarnings("ignore")
+def fit_against_all_dist(data,binsize=10):
+    '''
+    Fitting given data array against all statistical distributions in scipy.stats
+    '''
+    exclude= ['division', 'skellam', 'nbinom', 'logser', 'erlang','dlaplace', 'hypergeom', 'bernoulli', 'levy_stable', 'zipf', 'rv_discrete', 'rv_frozen', 'boltzmann', 'rv_continuous', 'entropy', 'randint', 'poisson', 'geom', 'binom', 'planck', 'print_function']
+    fcn_lst = filter(lambda x: x not in exclude,dir(stats.distributions)[9:])
+    data_fit_stats=[]
+    #Testing against various distributions 
+    for fcn_name in tqdm(fcn_lst):
+        # Based on MLE estimate for fitting
+        try:
+            fcn = getattr(scipy.stats,fcn_name)
+            params = fcn.fit(data)
+            histo,bin_edges = np.histogram(data, binsize, normed=1)
+            bins = ((bin_edges+np.roll(bin_edges,-1))/2)[:-1]
+            y = fcn.pdf(bins, *params)
+            RSS =sum((histo-y)**2)
+            #ks_result = kolmogorov_smirnov(bins,y,fcn_name) #D-value and p-value
+            data_stats  = [fcn_name,params,RSS]
+            #data_stats.extend(ks_result)
+            data_fit_stats.append(data_stats)
+        except(AttributeError,NotImplementedError,TypeError):
+            #function has no fitting
+            print "Skipped", fcn_name
+    df_stats_tbl = pd.DataFrame(data_fit_stats,columns=["Function Name", "Parameters","RSS"])
+    return df_stats_tbl
+    

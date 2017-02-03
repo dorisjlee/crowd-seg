@@ -71,8 +71,8 @@ def interpolate_align_bb():
         image_id = int(object_tbl[object_tbl.object_id==oid].image_id)
         img_name = img_info["filename"][image_id-1]
 
-        bbx_path= bb[1]["x_locs"]
-        bby_path= bb[1]["y_locs"]
+        bbx_path = bb[1]["x_locs"]
+        bby_path = bb[1]["y_locs"]
         worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
         worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
         coord_lst.append(zip(worker_x_locs,worker_y_locs))

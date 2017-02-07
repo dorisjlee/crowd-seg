@@ -38,7 +38,7 @@ def make_synthetic_bb(N_sample):
     return data
 
 from scipy.interpolate import splprep,splev
-def single_parametric_interpolate(obj_x_loc,obj_y_loc,numPts=50,PLOT=False):
+def single_parametric_interpolate(obj_x_loc,obj_y_loc,numPts=50):
     '''
     Interpolate a single given bounding box obj_x_loc,obj_y_loc
     return a new set of coordinates interpolated on numPts 
@@ -48,8 +48,27 @@ def single_parametric_interpolate(obj_x_loc,obj_y_loc,numPts=50,PLOT=False):
     new_points = splev(u_new, tck,der=0)
     return new_points
 
+def single_randomwalk_interpolate(obj_x_loc,obj_y_loc,numPts=50):
+	'''
+	Random sampling numPts points along the BB polygon's boundary
+	by random walk from the vertices given by the xy coordinates
+	'''
+    n = len(obj_x_loc)
+    vi = [[obj_x_loc[(i+1)%n] - obj_x_loc[i],
+         obj_y_loc[(i+1)%n] - obj_y_loc[i]] for i in range(n)]
+    si = [np.linalg.norm(v) for v in vi]
+    di = np.linspace(0, sum(si), numPts, endpoint=False)
+    new_points = []
+    for d in di:
+        for i,s in enumerate(si):
+            if d>s: d -= s
+            else: break
+        l = d/s
+        new_points.append([obj_x_loc[i] + l*vi[i][0],
+                           obj_y_loc[i] + l*vi[i][1]])
+    return new_points
+
 def interpolate_align_bb():
-	from collections import OrderedDict
     '''
     Interpolate and Align bounding boxes and save results to interpolated_aligned_bb_info.csv
     1. subsample 50 points 
@@ -71,14 +90,14 @@ def interpolate_align_bb():
         image_id = int(object_tbl[object_tbl.object_id==oid].image_id)
         img_name = img_info["filename"][image_id-1]
 
-        bbx_path = bb[1]["x_locs"]
-        bby_path = bb[1]["y_locs"]
+        bbx_path= bb[1]["x_locs"]
+        bby_path= bb[1]["y_locs"]
         worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
         worker_x_locs,worker_y_locs = zip(*list(OrderedDict.fromkeys(zip(worker_x_locs,worker_y_locs))))
         coord_lst.append(zip(worker_x_locs,worker_y_locs))
 
-        ixlocs,iylocs = single_parametric_interpolate(worker_x_locs,worker_y_locs)
-        icoord = np.array(zip(ixlocs,iylocs)) #interpolated coordinates
+        ixylocs = single_randomwalk_interpolate(worker_x_locs,worker_y_locs)
+        icoord = np.array(ixylocs) #interpolated coordinates
         icoord_lst.append(icoord)
         # find point with min distance to origin
         oidx=np.argmin(sqrt(icoord[:,0]**2+icoord[:,1]**2))
@@ -99,7 +118,7 @@ def interpolate_align_bb():
     ai_tbl = pd.DataFrame(aicoord_tbl,columns=["object_id","worker_id","aix_locs","aiy_locs"])
     ai_tbl.to_csv("interpolated_aligned_bb_info.csv")
     return ai_tbl
-def plot_interpolated_aligned_obj_data(oid):
+def plot_interpolated_aligned_obj_data(oid,numPts=50):
     '''
     Plot the Interpolated aligned data for the object corresponding to the given oid 
     The colorbar indicates the index of the points 
@@ -108,7 +127,7 @@ def plot_interpolated_aligned_obj_data(oid):
     ai_tbl= pd.read_csv("interpolated_aligned_bb_info.csv",index_col=0)
     ai_tbl = ai_tbl[ai_tbl["object_id"]==oid]
 
-    selected_idx=range(49)
+    selected_idx=range(numPts-1)
     steps = np.linspace(0, 1, len(selected_idx))
     colors = cm.rainbow(steps)
     Z = [[0,0],[0,0]]

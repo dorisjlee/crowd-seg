@@ -112,9 +112,13 @@ Using Jensen's inequality, assuming that the probabilities of the hidden variabl
 \begin{equation}
 Q(\mathbf{\Theta}|\mathbf{\Theta}^\prime)\leq log p(b|\beta)+  log p(c|\gamma)+  log p(D|\theta)+\sum_i\sum_{j\in J_i}log \mathcal{N}(\phi_{ij};\mu,\sigma)
 \end{equation}
-In the M-step, we simply have to maximize the right side of this equation which sets an upper bound for $Q(\mathbf{\Theta}|\mathbf{\Theta}^\prime)$:
+In the M-step, we simply have to maximize the right side of this equation which sets an upper bound for $Q_k(\mathbf{\Theta}|\mathbf{\Theta}^\prime)$ for each metric component k:
 \begin{equation}
-\mathbf{\Theta}^\prime = arg\,max\ Q(\mathbf{\Theta}|\mathbf{\Theta}^\prime)
+\mathbf{\Theta}_k^\prime = arg\,max\ Q_k(\mathbf{\Theta}|\mathbf{\Theta}^\prime)
+\end{equation}
+where $Q_k(\mathbf{\Theta}|\mathbf{\Theta}^\prime)$ is evaluated as: 
+\begin{equation}
+Q_k(\mathbf{\Theta}|\mathbf{\Theta}^\prime)= \sum_j \Bigg[ log p(b_j|\beta_k)+  log p(c_j|\gamma_k)\Bigg] + \sum_i \Bigg[log p(D_i|\theta_k) + \sum_{j\in J_i}   log \mathcal{N}(\phi_{ij};\mu_{ij},\sigma_{ij}) \Bigg]
 \end{equation}
 
 \section{Metrics for $\Phi$ Functions}

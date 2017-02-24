@@ -13,11 +13,13 @@ web-app/flask/lib/python2.7/site-packages/*
 *.csv
 *.log
 *.dump
+analysis/old_data/
 analysis/plots/*.pdf
+analysis/plots/*.png
 analysis/*.pdf
 analysis/*.png
 *.sql
-
+*.pages
 #LaTeX 
 *.aux
 *.bbl

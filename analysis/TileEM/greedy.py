@@ -5,7 +5,7 @@ from generateBoundingBoxData import *
 class Solution:
 
     def __init__(self,n):
-        self.areaOfIntersections = [0]*n
+        self.areaOfIntersections = [1e-10]*n
         self.areaOfSolution = 0
         self.logLikelihood = -100000000
         self.frontier = set()
@@ -42,7 +42,7 @@ def initializeFrontier(testSet,solution):
         #Checking what the highest available level in the poset is and its corresponding frontier
         checkList = {testSet.MaximumNumberOfRegions - 1}
         for _ in xrange(1,testSet.N):
-            allChildren = {}
+            allChildren = set()
             for region in checkList:
                 allChildren = allChildren.union(set(getChildrenRegionsSlow(region,set(range(1,testSet.MaximumNumberOfRegions)))))
             children = testSet.setOfRegions.intersection(allChildren)
@@ -117,6 +117,9 @@ def computeLogLikelihood(region,solution,testSet):
         if i in annotators:
             logLikelihood += 2 * log(solution.areaOfIntersections[i - 1] + testSet.RegionToAreaMapping[region])
         else:
+            solution.printSolution()
+            print solution.areaOfIntersections
+            print solution.areaOfIntersections[i - 1]
             logLikelihood += 2 * log(solution.areaOfIntersections[i - 1])
     return logLikelihood
 

@@ -4,7 +4,7 @@ import numpy as np
 
 def experiment_exhaustive(T_low, raw_data):
     annotators = data.gen_data2(raw_data)
-    T_high = sum(annotators[0].regions)
+    T_high = int(sum(annotators[0].regions))
     T_values = []
     L_values = []
     print "Starting Exhaustive Search with T values between " + str(T_low) + " and " + str(T_high)

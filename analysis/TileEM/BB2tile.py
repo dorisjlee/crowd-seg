@@ -1,19 +1,21 @@
+import os
 import pandas as pd 
-from analysis_toolbox import *
-from qualityBaseline import *
-os.chdir("../../BoundingBoxArchive/Code/")
 from greedy import *
 from data import *
 from experiment import *
+
 from PIL import Image, ImageDraw
 from shapely.geometry import Polygon
+os.chdir("..")
+from analysis_toolbox import *
+from qualityBaseline import *
 ################################################
 ##                                            ##
 ##        Preprocessing                       ##
 ##                                            ##
 ################################################
 # Loading bounding box drawn by workers
-bb_info = pd.read_csv('../../crowd-seg/analysis/computed_my_COCO_BBvals.csv')
+bb_info = pd.read_csv('../computed_my_COCO_BBvals.csv')
 obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
 object_id_lst  = list(set(obj_sorted_tbl.object_id))
 img_info,object_tbl,bb_info,hit_info = load_info()
@@ -24,7 +26,7 @@ def createObjIndicatorMatrix(objid,PLOT=False):
     # Create a masked image for the object
     # where each of the worker BB is considered a mask and overlaid on top of each other 
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
-    fname = "../../crowd-seg/web-app/app/static/"+img_name+".png"
+    fname = "../../web-app/app/static/"+img_name+".png"
     img=mpimg.imread(fname)
     width,height = get_size(fname)
     mega_mask = np.zeros((height,width))
@@ -88,7 +90,7 @@ def createObjIndicatorMatrix(objid,PLOT=False):
         tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
         indicator_matrix[-1][tile_i]=tile.area
     if PLOT: sanity_check(indicator_matrix)
-    return indicator_matrix
+    return tiles,indicator_matrix
 def sanity_check(indicator_matrix): 
     plt.title("Tile Area")
     plt.semilogy(indicator_matrix[-1])

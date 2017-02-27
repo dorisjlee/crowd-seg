@@ -20,7 +20,7 @@ def solve(annotators, T):
 
 	objective = cvx.Maximize(f)
 	prob = cvx.Problem(objective, constraints)
-	
+	print np.exp(prob.solve(solver='SCS')), gammas.value
 	return np.exp(prob.solve(solver='SCS')), gammas.value
 
 

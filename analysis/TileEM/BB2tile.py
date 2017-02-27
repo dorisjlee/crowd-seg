@@ -15,18 +15,21 @@ from qualityBaseline import *
 ##                                            ##
 ################################################
 # Loading bounding box drawn by workers
-bb_info = pd.read_csv('../computed_my_COCO_BBvals.csv')
+bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
 obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
 object_id_lst  = list(set(obj_sorted_tbl.object_id))
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-def createObjIndicatorMatrix(objid,PLOT=False):
+def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects  = obj_sorted_tbl[obj_sorted_tbl["object_id"]==objid]
+    # Sampling Data from Ji table 
+    if sampleNworkers>0 and sampleNworkers<len(bb_objects):
+        bb_objects = bb_objects.sample(n=sampleNworkers,random_state=111)
     # Create a masked image for the object
     # where each of the worker BB is considered a mask and overlaid on top of each other 
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
-    fname = "../../web-app/app/static/"+img_name+".png"
+    fname = "../web-app/app/static/"+img_name+".png"
     img=mpimg.imread(fname)
     width,height = get_size(fname)
     mega_mask = np.zeros((height,width))
@@ -60,6 +63,7 @@ def createObjIndicatorMatrix(objid,PLOT=False):
         for segment in res:
             if segment.dtype!=np.uint8:
                 tiles.append(segment)
+
     # Convert set of tiles to indicator matrix for all workers and tiles
     # by checking if the worker's BB contains the tile pieces
     # The indicator matrix is a (N + 1) X M matrix, 
@@ -68,6 +72,9 @@ def createObjIndicatorMatrix(objid,PLOT=False):
     M = len(tiles)
     worker_lst  = np.unique(bb_objects.worker_id)
     N = len(worker_lst)
+    if PRINT: 
+        print "Number of non-overlapping tile regions (M) : ",M
+        print "Number of workers (N) : ",N
     indicator_matrix = np.zeros((N+1,M))
     for  wi in range(N):
         worker_id = worker_lst[wi]
@@ -83,17 +90,40 @@ def createObjIndicatorMatrix(objid,PLOT=False):
                 plt.figure()
                 plot_coords(tile)
                 plot_coords(worker_BB_polygon,color="blue")
-            if worker_BB_polygon.contains(tile): 
+            if worker_BB_polygon.contains(tile) : #or tile.contains(worker_BB_polygon): 
                 indicator_matrix[wi][tile_i]=1
     # The last row of the indicator matrix is the tile area
     for tile_i in range(M):
         tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
         indicator_matrix[-1][tile_i]=tile.area
+    # # for all the regions that have not been voted by any workers (all-zero rows) 
+    # for i in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
+    #     #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
+    #     tile= Polygon(zip(tiles[i][:,1],tiles[i][:,0]))
+    #     # find worker's BB that intersects and assign it as tile region
+    #     for  wi in range(N):
+    #         worker_id = worker_lst[wi]
+    #         worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
+    #         worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))
+    #         # Check if this worker's polygon intersects  this tile 
+    #         if worker_BB_polygon.intersects(tile): 
+    #             indicator_matrix[wi][tile_i]=1
+    #             if PLOT:
+    #                 plt.figure()
+    #                 plot_coords(tile)
+    #                 plot_coords(worker_BB_polygon,color="blue")
+    #Final check if there are still all-zero rows, and their area is fairly small, let's just throw the whole tile out
+    all_zero_check =  np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    for i in all_zero_check:
+        print Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area
+        indicator_matrix = np.delete(indicator_matrix,(i),axis=0)
     if PLOT: sanity_check(indicator_matrix)
     return tiles,indicator_matrix
 def sanity_check(indicator_matrix): 
+    print "Check that there are no all-zero rows in indicator matrix:" , len(np.where(np.sum(indicator_matrix,axis=1)==0)[0])==0
     plt.title("Tile Area")
-    plt.semilogy(indicator_matrix[-1])
+    sorted_indicator_matrix = indicator_matrix[:,indicator_matrix[-1].argsort()]
+    plt.semilogy(sorted_indicator_matrix[-1])
     plt.figure()
     plt.title("Indicator Matrix")
     #Plot all excluding last row (area)

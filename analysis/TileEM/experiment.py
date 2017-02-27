@@ -1,8 +1,8 @@
 import convexsolver as cvx
 import data
 import numpy as np
-
-def experiment_exhaustive(T_low, raw_data):
+from tqdm import tqdm
+def experiment_exhaustive(T_low, raw_data,step_size=1):
     annotators = data.gen_data2(raw_data)
     T_high = int(sum(annotators[0].regions))
     T_values = []
@@ -11,7 +11,7 @@ def experiment_exhaustive(T_low, raw_data):
     print "--------------------------"
     maxL = -1000000000
     gammas = None
-    for T in range(T_low, T_high + 1):
+    for T in tqdm(range(T_low, T_high + 1,step_size)):
         l, g = cvx.solve(annotators, T)
         if l is None:
             print "Failed to solve"
@@ -22,7 +22,7 @@ def experiment_exhaustive(T_low, raw_data):
             T_values.append(T)
             L_values.append(l)
         #print "Done with T = " + str(T)
-    return T_values, L_values, getSolution(gammas)
+    return T_values, L_values, gammas, getSolution(gammas)
 
 def experiment_local(T_low, raw_data):
 	annotators = data.gen_data2(raw_data)
@@ -56,16 +56,14 @@ def experiment_local(T_low, raw_data):
 				next_T = T_right
 		
 		# only decrease step size when no update was made
-		if step_size >= 2 and next_T == curr_T:
-			step_size /= 2
-
+		if step_size >= 1 and next_T == curr_T:
+			step_size /=  2
 		# if no update was made when step_size reached 1, we have
 		# found a local minimum
-		if step_size == 1 and next_T == curr_T:
+		if step_size <= 1 and next_T == curr_T:
 			break
-		
 		curr_T = next_T
-	return curr_T, max_L, getSolution(gammas)
+	return curr_T, max_L, gammas, getSolution(gammas)
 
 def experiment_median(raw_data):
 	annotators = data.gen_data2(raw_data)
@@ -77,7 +75,7 @@ def experiment_median(raw_data):
 	print "Starting Median Experiment with T value " + str(T)
 	print "--------------------------"
 	l, g = cvx.solve(annotators, T)
-	return T, l, getSolution(g)
+	return T, l, g, getSolution(g)
 
 def experiment_avg(raw_data):
 	annotators = data.gen_data2(raw_data)
@@ -88,7 +86,7 @@ def experiment_avg(raw_data):
 	print "Starting Average Experiment with T value " + str(T)
 	print "--------------------------"
 	l, g = cvx.solve(annotators, T)
-	return T, l, getSolution(g)
+	return T, l, g, getSolution(g)
 
 def getSolution(gammas):
     solutionList = []

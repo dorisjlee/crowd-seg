@@ -62,7 +62,11 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
         if PLOT: plot_trace_contours(res)
         for segment in res:
             if segment.dtype!=np.uint8:
-                tiles.append(segment)
+                #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
+                tile= Polygon(zip(segment[:,1],segment[:,0]))
+                # print tile.area
+                if tile.area>=1:
+                    tiles.append(segment)
 
     # Convert set of tiles to indicator matrix for all workers and tiles
     # by checking if the worker's BB contains the tile pieces
@@ -75,28 +79,30 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
     if PRINT: 
         print "Number of non-overlapping tile regions (M) : ",M
         print "Number of workers (N) : ",N
-    indicator_matrix = np.zeros((N+1,M))
+    indicator_matrix = np.zeros((N+1,M),dtype=int)
     for  wi in range(N):
         worker_id = worker_lst[wi]
         worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
         worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))
         # Check if worker's polygon contains this tile
         for tile_i in range(M):
-            #tile = Polygon(tiles[tile_i])
-            #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
+            # tile = Polygon(tiles[tile_i])
             tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
             # Check that tiles are indeed close to BB (no mis-alignment issue)
             if PLOT and tile_i==0:
                 plt.figure()
                 plot_coords(tile)
                 plot_coords(worker_BB_polygon,color="blue")
-            if worker_BB_polygon.contains(tile) : #or tile.contains(worker_BB_polygon): 
+            if worker_BB_polygon.contains(tile): #or tile.contains(worker_BB_polygon): 
                 indicator_matrix[wi][tile_i]=1
-    # The last row of the indicator matrix is the tile area
-    for tile_i in range(M):
-        tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
-        indicator_matrix[-1][tile_i]=tile.area
-    # # for all the regions that have not been voted by any workers (all-zero rows) 
+
+        # print tile.area
+        # if tile.area<1:
+        #     delete_tile_idx.append(tile_i)
+    # print delete_tile_idx
+    #indicator_matrix = np.delete(indicator_matrix,(delete_tile_idx),axis=1)
+
+    # for all the regions that have not been voted by any workers (all-zero rows) 
     # for i in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
     #     #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
     #     tile= Polygon(zip(tiles[i][:,1],tiles[i][:,0]))
@@ -112,18 +118,33 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
     #                 plt.figure()
     #                 plot_coords(tile)
     #                 plot_coords(worker_BB_polygon,color="blue")
-    #Final check if there are still all-zero rows, and their area is fairly small, let's just throw the whole tile out
-    all_zero_check =  np.where(np.sum(indicator_matrix,axis=1)==0)[0]
-    for i in all_zero_check:
-        print Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area
-        indicator_matrix = np.delete(indicator_matrix,(i),axis=0)
+    #Final check if there are still all-zero rows, and their area is <1 px, let's just throw the whole tile out
+    # all_zero_check = np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    # for i in all_zero_check:
+    #     print Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area
+    #     if Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area<4: #no smaller than 2pix^2
+    #         print "deleted tile #",i
+    #         indicator_matrix = np.delete(indicator_matrix,(i),axis=0)
+    # throw away worker responses that contain all-zero rows (they probably did not draw any important region since nothing they drew agreed with others )
+    delete_tile_idx = np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    indicator_matrix = np.delete(indicator_matrix,delete_tile_idx,axis=0)[:-1]
+    # The last row of the indicator matrix is the tile area
+    #delete_tile_idx = []
+    for tile_i in range(M):
+        tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
+        # print tile
+        # print tile.area
+        indicator_matrix[-1][tile_i]=tile.area
+    # for _i in delete_tile_idx: tiles.pop(_i) #remove corresponding tile information
     if PLOT: sanity_check(indicator_matrix)
     return tiles,indicator_matrix
 def sanity_check(indicator_matrix): 
     print "Check that there are no all-zero rows in indicator matrix:" , len(np.where(np.sum(indicator_matrix,axis=1)==0)[0])==0
+    plt.figure()
     plt.title("Tile Area")
     sorted_indicator_matrix = indicator_matrix[:,indicator_matrix[-1].argsort()]
     plt.semilogy(sorted_indicator_matrix[-1])
+    # plt.plot(sorted_indicator_matrix[-1])
     plt.figure()
     plt.title("Indicator Matrix")
     #Plot all excluding last row (area)

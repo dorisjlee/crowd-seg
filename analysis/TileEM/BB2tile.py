@@ -15,14 +15,11 @@ from qualityBaseline import *
 ##                                            ##
 ################################################
 # Loading bounding box drawn by workers
-bb_info = pd.read_csv('computed_my_COCO_BBvals.csv')
-obj_sorted_tbl =  bb_info[bb_info['Jaccard [COCO]']!=-1][bb_info['Jaccard [COCO]']!=0][bb_info['Jaccard [Self]']!=0].sort('object_id')
-object_id_lst  = list(set(obj_sorted_tbl.object_id))
 img_info,object_tbl,bb_info,hit_info = load_info()
 
 def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
-    bb_objects  = obj_sorted_tbl[obj_sorted_tbl["object_id"]==objid]
+    bb_objects = bb_info[bb_info["object_id"]==objid]
     # Sampling Data from Ji table 
     if sampleNworkers>0 and sampleNworkers<len(bb_objects):
         bb_objects = bb_objects.sample(n=sampleNworkers,random_state=111)
@@ -61,7 +58,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
         res = c.trace(0.9)
         if PLOT: plot_trace_contours(res)
         for segment in res:
-            if segment.dtype!=np.uint8:
+            if segment.dtype!=np.uint8 and len(segment)>2:
                 #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
                 tile= Polygon(zip(segment[:,1],segment[:,0]))
                 # print tile.area
@@ -96,46 +93,26 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
             if worker_BB_polygon.contains(tile): #or tile.contains(worker_BB_polygon): 
                 indicator_matrix[wi][tile_i]=1
 
-        # print tile.area
-        # if tile.area<1:
-        #     delete_tile_idx.append(tile_i)
-    # print delete_tile_idx
-    #indicator_matrix = np.delete(indicator_matrix,(delete_tile_idx),axis=1)
-
-    # for all the regions that have not been voted by any workers (all-zero rows) 
-    # for i in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
-    #     #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
-    #     tile= Polygon(zip(tiles[i][:,1],tiles[i][:,0]))
-    #     # find worker's BB that intersects and assign it as tile region
-    #     for  wi in range(N):
-    #         worker_id = worker_lst[wi]
-    #         worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
-    #         worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))
-    #         # Check if this worker's polygon intersects  this tile 
-    #         if worker_BB_polygon.intersects(tile): 
-    #             indicator_matrix[wi][tile_i]=1
-    #             if PLOT:
-    #                 plt.figure()
-    #                 plot_coords(tile)
-    #                 plot_coords(worker_BB_polygon,color="blue")
-    #Final check if there are still all-zero rows, and their area is <1 px, let's just throw the whole tile out
-    # all_zero_check = np.where(np.sum(indicator_matrix,axis=1)==0)[0]
-    # for i in all_zero_check:
-    #     print Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area
-    #     if Polygon(zip(tiles[i][:,1],tiles[i][:,0])).area<4: #no smaller than 2pix^2
-    #         print "deleted tile #",i
-    #         indicator_matrix = np.delete(indicator_matrix,(i),axis=0)
-    # throw away worker responses that contain all-zero rows (they probably did not draw any important region since nothing they drew agreed with others )
-    delete_tile_idx = np.where(np.sum(indicator_matrix,axis=1)==0)[0]
-    indicator_matrix = np.delete(indicator_matrix,delete_tile_idx,axis=0)[:-1]
     # The last row of the indicator matrix is the tile area
-    #delete_tile_idx = []
     for tile_i in range(M):
         tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
-        # print tile
-        # print tile.area
         indicator_matrix[-1][tile_i]=tile.area
-    # for _i in delete_tile_idx: tiles.pop(_i) #remove corresponding tile information
+
+    #for all the workers with all-zero rows
+    for wi in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
+        worker_id = worker_lst[wi]
+        worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
+        worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))
+        dist_lst = []
+        for tile_i in range(len(tiles)): 
+            #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
+            tile = Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
+            #Find the closest tile that corresponds to that worker
+            dist_lst.append(worker_BB_polygon.distance(tile))
+        argmin_dist_idx = np.where(dist_lst==min(np.array(dist_lst)))[0]
+        for min_dist_idx in argmin_dist_idx:
+            indicator_matrix[wi][tile_i]=1
+
     if PLOT: sanity_check(indicator_matrix)
     return tiles,indicator_matrix
 def sanity_check(indicator_matrix): 

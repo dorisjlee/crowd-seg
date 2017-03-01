@@ -13,6 +13,7 @@ web-app/flask/lib/python2.7/site-packages/*
 *.csv
 *.log
 *.dump
+analysis/TileEM/output/
 analysis/old_data/
 analysis/plots/*.pdf
 analysis/plots/*.png

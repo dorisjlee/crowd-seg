@@ -6,7 +6,8 @@ from experiment import *
 
 from PIL import Image, ImageDraw
 from shapely.geometry import Polygon
-os.chdir("..")
+import sys
+sys.path.append('../')
 from analysis_toolbox import *
 from qualityBaseline import *
 ################################################
@@ -26,7 +27,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False):
     # Create a masked image for the object
     # where each of the worker BB is considered a mask and overlaid on top of each other 
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
-    fname = "../web-app/app/static/"+img_name+".png"
+    fname = "../../web-app/app/static/"+img_name+".png"
     img=mpimg.imread(fname)
     width,height = get_size(fname)
     mega_mask = np.zeros((height,width))
@@ -125,7 +126,7 @@ def sanity_check(indicator_matrix):
     plt.figure()
     plt.title("Indicator Matrix")
     #Plot all excluding last row (area)
-    plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
+    plt.imshow(sorted_indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
     plt.colorbar()
 def plot_coords(ob,color='red'):
     #Plot shapely polygon coord 

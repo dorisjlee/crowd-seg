@@ -14,6 +14,7 @@ web-app/flask/lib/python2.7/site-packages/*
 *.log
 *.dump
 analysis/TileEM/output/
+ analysis/TileEM/step500_output/
 analysis/old_data/
 analysis/plots/*.pdf
 analysis/plots/*.png
@@ -21,6 +22,7 @@ analysis/*.pdf
 analysis/*.png
 *.sql
 *.pages
+*.pkl
 #LaTeX 
 *.aux
 *.bbl

@@ -86,9 +86,15 @@ def experiment_avg(raw_data):
 	print "Starting Average Experiment with T value " + str(T)
 	print "--------------------------"
 	l, g = cvx.solve(annotators, T)
+	print l,g
 	return T, l, g, getSolution(g)
 
 def getSolution(gammas):
+    if gammas is None:
+    	# In the case when the CVX solver can not find a solution, it returns gamma as None and l as inf. 
+    	# This happens for Median or Average case, where your T value is just very off, so you can't really find a good ML region corresponding to the T constraints.
+    	# This means that our solution set should be empty.
+    	return []
     solutionList = []
     solutionListPartial = []
     for i,gamma in enumerate(gammas):

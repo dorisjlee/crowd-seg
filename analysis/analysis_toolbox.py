@@ -52,7 +52,7 @@ def load_info():
 	return [img_info,object_tbl,bb_info,hit_info]
 
 import matplotlib.image as mpimg
-def visualize_bb_objects(object_id,gtypes=['worker','self'],single=False,bb_info=""):
+def visualize_bb_objects(object_id,img_bkgrnd=True,gtypes=['worker','self'],single=False,bb_info=""):
     '''
     Plot BB for the object corresponding to the given object_id
     #Still need to implement COCO later...
@@ -62,19 +62,21 @@ def visualize_bb_objects(object_id,gtypes=['worker','self'],single=False,bb_info
         img_info,object_tbl,bb_info,hit_info=load_info()
     else:
         img_info,object_tbl,bb_info_bad,hit_info=load_info()
-    
+    plt.figure(figsize =(7,7))
     ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
     my_BBG  = pd.read_csv("my_ground_truth.csv")
-    img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==object_id]["image_id"])]["filename"].iloc[0]
-    fname = "../web-app/app/static/"+img_name+".png"
-    img=mpimg.imread(fname)
-    width,height = get_size(fname)
-    img_id = int(img_name.split('_')[-1])
-    plt.figure(figsize =(7,7))
-    plt.imshow(img)
-    plt.axis("off")   
-    plt.xlim(0,width)
-    plt.ylim(height,0)
+    if img_bkgrnd:
+        img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==object_id]["image_id"])]["filename"].iloc[0]
+        fname = "../web-app/app/static/"+img_name+".png"
+        img=mpimg.imread(fname)
+        width,height = get_size(fname)
+        img_id = int(img_name.split('_')[-1])
+        plt.imshow(img)
+        plt.xlim(0,width)
+        plt.ylim(height,0)
+        plt.axis("off")   
+    else:
+        plt.gca().invert_yaxis()
     plt.title("Object {0} [{1}]".format(object_id,object_tbl[object_tbl.object_id==object_id]["name"].iloc[0]))
 #         plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.5)
     if 'worker' in gtypes:

@@ -11,6 +11,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib
 import warnings
+
+DATA_DIR="output"
 warnings.filterwarnings('ignore')
 
 my_BBG  = pd.read_csv("../my_ground_truth.csv")
@@ -26,7 +28,7 @@ def compute_PR(objid,solnset,tiles):
         return -1,-1
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
-    BBG = Polygon(zip(x_locs,y_locs))
+    BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
     recall = ML_regions.intersection(BBG).area/float(BBG.area)
     if float(ML_regions.area)!=0:
         precision = ML_regions.intersection(BBG).area/float(ML_regions.area)
@@ -71,7 +73,7 @@ def compute_worker_PR_obj(objid):
         recall_lst.append(recall([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
     return np.array(precision_lst),np.array(recall_lst)
 
-def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1):
+def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1,PLOT_HEATMAP=False):
     '''
     Compute the precision recall for a object indexed by objid
     based on T-search strategy indexed by experiment_idx, where:
@@ -80,6 +82,7 @@ def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1):
     2 = Local Search
     3 = Exhaustive Search
     The post-processing method could either be gamma threshold, top-k gamma, or top-k majority vote.
+    OPTIONAL: Plot Gamma Heatmap 
     '''
     
     precision_lst = []
@@ -90,20 +93,33 @@ def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1):
         # Deriving new solution set from different thresholding criteria
         if majority_topk==-1:
             if threshold!=-1:
+                procstr = "Gamma>{}".format(threshold)
                 solnset = getSolutionThreshold(gammas[experiment_idx],threshold=threshold)
             elif topk!=-1:
+                procstr="Gamma k={}".format(topk)
                 solnset = getSolutionTopK(gammas[experiment_idx],k=topk)
-        else:
+        elif majority_topk!=-1:
             os.chdir("..")
             tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
             os.chdir("step500_output")
             worker_tile_votes = np.sum(objIndicatorMat,axis=1)[:-1] 
+            procstr="Majority k={}".format(majority_topk)
             solnset = getSolutionTopK(worker_tile_votes,k=majority_topk)
+        if PLOT_HEATMAP: 
+            mask = plot_tile_gamma(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True)
         precision,recall = compute_PR(objid,solnset,tiles)
+        if PLOT_HEATMAP:
+	        font0 = matplotlib.font_manager.FontProperties()
+	        font1=font0.copy()
+	        font1.set_size('xx-large')
+	        font1.set_weight('heavy')
+	        plt.figtext(0.45,0.7,'{0}\n P={1:.2f}, R={2:.2f}'.format(procstr,precision,recall),color='white',fontproperties=font1,ha='center')
     except(IOError):
         pass
     return precision,recall
-def plot_all_postprocess_PR_curves(objid):
+
+
+def plot_all_postprocess_PR_curves(objid,legend=False):
     '''
 	Plot PR curves for each object for all post-processing methods
 	'''
@@ -115,7 +131,7 @@ def plot_all_postprocess_PR_curves(objid):
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
     tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
-    os.chdir("step500_output")
+    os.chdir(DATA_DIR)
     k_lst = np.arange(1,len(tiles))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
@@ -138,7 +154,7 @@ def plot_all_postprocess_PR_curves(objid):
         TileEM_thres_recall_lst.append(TileEM_thres_recall)
     TileEM_thres_recall_lst = np.array(TileEM_thres_recall_lst)
     TileEM_thres_precision_lst = np.array(TileEM_thres_precision_lst)
-    #     print "{0}:{1},{2}".format(threshold,TileEM_thres_precision,TileEM_thres_recall)
+        # print "{0}:{1},{2}".format(threshold,TileEM_thres_precision,TileEM_thres_recall)
     order = np.argsort(TileEM_thres_recall_lst)
     plt.plot(TileEM_thres_recall_lst[order],TileEM_thres_precision_lst[order], linestyle='-',linewidth=2,ms=13, marker='x',color="blue",label="TileEM Thresh")
     # Plotting PR from TileEM for different Top-k
@@ -157,7 +173,7 @@ def plot_all_postprocess_PR_curves(objid):
     plt.ylim(0,1.05)
     plt.ylabel("Precision",fontsize=13)
     plt.xlabel("Recall",fontsize=13)
-    plt.legend(loc="top left",numpoints=1)
+    if legend: plt.legend(loc="top left",numpoints=1)
     plt.savefig("PR_obj{}.pdf".format(objid))
 def compute_joined_PR(objid):
     '''
@@ -168,7 +184,7 @@ def compute_joined_PR(objid):
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
     tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
-    os.chdir("step500_output")
+    os.chdir(DATA_DIR)
     k_lst = np.arange(1,len(tiles))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
@@ -278,9 +294,9 @@ def join_tiles(solutionList,tiles):
     '''
     return cascaded_union([shapely.geometry.Polygon(zip(tiles[int(tidx)-1][:,1],tiles[int(tidx)-1][:,0])) for tidx in solutionList])
 
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Polygon
 def plot_tile_gamma(objid,solnset,tiles,gamma,PLOT_BBG=False,PLOT_GSOLN=False):
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import Polygon
     '''
 	Plot Tile Heatmap for the object 
 	Optional: include ground truth (BBG) or Gamma tile solution (GSOLN)

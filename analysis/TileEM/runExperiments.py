@@ -8,7 +8,7 @@ import pandas as pd
 import string
 from tqdm import tqdm
 import pickle as pkl
-def run_all_experiments(tiles, objIndicatorMat,exhaustive_step_size=500):
+def run_all_experiments(tiles, objIndicatorMat,exhaustive_step_size=1000):
     Ta, La, ga, solutionLista = experiment_avg(objIndicatorMat)
     Tm, Lm, gm, solutionListm = experiment_median(objIndicatorMat)
     Tl, Ll, gl, solutionListl = experiment_local(1, objIndicatorMat)

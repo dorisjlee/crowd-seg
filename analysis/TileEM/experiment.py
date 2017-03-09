@@ -86,7 +86,6 @@ def experiment_avg(raw_data):
 	print "Starting Average Experiment with T value " + str(T)
 	print "--------------------------"
 	l, g = cvx.solve(annotators, T)
-	print l,g
 	return T, l, g, getSolution(g)
 
 def getSolution(gammas):

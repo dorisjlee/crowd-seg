@@ -44,7 +44,7 @@ def getSolutionThreshold(gammas,threshold=0.5):
 	'''
 	if gammas is None:
 	# In the case when the CVX solver can not find a solution, it returns gamma as None and l as inf. 
-	# This happens for Median or Average case, where your T value is just very off, so you can't really find a good ML region corresponding to the T constraints.
+	# This happens for Median or Average case, where   your T value is just very off, so you can't really find a good ML region corresponding to the T constraints.
 	# This means that our solution set should be empty.
 		return []
 	solutionList = []
@@ -73,7 +73,7 @@ def compute_worker_PR_obj(objid):
         recall_lst.append(recall([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
     return np.array(precision_lst),np.array(recall_lst)
 
-def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1,PLOT_HEATMAP=False):
+def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,PLOT_HEATMAP=False):
     '''
     Compute the precision recall for a object indexed by objid
     based on T-search strategy indexed by experiment_idx, where:
@@ -98,15 +98,17 @@ def compute_PR_obj(objid,experiment_idx,threshold=-1,topk=-1,majority_topk=-1,PL
             elif topk!=-1:
                 procstr="Gamma k={}".format(topk)
                 solnset = getSolutionTopK(gammas[experiment_idx],k=topk)
+            if PLOT_HEATMAP: 
+                mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True)
         elif majority_topk!=-1:
             os.chdir("..")
-            tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
-            os.chdir("step500_output")
-            worker_tile_votes = np.sum(objIndicatorMat,axis=1)[:-1] 
+            tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
+            os.chdir(DATA_DIR)
+            tile_votes = np.sum(objIndicatorMat[:-1],axis=0)
             procstr="Majority k={}".format(majority_topk)
-            solnset = getSolutionTopK(worker_tile_votes,k=majority_topk)
-        if PLOT_HEATMAP: 
-            mask = plot_tile_gamma(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True)
+            solnset = getSolutionTopK(tile_votes,k=majority_topk)
+            if PLOT_HEATMAP: 
+                mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True)
         precision,recall = compute_PR(objid,solnset,tiles)
         if PLOT_HEATMAP:
 	        font0 = matplotlib.font_manager.FontProperties()
@@ -130,7 +132,7 @@ def plot_all_postprocess_PR_curves(objid,legend=False):
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="red",label="Worker")
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
+    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
     os.chdir(DATA_DIR)
     k_lst = np.arange(1,len(tiles))
     Maj_topk_precision_lst = []
@@ -183,7 +185,7 @@ def compute_joined_PR(objid):
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
+    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
     os.chdir(DATA_DIR)
     k_lst = np.arange(1,len(tiles))
     Maj_topk_precision_lst = []
@@ -294,7 +296,7 @@ def join_tiles(solutionList,tiles):
     '''
     return cascaded_union([shapely.geometry.Polygon(zip(tiles[int(tidx)-1][:,1],tiles[int(tidx)-1][:,0])) for tidx in solutionList])
 
-def plot_tile_gamma(objid,solnset,tiles,gamma,PLOT_BBG=False,PLOT_GSOLN=False):
+def plot_tile_heatmap(objid,solnset,tiles,gamma,PLOT_BBG=False,PLOT_GSOLN=False):
     from matplotlib.collections import PatchCollection
     from matplotlib.patches import Polygon
     '''
@@ -364,6 +366,58 @@ def plot_all_obj_tiles(experiment_idx,threshold=0.01,PLOT_BBG=True,PLOT_GSOLN=Tr
             gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))#ga,gm,gl,ge
             # Deriving new solution set from different thresholding criteria
             solnset =  getSolutionThreshold(gammas[experiment_idx],threshold=threshold)
-            mask = plot_tile_gamma(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=PLOT_BBG,PLOT_GSOLN=PLOT_GSOLN)
+            mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=PLOT_BBG,PLOT_GSOLN=PLOT_GSOLN)
         except(IOError):
             pass
+def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False):
+    '''
+    Plot PR curves for each object for all post-processing methods
+    '''
+    plt.figure()
+    plt.title("Object #{0} [{1}]".format(objid,method))
+    # Worker Individual Precision and Recall based on their BB drawn for this object
+    worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
+    # Plotting PR from Top-k Majority vote 
+    os.chdir("..")
+    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False,PLOT=False)
+    os.chdir(DATA_DIR)
+    precision_lst = []
+    recall_lst = []
+    if method=='majority_top_k':
+    	print int((len(tiles)-1)/30.)
+    	print len(tiles)
+        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+        for  k in tqdm(param_lst):
+            precision,recall= compute_PR_obj(objid,2,majority_topk=k)
+            precision_lst.append(precision)
+            recall_lst.append(recall)
+        plt.xlabel("k")
+        plt.xlim(0,len(tiles))
+    elif method=="gamma_threshold":
+        param_lst = np.linspace(0,0.95,20)
+        for  threshold in param_lst :
+            precision,recall= compute_PR_obj(objid,2,threshold=threshold)
+            precision_lst.append(precision)
+            recall_lst.append(recall)
+        plt.xlabel("Threshold")
+        plt.xlim(0,1)
+    elif method=="gamma_top_k":
+        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+        for  k in param_lst :
+            precision,recall= compute_PR_obj(objid,2,topk=k)
+            precision_lst.append(precision)
+            recall_lst.append(recall)
+        plt.xlabel("k")
+        plt.xlim(0,len(tiles))
+    recall_lst = np.array(recall_lst)
+    precision_lst = np.array(precision_lst)
+    plt.plot(param_lst,recall_lst, linestyle='-', linewidth=1,marker='.',color="blue",label="Recall")
+    plt.plot(param_lst,precision_lst, linestyle='-', linewidth=1,marker='.',color="red",label="Precision")
+        
+    if PLOT_WORKER:
+        plt.plot(worker_recall_lst , '^',color="gray",label="Worker Recall")
+        plt.plot(worker_precision_lst  , 'o',color="gray",label="Worker Precision")
+    
+    plt.ylim(0,1.05)
+    plt.savefig("Dual_PR_{0}_{1}.pdf".format(objid,method))
+#     plt.legend(loc="lower right",numpoints=1)

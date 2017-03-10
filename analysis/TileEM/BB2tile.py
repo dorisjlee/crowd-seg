@@ -192,8 +192,9 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     # except(IndexError):
     #     print "IndexError"
     #     pass
-    print "Object ",objid
-    sanity_check(indicator_matrix,PLOT)
+    if PLOT or PRINT:
+        print "Object ",objid
+        sanity_check(indicator_matrix,PLOT)
         
     return tiles,indicator_matrix
 

@@ -20,6 +20,7 @@ analysis/plots/*.pdf
 analysis/plots/*.png
 analysis/*.pdf
 analysis/*.png
+*output*
 *.sql
 *.pages
 *.pkl

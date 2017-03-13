@@ -2,11 +2,17 @@ import sys
 from TileEM_plot_toolbox import *
 os.chdir("output")
 try:
-	print "Running PR Curves for ",sys.argv[1]
+	print "Running PR Curves while varying ",sys.argv[1]
 except(IndexError):
 	print '''
-	  method='gamma_threshold','majority_top_k','gamma_top_k'
+	  method='postprocess','T-search'
 	  '''
 object_lst = list(object_tbl.id)
-for objid in tqdm(object_lst):
-    plot_dual_PR_curves(objid,method= sys.argv[1])
+if sys.argv[1]=='postprocess':
+	for objid in tqdm(object_lst[36:]):
+	    plot_all_postprocess_PR_curves(objid,legend=True) 
+elif sys.argv[1]=='T-search':
+	for objid in tqdm(object_lst):
+	    plot_all_T_search_PR_curves(objid,'majority-top-k')
+	    plot_all_T_search_PR_curves(objid,'tile-threshold')
+	    plot_all_T_search_PR_curves(objid,'tile-top-k')

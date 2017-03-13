@@ -36,15 +36,17 @@ def gmat2arr(g):
         return np.array(g.T)[0]
 if __name__ == "__main__":
     img_info,object_tbl,bb_info,hit_info = load_info()
+    Nsample = sys.argv[1]
+    DIR_NAME = '{}_worker_output/'.format(Nsample)
     object_lst = list(object_tbl.id)
-    Tfile = open("output/Tarea.txt",'a')
-    Lfile = open("output/likelihood.txt",'a')
+    Tfile = open(DIR_NAME+"Tarea.txt",'a')
+    Lfile = open(DIR_NAME+"likelihood.txt",'a')
     for objid in tqdm(object_lst):
         print "Working on obj:",objid
         tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
         print "Saving checkpoint..."
-        Tfile = open("output/Tarea.txt",'a')
-        Lfile = open("output/likelihood.txt",'a')
+        Tfile = open(DIR_NAME+"Tarea.txt",'a')
+        Lfile = open(DIR_NAME+"likelihood.txt",'a')
         T,L,g,soln = run_all_experiments(tiles, objIndicatorMat)
 
         Tfile.write(T.__repr__().replace('(','').replace(')','\n'))
@@ -52,8 +54,8 @@ if __name__ == "__main__":
 
         Tfile.close()
         Lfile.close()
-        pkl.dump(g,open("output/gfile{}.pkl".format(objid),'w'))
-        pkl.dump(soln,open("output/solnfile{}.pkl".format(objid),'w'))
-        pkl.dump(tiles,open("output/tiles{}.pkl".format(objid),'w'))
+        pkl.dump(g,open(DIR_NAME+"gfile{}.pkl".format(objid),'w'))
+        pkl.dump(soln,open(DIR_NAME+"solnfile{}.pkl".format(objid),'w'))
+        pkl.dump(tiles,open(DIR_NAME+"tiles{}.pkl".format(objid),'w'))
     Tfile.close()
     Lfile.close()

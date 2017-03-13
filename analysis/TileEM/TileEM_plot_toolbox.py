@@ -94,20 +94,18 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
         tiles = pkl.load(open("tiles{}.pkl".format(objid),'r'))
         gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))#ga,gm,gl,ge
         # Deriving new solution set from different thresholding criteria
-        if majority_topk==-1:
-            if threshold!=-1:
-                procstr = "Gamma>{}".format(threshold)
-                solnset = getSolutionThreshold(gammas[experiment_idx],threshold=threshold)
-            elif topk!=-1:
-                procstr="Gamma k={}".format(topk)
-                solnset = getSolutionTopK(gammas[experiment_idx],k=topk)
-            if PLOT_HEATMAP: 
-            	if DEBUG:
-	            	print procstr
-	            	print solnset
-	            	print np.array(gammas[experiment_idx])[solnset]
-                mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
-                
+        if threshold!=-1:
+            procstr = "Gamma>{}".format(threshold)
+            solnset = getSolutionThreshold(gammas[experiment_idx],threshold=threshold) 
+            if PLOT_HEATMAP: mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
+        elif topk!=-1:
+            procstr="Gamma k={}".format(topk)
+            solnset = getSolutionTopK(gammas[experiment_idx],k=topk)
+            if PLOT_HEATMAP: mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
+            if DEBUG:
+	        	print procstr
+	        	print solnset
+	        	print np.array(gammas[experiment_idx])[solnset]
         elif majority_topk!=-1:
             os.chdir("..")
             tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
@@ -117,6 +115,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
             solnset = getSolutionTopK(tile_votes,k=majority_topk)
             if PLOT_HEATMAP: 
                 mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
+        
         precision,recall = compute_PR(objid,solnset,tiles)
         if PLOT_HEATMAP:
 	        font0 = matplotlib.font_manager.FontProperties()
@@ -159,7 +158,7 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     TileEM_thres_precision_lst = []
     TileEM_thres_recall_lst = []
     for threshold in threshold_lst :
-        TileEM_thres_precision, TileEM_thres_recall= compute_PR_obj(objid,2,threshold=threshold)
+        TileEM_thres_precision, TileEM_thres_recall= compute_PR_obj(objid,threshold=threshold)
         TileEM_thres_precision_lst.append(TileEM_thres_precision)
         TileEM_thres_recall_lst.append(TileEM_thres_recall)
     TileEM_thres_recall_lst = np.array(TileEM_thres_recall_lst)
@@ -171,7 +170,7 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     TileEM_topk_precision_lst = []
     TileEM_topk_recall_lst = []
     for  k in k_lst :
-        TileEM_topk_precision, TileEM_topk_recall= compute_PR_obj(objid,2,topk=k)
+        TileEM_topk_precision, TileEM_topk_recall= compute_PR_obj(objid,topk=k)
         TileEM_topk_precision_lst.append(TileEM_topk_precision)
         TileEM_topk_recall_lst.append(TileEM_topk_recall)
     TileEM_topk_recall_lst = np.array(TileEM_topk_recall_lst)
@@ -352,6 +351,7 @@ def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=Fal
 
     collection = PatchCollection(patches,cmap=matplotlib.cm.autumn_r,alpha=0.25)
     pcollection = ax.add_collection(collection)
+    
     if max(z_values)>2 : #majority vote
     	cbar_range = np.arange(0,max(z_values))
     else: 
@@ -362,7 +362,7 @@ def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=Fal
 	    selected_z_vals=np.array(z_values[solnset])
     collection.set_array(selected_z_vals)
     ax.add_collection(collection)
-    plt.colorbar(collection,boundaries=cbar_range)
+    plt.colorbar(collection)#,boundaries=cbar_range)
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
     fname = "../../../web-app/app/static/"+img_name+".png"
     plt.title("Object {0} [{1}]".format(objid,object_tbl[object_tbl.object_id==objid]["name"].iloc[0]))
@@ -370,6 +370,7 @@ def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=Fal
     width,height = get_size(fname)
     plt.xlim(0,width)
     plt.ylim(height,0) 
+    collection.set_clim(0,max(z_values))
     plt.imshow(img,alpha=0.8)
     ax.autoscale_view()
 def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
@@ -472,7 +473,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     if method=='majority_top_k':
         param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
         for  k in tqdm(param_lst):
-            precision,recall= compute_PR_obj(objid,2,majority_topk=k)
+            precision,recall= compute_PR_obj(objid,majority_topk=k)
             precision_lst.append(precision)
             recall_lst.append(recall)
         plt.xlabel("k")
@@ -480,7 +481,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     elif method=="gamma_threshold":
         param_lst = np.linspace(0,0.95,20)
         for  threshold in param_lst :
-            precision,recall= compute_PR_obj(objid,2,threshold=threshold)
+            precision,recall= compute_PR_obj(objid,threshold=threshold)
             precision_lst.append(precision)
             recall_lst.append(recall)
         plt.xlabel("Threshold")

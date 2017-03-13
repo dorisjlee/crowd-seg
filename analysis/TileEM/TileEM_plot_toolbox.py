@@ -11,7 +11,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib
 import warnings
-
+DEBUG=False
 DATA_DIR="output"
 warnings.filterwarnings('ignore')
 
@@ -49,8 +49,8 @@ def getSolutionThreshold(gammas,threshold=0.5):
 		return []
 	solutionList = []
 	for i,gamma in enumerate(gammas):
-		if gamma > threshold:
-			solutionList.append(i+1)
+		if gamma > threshold: 
+			solutionList.append(i)
 	return solutionList
 
 def getSolutionTopK(data,k=5):
@@ -83,8 +83,11 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     3 = Exhaustive Search
     The post-processing method could either be gamma threshold, top-k gamma, or top-k majority vote.
     OPTIONAL: Plot Gamma Heatmap 
+    If PLOT_HEATMAP="all-region", plot all tile heatmap region whether selected from solnset or not
     '''
-    
+    INCLUDE_ALL=False
+    if PLOT_HEATMAP=="all-region": INCLUDE_ALL=True
+        
     precision_lst = []
     recall_lst = []
     try:
@@ -99,7 +102,12 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
                 procstr="Gamma k={}".format(topk)
                 solnset = getSolutionTopK(gammas[experiment_idx],k=topk)
             if PLOT_HEATMAP: 
-                mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True)
+            	if DEBUG:
+	            	print procstr
+	            	print solnset
+	            	print np.array(gammas[experiment_idx])[solnset]
+                mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
+                
         elif majority_topk!=-1:
             os.chdir("..")
             tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
@@ -108,7 +116,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
             procstr="Majority k={}".format(majority_topk)
             solnset = getSolutionTopK(tile_votes,k=majority_topk)
             if PLOT_HEATMAP: 
-                mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True)
+                mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
         precision,recall = compute_PR(objid,solnset,tiles)
         if PLOT_HEATMAP:
 	        font0 = matplotlib.font_manager.FontProperties()
@@ -121,7 +129,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     return precision,recall
 
 
-def plot_all_postprocess_PR_curves(objid,legend=False):
+def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     '''
 	Plot PR curves for each object for all post-processing methods
 	'''
@@ -138,7 +146,7 @@ def plot_all_postprocess_PR_curves(objid,legend=False):
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
     for  k in k_lst :
-        Maj_topk_precision,Maj_topk_recall= compute_PR_obj(objid,2,topk=k)
+        Maj_topk_precision,Maj_topk_recall= compute_PR_obj(objid,experiment_idx,topk=k)
         Maj_topk_precision_lst.append(Maj_topk_precision)
         Maj_topk_recall_lst.append(Maj_topk_recall)
     Maj_topk_recall_lst = np.array(Maj_topk_recall_lst)
@@ -175,7 +183,7 @@ def plot_all_postprocess_PR_curves(objid,legend=False):
     plt.ylim(0,1.05)
     plt.ylabel("Precision",fontsize=13)
     plt.xlabel("Recall",fontsize=13)
-    if legend: plt.legend(loc="top left",numpoints=1)
+    if legend: plt.legend(loc="bottom left",numpoints=1)
     plt.savefig("PR_obj{}.pdf".format(objid))
 def compute_joined_PR(objid):
     '''
@@ -294,14 +302,18 @@ def join_tiles(solutionList,tiles):
     '''
     Given a solutionList of tile indicies, join the tiles together into a Polygon/MultiPolygon object.
     '''
-    return cascaded_union([shapely.geometry.Polygon(zip(tiles[int(tidx)-1][:,1],tiles[int(tidx)-1][:,0])) for tidx in solutionList])
+    # Debugging large tile for obj26
+    #plot_coords(shapely.geometry.Polygon(zip(tiles[141][:,0],tiles[141][:,1])),color='cyan')
+    return cascaded_union([shapely.geometry.Polygon(zip(tiles[int(tidx)][:,1],tiles[int(tidx)][:,0])) for tidx in solutionList])
 
-def plot_tile_heatmap(objid,solnset,tiles,gamma,PLOT_BBG=False,PLOT_GSOLN=False):
+#mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True)
+def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=False,INCLUDE_ALL=False):
     from matplotlib.collections import PatchCollection
     from matplotlib.patches import Polygon
     '''
-	Plot Tile Heatmap for the object 
-	Optional: include ground truth (BBG) or Gamma tile solution (GSOLN)
+	Plot Tile Heatmap for the object z_values (can either be gamma values or majority votes)
+	Optional: include ground truth (BBG) or Gamma/Majority vote tile solution (GSOLN)
+	INCLUDE_ALL: plot  heatmap values for all tiles, otherwise, plot only the tiles selected by solnset
 	'''
     area_lst=[]
 
@@ -316,41 +328,115 @@ def plot_tile_heatmap(objid,solnset,tiles,gamma,PLOT_BBG=False,PLOT_GSOLN=False)
         except(ValueError):
             return 
         if type(ML_regions)==shapely.geometry.polygon.Polygon:
-            x,y=ML_regions.exterior.xy
-            plt.plot(x, y, '-', color='lime',linewidth=1)    
+            plot_coords(ML_regions,color="lime",reverse_xy=True)
         else:
             for region in ML_regions:
-                x,y=region.exterior.xy
-                plt.plot(x, y, '-', color='lime',linewidth=1)    
+                plot_coords(region,color="lime",reverse_xy=True)
     if PLOT_BBG:
         my_BBG  = pd.read_csv("../../my_ground_truth.csv")
         ground_truth_match = my_BBG[my_BBG.object_id==objid]
         x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
         plt.plot(x_locs,y_locs,'--',color='#0000ff',linewidth=1.5)
 
-    # Gamma Tiles 
+    # Plot only z_values of tiles included in the solnset
     patches = []
-    for tile_idx in range(len(tiles)):
-        tile =  sorted_ascend_tile_by_size[tile_idx]
+
+    if INCLUDE_ALL:
+    	solnset=range(len(tiles))	
+    for tile_idx in  solnset:
+        #tile =  sorted_ascend_tile_by_size[tile_idx]
+        tile=tiles[tile_idx]
         polygon = Polygon(zip(tile[:,1],tile[:,0]),closed=True,\
                           linewidth=1,edgecolor='black',fill=False)
         patches.append(polygon)
 
     collection = PatchCollection(patches,cmap=matplotlib.cm.autumn_r,alpha=0.25)
     pcollection = ax.add_collection(collection)
-    
-    collection.set_array(gamma)
+    if max(z_values)>2 : #majority vote
+    	cbar_range = np.arange(0,max(z_values))
+    else: 
+    	cbar_range = np.linspace(0,1,21)
+    if INCLUDE_ALL:
+    	selected_z_vals=np.array(z_values)
+    else:
+	    selected_z_vals=np.array(z_values[solnset])
+    collection.set_array(selected_z_vals)
     ax.add_collection(collection)
-    plt.colorbar(collection)
+    plt.colorbar(collection,boundaries=cbar_range)
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
     fname = "../../../web-app/app/static/"+img_name+".png"
     plt.title("Object {0} [{1}]".format(objid,object_tbl[object_tbl.object_id==objid]["name"].iloc[0]))
     img =mpimg.imread(fname)
     width,height = get_size(fname)
     plt.xlim(0,width)
-    plt.ylim(height,0)
+    plt.ylim(height,0) 
     plt.imshow(img,alpha=0.8)
     ax.autoscale_view()
+def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
+    '''
+    Plot PR curves for each object for all T-search methods
+    '''
+    experiment_names = {0:'Avrg',1:'Median',2:'Local',3:'Exhaustive'}
+
+    plt.figure()
+    plt.title("Object #{0} [{1}]".format(objid,postprocess))
+    # Worker Individual Precision and Recall based on their BB drawn for this object
+    worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
+    plt.plot(worker_recall_lst ,worker_precision_lst , '.',color='gray',label="Worker")
+
+    os.chdir("..")
+    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
+    os.chdir(DATA_DIR)
+    k_lst = np.arange(1,len(tiles))
+    linestyles = ['--','-','-.','--']
+    markers=['^','D','o','>']
+    for experiment_idx in [2,3,0,1]:
+        if postprocess == 'majority-top-k':
+            # Plotting PR from Top-k Majority vote 
+            Maj_topk_precision_lst = []
+            Maj_topk_recall_lst = []
+            for  k in k_lst :
+                Maj_topk_precision,Maj_topk_recall= compute_PR_obj(objid,experiment_idx,topk=k)
+                Maj_topk_precision_lst.append(Maj_topk_precision)
+                Maj_topk_recall_lst.append(Maj_topk_recall)
+            Maj_topk_recall_lst = np.array(Maj_topk_recall_lst)
+            Maj_topk_precision_lst = np.array(Maj_topk_precision_lst)
+            order = np.argsort(Maj_topk_recall_lst)
+            plt.plot(Maj_topk_recall_lst[order],Maj_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1, marker=markers[experiment_idx], label=experiment_names[experiment_idx])
+        elif postprocess == 'tile-threshold':
+            # Plotting PR from TileEM for different thresholds
+            threshold_lst = np.linspace(0,0.95,20)
+            TileEM_thres_precision_lst = []
+            TileEM_thres_recall_lst = []
+            for threshold in threshold_lst :
+                TileEM_thres_precision, TileEM_thres_recall= compute_PR_obj(objid,experiment_idx,threshold=threshold)
+                TileEM_thres_precision_lst.append(TileEM_thres_precision)
+                TileEM_thres_recall_lst.append(TileEM_thres_recall)
+            TileEM_thres_recall_lst = np.array(TileEM_thres_recall_lst)
+            TileEM_thres_precision_lst = np.array(TileEM_thres_precision_lst)
+            #     print "{0}:{1},{2}".format(threshold,TileEM_thres_precision,TileEM_thres_recall)
+            order = np.argsort(TileEM_thres_recall_lst)
+            plt.plot(TileEM_thres_recall_lst[order],TileEM_thres_precision_lst[order], linestyle=linestyles[experiment_idx],linewidth=experiment_idx+1, marker=markers[experiment_idx], label=experiment_names[experiment_idx])
+        elif postprocess=='tile-top-k':
+            # Plotting PR from TileEM for different Top-k
+            TileEM_topk_precision_lst = []
+            TileEM_topk_recall_lst = []
+            for  k in k_lst :
+                TileEM_topk_precision, TileEM_topk_recall= compute_PR_obj(objid,experiment_idx,topk=k)
+                TileEM_topk_precision_lst.append(TileEM_topk_precision)
+                TileEM_topk_recall_lst.append(TileEM_topk_recall)
+            TileEM_topk_recall_lst = np.array(TileEM_topk_recall_lst)
+            TileEM_topk_precision_lst = np.array(TileEM_topk_precision_lst)
+            order = np.argsort(TileEM_topk_recall_lst)
+            plt.plot(TileEM_topk_recall_lst[order],TileEM_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1,marker=markers[experiment_idx], label=experiment_names[experiment_idx])
+
+    plt.xlim(0,1.05)
+    plt.ylim(0,1.05)
+    plt.ylabel("Precision",fontsize=13)
+    plt.xlabel("Recall",fontsize=13)
+    lgd = plt.legend( numpoints=1, loc="center right", bbox_to_anchor=(1.4, 0.5))
+    plt.savefig("PR_obj{0}_{1}.pdf".format(objid,postprocess), bbox_extra_artists=(lgd,),bbox_inches='tight')
+
 def plot_all_obj_tiles(experiment_idx,threshold=0.01,PLOT_BBG=True,PLOT_GSOLN=True):
     '''
     Plot Tile Heatmap for all objects for a given experiment index
@@ -369,7 +455,7 @@ def plot_all_obj_tiles(experiment_idx,threshold=0.01,PLOT_BBG=True,PLOT_GSOLN=Tr
             mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=PLOT_BBG,PLOT_GSOLN=PLOT_GSOLN)
         except(IOError):
             pass
-def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False):
+def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=False):
     '''
     Plot PR curves for each object for all post-processing methods
     '''
@@ -384,8 +470,6 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False):
     precision_lst = []
     recall_lst = []
     if method=='majority_top_k':
-    	print int((len(tiles)-1)/30.)
-    	print len(tiles)
         param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
         for  k in tqdm(param_lst):
             precision,recall= compute_PR_obj(objid,2,majority_topk=k)
@@ -420,4 +504,4 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False):
     
     plt.ylim(0,1.05)
     plt.savefig("Dual_PR_{0}_{1}.pdf".format(objid,method))
-#     plt.legend(loc="lower right",numpoints=1)
+    if legend: plt.legend(loc="lower left",numpoints=1)

@@ -216,9 +216,12 @@ def sanity_check(indicator_matrix,PLOT=False):
         plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
         plt.colorbar()
 
-def plot_coords(ob,color='red'):
+def plot_coords(ob,color='red',reverse_xy=False):
     #Plot shapely polygon coord 
-    y,x = ob.exterior.xy
+    if reverse_xy:
+        x,y = ob.exterior.xy
+    else:
+        y,x = ob.exterior.xy
     plt.plot(x, y, '-', color=color, zorder=1)
 
 def plot_all_tiles(tiles):

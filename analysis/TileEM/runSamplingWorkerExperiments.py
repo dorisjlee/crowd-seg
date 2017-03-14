@@ -19,10 +19,10 @@ def run_experiment(tiles, objIndicatorMat,method="average"):
         T, L, g, solutionList = experiment_exhaustive(1,  objIndicatorMat,step_size=500)
         L = np.array(L)
         try:
-        L  = L [L !=np.inf]
-        maxidx = argmax(L )
-        L  = L[maxidx] #Maximum likelihood
-        T  = T[maxidx]
+            L  = L [L !=np.inf]
+            maxidx = argmax(L )
+            L  = L[maxidx] #Maximum likelihood
+            T  = T[maxidx]
         except(ValueError):
             L  = np.inf
             T  =np.nan
@@ -36,18 +36,22 @@ def gmat2arr(g):
         return np.array(g.T)[0]
 if __name__ == "__main__":
     img_info,object_tbl,bb_info,hit_info = load_info()
-    Nsample = sys.argv[1]
+    Nsample = int(sys.argv[1])
+    print "Sampling {} workers".format(Nsample)
     DIR_NAME = '{}_worker_output/'.format(Nsample)
     object_lst = list(object_tbl.id)
+    if not os.path.exists(DIR_NAME):
+        os.makedirs(DIR_NAME)
     Tfile = open(DIR_NAME+"Tarea.txt",'a')
     Lfile = open(DIR_NAME+"likelihood.txt",'a')
     for objid in tqdm(object_lst):
         print "Working on obj:",objid
-        tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
+        tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=Nsample,PRINT=False)
+        print "Check that objectIndicatorMat is N+1x|T|:", shape(objIndicatorMat)[0]==Nsample+1
         print "Saving checkpoint..."
         Tfile = open(DIR_NAME+"Tarea.txt",'a')
         Lfile = open(DIR_NAME+"likelihood.txt",'a')
-        T,L,g,soln = run_all_experiments(tiles, objIndicatorMat)
+        T,L,g,soln = run_experiment(tiles, objIndicatorMat)
 
         Tfile.write(T.__repr__().replace('(','').replace(')','\n'))
         Lfile.write(L.__repr__().replace('(','').replace(')','\n'))

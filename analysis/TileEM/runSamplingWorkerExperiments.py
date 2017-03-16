@@ -38,28 +38,34 @@ if __name__ == "__main__":
     img_info,object_tbl,bb_info,hit_info = load_info()
     Nsample = int(sys.argv[1])
     print "Sampling {} workers".format(Nsample)
-    DIR_NAME = '{}_worker_output/'.format(Nsample)
-    object_lst = list(object_tbl.id)
-    if not os.path.exists(DIR_NAME):
-        os.makedirs(DIR_NAME)
-    Tfile = open(DIR_NAME+"Tarea.txt",'a')
-    Lfile = open(DIR_NAME+"likelihood.txt",'a')
-    for objid in tqdm(object_lst):
-        print "Working on obj:",objid
-        tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=Nsample,PRINT=False)
-        print "Check that objectIndicatorMat is N+1x|T|:", shape(objIndicatorMat)[0]==Nsample+1
-        print "Saving checkpoint..."
+    # Loop through all randomized batches
+    try:
+        Nbatches= int(sys.argv[2])
+    except:
+        Nbatches=1
+    for batch_i in range(Nbatches):
+        DIR_NAME = '{0}_worker_output_{1}/'.format(Nsample,batch_i)
+        object_lst = list(object_tbl.id)
+        if not os.path.exists(DIR_NAME):
+            os.makedirs(DIR_NAME)
         Tfile = open(DIR_NAME+"Tarea.txt",'a')
         Lfile = open(DIR_NAME+"likelihood.txt",'a')
-        T,L,g,soln = run_experiment(tiles, objIndicatorMat)
+        for objid in tqdm(object_lst):
+            print "Working on obj:",objid
+            tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=Nsample,PRINT=False)
+            print "Check that objectIndicatorMat is N+1x|T|:", shape(objIndicatorMat)[0]==Nsample+1
+            print "Saving checkpoint..."
+            Tfile = open(DIR_NAME+"Tarea.txt",'a')
+            Lfile = open(DIR_NAME+"likelihood.txt",'a')
+            T,L,g,soln = run_experiment(tiles, objIndicatorMat)
 
-        Tfile.write(T.__repr__().replace('(','').replace(')','\n'))
-        Lfile.write(L.__repr__().replace('(','').replace(')','\n'))
+            Tfile.write(T.__repr__()+'\n')
+            Lfile.write(L.__repr__()+'\n')
 
+            Tfile.close()
+            Lfile.close()
+            pkl.dump(g,open(DIR_NAME+"gfile{}.pkl".format(objid),'w'))
+            pkl.dump(soln,open(DIR_NAME+"solnfile{}.pkl".format(objid),'w'))
+            pkl.dump(tiles,open(DIR_NAME+"tiles{}.pkl".format(objid),'w'))
         Tfile.close()
         Lfile.close()
-        pkl.dump(g,open(DIR_NAME+"gfile{}.pkl".format(objid),'w'))
-        pkl.dump(soln,open(DIR_NAME+"solnfile{}.pkl".format(objid),'w'))
-        pkl.dump(tiles,open(DIR_NAME+"tiles{}.pkl".format(objid),'w'))
-    Tfile.close()
-    Lfile.close()

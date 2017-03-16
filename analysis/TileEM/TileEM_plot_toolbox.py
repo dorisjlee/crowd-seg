@@ -57,10 +57,11 @@ def getSolutionTopK(data,k=5):
 	#Derive a solution set of tiles of top-K gamma tile values 
 	return np.argsort(data)[::-1][:k]
 
-def compute_worker_PR_obj(objid):
+def compute_worker_PR_obj(objid,return_worker_id=False):
     # List of PR measures of all workers 
     precision_lst = []
     recall_lst = []
+    worker_lst=[]
     objBBs = bb_info[bb_info.object_id==objid]
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     BBG_x_locs,BBG_y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
@@ -69,9 +70,13 @@ def compute_worker_PR_obj(objid):
         bbx_path= bb[1]["x_locs"]
         bby_path= bb[1]["y_locs"]
         worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+        worker_lst.append(bb[1]["worker_id"])
         precision_lst.append(precision([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
         recall_lst.append(recall([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
-    return np.array(precision_lst),np.array(recall_lst)
+    if return_worker_id:
+        return np.array(worker_lst),np.array(precision_lst),np.array(recall_lst)
+    else:
+        return np.array(precision_lst),np.array(recall_lst)
 
 def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,PLOT_HEATMAP=False):
     '''
@@ -120,9 +125,12 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
         if PLOT_HEATMAP:
 	        font0 = matplotlib.font_manager.FontProperties()
 	        font1=font0.copy()
-	        font1.set_size('xx-large')
+	        font1.set_size('large')
 	        font1.set_weight('heavy')
-	        plt.figtext(0.45,0.7,'{0}\n P={1:.2f}, R={2:.2f}'.format(procstr,precision,recall),color='white',fontproperties=font1,ha='center')
+	        plt.figtext(0.60,0.75,'{0}\n P={1:.2f}, R={2:.2f}'.format(procstr,precision,recall),color='black',fontproperties=font1,ha='center')
+	        # font1.set_size('xx-large')
+	        # font1.set_weight('heavy')
+	        # plt.figtext(0.45,0.7,'{0}\n P={1:.2f}, R={2:.2f}'.format(procstr,precision,recall),color='white',fontproperties=font1,ha='center')
     except(IOError):
         pass
     return precision,recall
@@ -136,7 +144,7 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     plt.title("Object #{}".format(objid))
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
-    plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="red",label="Worker")
+    plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="gray",label="Worker")
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
     tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
@@ -178,8 +186,8 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     order = np.argsort(TileEM_topk_recall_lst)
     plt.plot(TileEM_topk_recall_lst[order],TileEM_topk_precision_lst[order], linestyle='--', linewidth=3,marker='o',color="green",label="TileEM Top-k")
 
-    plt.xlim(0,1.05)
-    plt.ylim(0,1.05)
+    plt.xlim(-0.05,1.05)
+    plt.ylim(-0.05,1.05)
     plt.ylabel("Precision",fontsize=13)
     plt.xlabel("Recall",fontsize=13)
     if legend: plt.legend(loc="bottom left",numpoints=1)
@@ -271,8 +279,8 @@ def plot_joined_PR_curves():
     TileEM_topk_precision_lst = np.array(TileEM_topk_precision_lst)
     order = np.argsort(TileEM_topk_recall_lst)
     plt.plot(TileEM_topk_recall_lst[order],TileEM_topk_precision_lst[order], linestyle='--', linewidth=3,marker='o',color="green",label="TileEM Top-k")
-    plt.xlim(0,1.05)
-    plt.ylim(0,1.05)
+    plt.xlim(-0.05,1.05)
+    plt.ylim(-0.05,1.05)
     plt.ylabel("Precision",fontsize=13)
     plt.xlabel("Recall",fontsize=13)
     plt.savefig("PR_obj_all.pdf")
@@ -431,8 +439,8 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
             order = np.argsort(TileEM_topk_recall_lst)
             plt.plot(TileEM_topk_recall_lst[order],TileEM_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1,marker=markers[experiment_idx], label=experiment_names[experiment_idx])
 
-    plt.xlim(0,1.05)
-    plt.ylim(0,1.05)
+    plt.xlim(-0.05,1.05)
+    plt.ylim(-0.05,1.05)
     plt.ylabel("Precision",fontsize=13)
     plt.xlabel("Recall",fontsize=13)
     lgd = plt.legend( numpoints=1, loc="center right", bbox_to_anchor=(1.4, 0.5))
@@ -477,7 +485,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
             precision_lst.append(precision)
             recall_lst.append(recall)
         plt.xlabel("k")
-        plt.xlim(0,len(tiles))
+        plt.xlim(-0.01,len(tiles))
     elif method=="gamma_threshold":
         param_lst = np.linspace(0,0.95,20)
         for  threshold in param_lst :
@@ -485,7 +493,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
             precision_lst.append(precision)
             recall_lst.append(recall)
         plt.xlabel("Threshold")
-        plt.xlim(0,1)
+        plt.xlim(-0.01,1)
     elif method=="gamma_top_k":
         param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
         for  k in param_lst :
@@ -493,16 +501,16 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
             precision_lst.append(precision)
             recall_lst.append(recall)
         plt.xlabel("k")
-        plt.xlim(0,len(tiles))
+        plt.xlim(-0.01,len(tiles))
     recall_lst = np.array(recall_lst)
     precision_lst = np.array(precision_lst)
     plt.plot(param_lst,recall_lst, linestyle='-', linewidth=1,marker='.',color="blue",label="Recall")
     plt.plot(param_lst,precision_lst, linestyle='-', linewidth=1,marker='.',color="red",label="Precision")
-        
+
     if PLOT_WORKER:
-        plt.plot(worker_recall_lst , '^',color="gray",label="Worker Recall")
-        plt.plot(worker_precision_lst  , 'o',color="gray",label="Worker Precision")
+        plt.plot(np.zeros_like(worker_recall_lst),worker_recall_lst , '^',ms=5,color="blue",label="Worker Recall")
+        plt.plot(np.zeros_like(worker_precision_lst), worker_precision_lst  , 'o',ms=5,color="red",label="Worker Precision")
     
     plt.ylim(0,1.05)
-    plt.savefig("Dual_PR_{0}_{1}.pdf".format(objid,method))
     if legend: plt.legend(loc="lower left",numpoints=1)
+    plt.savefig("Dual_PR_{0}_{1}.pdf".format(objid,method))

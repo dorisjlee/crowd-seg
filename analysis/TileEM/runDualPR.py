@@ -5,8 +5,13 @@ try:
 	print "Running Dual PR Curves for ",sys.argv[1]
 except(IndexError):
 	print '''
-	  method='gamma_threshold','majority_top_k','gamma_top_k'
+	  method='all','gamma_threshold','majority_top_k','gamma_top_k'
 	  '''
 object_lst = list(object_tbl.id)
-for objid in tqdm(object_lst):
-    plot_dual_PR_curves(objid,method= sys.argv[1])
+if sys.argv[1]=='all':
+	for method in ['gamma_threshold','majority_top_k','gamma_top_k']:
+		for objid in tqdm(object_lst):
+			plot_dual_PR_curves(objid,method= method,PLOT_WORKER=True)#,legend=True)
+else:
+	for objid in tqdm(object_lst):
+		plot_dual_PR_curves(objid,method= sys.argv[1],PLOT_WORKER=True)#,legend=True)

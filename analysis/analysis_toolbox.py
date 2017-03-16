@@ -52,7 +52,7 @@ def load_info():
 	return [img_info,object_tbl,bb_info,hit_info]
 
 import matplotlib.image as mpimg
-def visualize_bb_objects(object_id,img_bkgrnd=True,gtypes=['worker','self'],single=False,bb_info=""):
+def visualize_bb_objects(object_id,img_bkgrnd=True,worker_id=-1,gtypes=['worker','self'],single=False,bb_info=""):
     '''
     Plot BB for the object corresponding to the given object_id
     #Still need to implement COCO later...
@@ -81,13 +81,20 @@ def visualize_bb_objects(object_id,img_bkgrnd=True,gtypes=['worker','self'],sing
 #         plt.fill_between(x_locs,y_locs,color='none',facecolor='#f442df', alpha=0.5)
     if 'worker' in gtypes:
         bb_objects = bb_info[bb_info["object_id"]==object_id]
-        for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"]):
-            xloc,yloc = process_raw_locs([x,y])
-            if single:
-                plt.plot(xloc,yloc,'-',color='#f442df',linewidth=4)
-            else:
-                plt.plot(xloc,yloc,'-',color='#f442df',linewidth=1)
-                plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
+        if worker_id!=-1:
+            bb = bb_objects[bb_objects["worker_id"]==worker_id]
+            xloc,yloc =  process_raw_locs([bb["x_locs"].iloc[0],bb["y_locs"].iloc[0]])    
+        
+            plt.plot(xloc,yloc,'-',color='cyan',linewidth=3)
+            plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
+        else:
+            for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"]):
+                xloc,yloc = process_raw_locs([x,y])
+                if single:
+                    plt.plot(xloc,yloc,'-',color='#f442df',linewidth=4)
+                else:
+                    plt.plot(xloc,yloc,'-',color='#f442df',linewidth=1)
+                    plt.fill_between(xloc,yloc,color='none',facecolor='#f442df', alpha=0.01)
     if 'self' in gtypes:
         ground_truth_match = my_BBG[my_BBG.object_id==object_id]
         x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])

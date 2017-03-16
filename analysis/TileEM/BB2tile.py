@@ -24,7 +24,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]
     # Sampling Data from Ji table 
     if sampleNworkers>0 and sampleNworkers<len(bb_objects):
-        bb_objects = bb_objects.sample(n=sampleNworkers,random_state=111)
+        bb_objects = bb_objects.sample(n=sampleNworkers)#,random_state=111)
     # Create a masked image for the object
     # where each of the worker BB is considered a mask and overlaid on top of each other 
     img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==objid]["image_id"])]["filename"].iloc[0]
@@ -44,14 +44,15 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     if PLOT: 
         # Visualize mega_mask
         plt.figure()
-        plt.imshow(mega_mask)
+        plt.imshow(mega_mask,interpolation="none")#,cmap="rainbow")
         plt.colorbar()
 
     # Create masks for single valued tiles (so that they are more disconnected)
     from matplotlib import _cntr as cntr
     tiles = [] # list of coordinates of all the tiles extracted
     unique_tile_values = np.unique(mega_mask)
-    for tile_value in unique_tile_values[1:]:
+    # print unique_tile_values
+    for tile_value in unique_tile_values[1:]: #exclude 0
         singly_masked_img = np.zeros_like(mega_mask)
         for x,y in zip(*np.where(mega_mask==tile_value)):
             singly_masked_img[x][y]=1
@@ -76,6 +77,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     # the last row being region sizes
     M = len(tiles)
     worker_lst  = np.unique(bb_objects.worker_id)
+    print worker_lst
     N = len(worker_lst)
     if PRINT: 
         print "Number of non-overlapping tile regions (M) : ",M
@@ -95,6 +97,9 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
             #     plot_coords(tile)
             #     plot_coords(worker_BB_polygon,color="blue")
             # if worker_BB_polygon.contains(tile): #or tile.contains(worker_BB_polygon): 
+
+            # Tried worker_BB_polygon expansion method but this led to too many votes among workers in the indicator matrix
+            # worker_BB_polygon= worker_BB_polygon.buffer(1.0)
             if worker_BB_polygon.contains(tile): #or tile.contains(worker_BB_polygon): 
                 # if tile_i==0 : print "contain"
                 indicator_matrix[wi][tile_i]=1
@@ -105,9 +110,9 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
         indicator_matrix[-1][tile_i]=tile.area
     # Debug plotting all tiles that have not been voted by workers 
     all_unvoted_tiles=np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
-    # print "all unvoted tiles:",all_unvoted_tiles
-    # print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
-    colors=cm.rainbow(np.linspace(0,1,len(np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0])))
+    print "all unvoted tiles:",all_unvoted_tiles
+    print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    # colors=cm.rainbow(np.linspace(0,1,len(np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0])))
     
     # Debug Visualizing what the bad bounding boxes look like
     # os.chdir("..")
@@ -216,13 +221,14 @@ def sanity_check(indicator_matrix,PLOT=False):
         plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
         plt.colorbar()
 
-def plot_coords(ob,color='red',reverse_xy=False):
+def plot_coords(ob,color='red',reverse_xy=False,fill_color=""):
     #Plot shapely polygon coord 
     if reverse_xy:
         x,y = ob.exterior.xy
     else:
         y,x = ob.exterior.xy
     plt.plot(x, y, '-', color=color, zorder=1)
+    if fill_color!="": plt.fill_between(x, y , facecolor=fill_color,color='none', alpha=0.5)
 
 def plot_all_tiles(tiles):
     plt.figure()

@@ -67,8 +67,8 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
                 #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
                 tile= Polygon(zip(segment[:,1],segment[:,0]))
                 # print tile.area
-                if tile.area>=1:
-                    tiles.append(segment)
+                # if tile.area>=1:
+                tiles.append(segment)
 
     # Convert set of tiles to indicator matrix for all workers and tiles
     # by checking if the worker's BB contains the tile pieces
@@ -77,7 +77,6 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     # the last row being region sizes
     M = len(tiles)
     worker_lst  = np.unique(bb_objects.worker_id)
-    print worker_lst
     N = len(worker_lst)
     if PRINT: 
         print "Number of non-overlapping tile regions (M) : ",M
@@ -100,8 +99,16 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
 
             # Tried worker_BB_polygon expansion method but this led to too many votes among workers in the indicator matrix
             # worker_BB_polygon= worker_BB_polygon.buffer(1.0)
-            if worker_BB_polygon.contains(tile): #or tile.contains(worker_BB_polygon): 
-                # if tile_i==0 : print "contain"
+            tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
+            overlap_lst.append(tileBB_overlap)
+            
+            #If either centroid is not contained in the polygon or overlap is too low, then its prob not a containment tile
+            if (not worker_BB_polygon.contains(tile.centroid)) or (tileBB_overlap<=0.8):
+                # plt.figure()
+                # plot_coords(worker_BB_polygon,color="green")
+                # plot_coords(tile,color="blue")
+                # y,x =tile.centroid.xy
+                # plt.plot(x[0],y[0],'x',color='red')
                 indicator_matrix[wi][tile_i]=1
 
     # The last row of the indicator matrix is the tile area
@@ -110,8 +117,9 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
         indicator_matrix[-1][tile_i]=tile.area
     # Debug plotting all tiles that have not been voted by workers 
     all_unvoted_tiles=np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
-    print "all unvoted tiles:",all_unvoted_tiles
-    print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    if PRINT:
+        print "all unvoted tiles:",all_unvoted_tiles
+        print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
     # colors=cm.rainbow(np.linspace(0,1,len(np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0])))
     
     # Debug Visualizing what the bad bounding boxes look like
@@ -123,49 +131,51 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
         # bad_tile = Polygon(tiles[tile_idx])
         # shrunk_bad_tile=bad_tile.buffer(-0.5)
         # plot_coords(shrunk_bad_tile)
-    for tile_idx  in  all_unvoted_tiles :
-        tile = Polygon(zip(tiles[tile_idx][:,1],tiles[tile_idx][:,0]))
-        overlap_lst=[]
-        max_overlap=True
-        for wi in range(len(worker_lst)):
-            worker_id = worker_lst[wi]
-            worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
-            worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
-
-            tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
-            overlap_lst.append(tileBB_overlap)
-            if tileBB_overlap>0.8:
-                indicator_matrix[wi][tile_idx]=1
-                max_overlap=False
-        if max_overlap:
-            most_overlapping_workerBB = np.argmax(overlap_lst)
-            indicator_matrix[most_overlapping_workerBB][tile_idx]=1
-            # #visually checking that tiles that don't pass the threshold and we pick from max overlap is decent
-            worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_lst[most_overlapping_workerBB]]
-            worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
-            # plt.figure()
-            # plt.title(str(overlap_lst[most_overlapping_workerBB]))
-            # plot_coords(tile)
-            # plot_coords(worker_BB_polygon,color="blue")
-    for wi in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
-        worker_id = worker_lst[wi]
-        worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
-        worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
-        for tile_idx  in  range(len(tiles)):
-            tile = Polygon(zip(tiles[tile_idx][:,1],tiles[tile_idx][:,0]))
-            tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
-            if tileBB_overlap>0.8:
-                indicator_matrix[wi][tile_idx]=1
-                # plt.figure()
-                # # plt.title(str(overlap_lst[most_overlapping_workerBB]))
-                # plt.title(str(tileBB_overlap))
-                # plot_coords(tile)
-                # plot_coords(worker_BB_polygon,color="blue")
-
-    # print "After overlap adding"
-    # print "all unvoted tiles:",np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
-    # print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
     
+    # if len(all_unvoted_tiles)!=0:
+    #     for tile_idx  in  all_unvoted_tiles :
+    #         tile = Polygon(zip(tiles[tile_idx][:,1],tiles[tile_idx][:,0]))
+    #         overlap_lst=[]
+    #         max_overlap=True
+    #         for wi in range(len(worker_lst)):
+    #             worker_id = worker_lst[wi]
+    #             worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
+    #             worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
+
+    #             tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
+    #             overlap_lst.append(tileBB_overlap)
+    #             if tileBB_overlap>0.8:
+    #                 indicator_matrix[wi][tile_idx]=1
+    #                 max_overlap=False
+    #         if max_overlap:
+    #             most_overlapping_workerBB = np.argmax(overlap_lst)
+    #             indicator_matrix[most_overlapping_workerBB][tile_idx]=1
+    #             # #visually checking that tiles that don't pass the threshold and we pick from max overlap is decent
+    #             worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_lst[most_overlapping_workerBB]]
+    #             worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
+    #             # plt.figure()
+    #             # plt.title(str(overlap_lst[most_overlapping_workerBB]))
+    #             # plot_coords(tile)
+    #             # plot_coords(worker_BB_polygon,color="blue")
+    #     for wi in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:
+    #         worker_id = worker_lst[wi]
+    #         worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
+    #         worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
+    #         for tile_idx  in  range(len(tiles)):
+    #             tile = Polygon(zip(tiles[tile_idx][:,1],tiles[tile_idx][:,0]))
+    #             tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
+    #             if tileBB_overlap>0.8:
+    #                 indicator_matrix[wi][tile_idx]=1
+    #                 # plt.figure()
+    #                 # # plt.title(str(overlap_lst[most_overlapping_workerBB]))
+    #                 # plt.title(str(tileBB_overlap))
+    #                 # plot_coords(tile)
+    #                 # plot_coords(worker_BB_polygon,color="blue")
+    #     if PRINT:
+    #         print "After overlap adding"
+    #         print "all unvoted tiles:",np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
+    #         print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+        
         
     # #for all the workers with all-zero rows
     # for wi in np.where(np.sum(indicator_matrix,axis=1)==0)[0]:

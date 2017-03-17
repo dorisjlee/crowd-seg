@@ -57,12 +57,14 @@ def getSolutionTopK(data,k=5):
 	#Derive a solution set of tiles of top-K gamma tile values 
 	return np.argsort(data)[::-1][:k]
 
-def compute_worker_PR_obj(objid,return_worker_id=False):
+def compute_worker_PR_obj(objid,return_worker_id=False,EXCLUDE_BBG=True):
     # List of PR measures of all workers 
     precision_lst = []
     recall_lst = []
     worker_lst=[]
+
     objBBs = bb_info[bb_info.object_id==objid]
+    if EXCLUDE_BBG: objBBs=  objBBs[objBBs.worker_id!=3]
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     BBG_x_locs,BBG_y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     for bb in objBBs.iterrows():

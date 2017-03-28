@@ -396,7 +396,7 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color='gray',label="Worker")
 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,sampleNworkers=40,PRINT=False)
+    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
     os.chdir(DATA_DIR)
     k_lst = np.arange(1,len(tiles))
     linestyles = ['--','-','-.','--']

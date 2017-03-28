@@ -38,18 +38,26 @@ def COCO_convert_png_to_jpg():
 	for fname in glob.glob("COCO*"):
 		os.system("convert {0} {1}".format(fname, fname.split(".")[0]+".png"))
 
-def load_info():
-	path = "/Users/dorislee/Desktop/Research/seg/data/"
-	old_path = os.getcwd()
-	os.chdir(path)
-	img_info = pd.read_csv("image.csv",skipfooter=1)
-	object_info = pd.read_csv("object.csv",skipfooter=1)
-	object_location = pd.read_csv("object_location.csv",skipfooter=1)
-	object_tbl = object_info.merge(object_location,how="inner",left_on="id",right_on="object_id")
-	bb_info = pd.read_csv("bounding_box.csv",skipfooter=1)
-	hit_info = pd.read_csv("hit.csv",skipfooter=1)
-	os.chdir(old_path)
-	return [img_info,object_tbl,bb_info,hit_info]
+def load_info(eliminate_self_intersection_bb=True):
+    from shapely.validation import explain_validity
+    path = "/Users/dorislee/Desktop/Research/seg/data/"
+    old_path = os.getcwd()
+    os.chdir(path)
+    img_info = pd.read_csv("image.csv",skipfooter=1)
+    object_info = pd.read_csv("object.csv",skipfooter=1)
+    object_location = pd.read_csv("object_location.csv",skipfooter=1)
+    object_tbl = object_info.merge(object_location,how="inner",left_on="id",right_on="object_id")
+    bb_info = pd.read_csv("bounding_box.csv",skipfooter=1)
+    if eliminate_self_intersection_bb:
+        for bb in bb_info.iterrows():
+            bb=bb[1]
+            xloc,yloc =  process_raw_locs([bb["x_locs"],bb["y_locs"]]) 
+            worker_BB_polygon=Polygon(zip(xloc,yloc))
+            if explain_validity(worker_BB_polygon).split("[")[0]=='Self-intersection':
+                bb_info.drop(bb.name, inplace=True)
+    hit_info = pd.read_csv("hit.csv",skipfooter=1)
+    os.chdir(old_path)
+    return [img_info,object_tbl,bb_info,hit_info]
 
 import matplotlib.image as mpimg
 def visualize_bb_objects(object_id,img_bkgrnd=True,worker_id=-1,gtypes=['worker','self'],single=False,bb_info=""):

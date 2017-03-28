@@ -18,7 +18,7 @@ from qualityBaseline import *
 # Loading bounding box drawn by workers
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCLUDE_BBG=True):
+def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCLUDE_BBG=True,overlap_threshold=0.5):
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects = bb_info[bb_info["object_id"]==objid]
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]
@@ -67,7 +67,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
                 #Take the transpose of the tile graph polygon because during the tile creation process the xy was flipped
                 tile= Polygon(zip(segment[:,1],segment[:,0]))
                 # print tile.area
-                # if tile.area>=1:
+                # if tile.area>=1: #FOR DEBUGGING PURPOSES
                 tiles.append(segment)
 
     # Convert set of tiles to indicator matrix for all workers and tiles
@@ -76,16 +76,18 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     # with first N rows indicator vectors for each annotator and
     # the last row being region sizes
     M = len(tiles)
-    worker_lst  = np.unique(bb_objects.worker_id)
+    worker_lst  = list(bb_objects.worker_id)
     N = len(worker_lst)
     if PRINT: 
         print "Number of non-overlapping tile regions (M) : ",M
         print "Number of workers (N) : ",N
     indicator_matrix = np.zeros((N+1,M),dtype=int)
+
     for  wi in range(N):
         worker_id = worker_lst[wi]
         worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
-        worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))
+        worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
+
         # Check if worker's polygon contains this tile
         for tile_i in range(M):
             # tile = Polygon(tiles[tile_i])
@@ -100,17 +102,18 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
             # Tried worker_BB_polygon expansion method but this led to too many votes among workers in the indicator matrix
             # worker_BB_polygon= worker_BB_polygon.buffer(1.0)
             tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
-            overlap_lst.append(tileBB_overlap)
             
             #If either centroid is not contained in the polygon or overlap is too low, then its prob not a containment tile
-            if (not worker_BB_polygon.contains(tile.centroid)) or (tileBB_overlap<=0.8):
+            
+            # if tileBB_overlap>=0.8:
+            if  worker_BB_polygon.contains(tile.centroid) or tileBB_overlap>=overlap_threshold:
+            #if worker_BB_polygon.contains(tile.centroid): #or tile.contains(worker_BB_polygon): 
                 # plt.figure()
                 # plot_coords(worker_BB_polygon,color="green")
                 # plot_coords(tile,color="blue")
                 # y,x =tile.centroid.xy
                 # plt.plot(x[0],y[0],'x',color='red')
                 indicator_matrix[wi][tile_i]=1
-
     # The last row of the indicator matrix is the tile area
     for tile_i in range(M):
         tile= Polygon(zip(tiles[tile_i][:,1],tiles[tile_i][:,0]))
@@ -120,6 +123,18 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     if PRINT:
         print "all unvoted tiles:",all_unvoted_tiles
         print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    # delete_tile_idx = np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
+    # if PRINT: print "Deleting ", len(delete_tile_idx),"tiles: ",delete_tile_idx
+    # indicator_matrix = np.delete(indicator_matrix,delete_tile_idx,axis=1)
+    # for tile_i in delete_tile_idx: 
+    #     tile= Polygon(tiles[tile_i])
+    #     plot_coords(tile)
+    #     # print "Tile",tile_i
+    #     # print tile.intersection(worker_BB_polygon).area
+    #     # print worker_BB_polygon.intersection(tile).area
+    #     # print float(tile.area)
+    #     print tile.area
+    #     tiles.pop(tile_i) #remove corresponding tile information
     # colors=cm.rainbow(np.linspace(0,1,len(np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0])))
     
     # Debug Visualizing what the bad bounding boxes look like
@@ -144,7 +159,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
 
     #             tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
     #             overlap_lst.append(tileBB_overlap)
-    #             if tileBB_overlap>0.8:
+    #             if tileBB_overlap>0.9:
     #                 indicator_matrix[wi][tile_idx]=1
     #                 max_overlap=False
     #         if max_overlap:
@@ -164,7 +179,7 @@ def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCL
     #         for tile_idx  in  range(len(tiles)):
     #             tile = Polygon(zip(tiles[tile_idx][:,1],tiles[tile_idx][:,0]))
     #             tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
-    #             if tileBB_overlap>0.8:
+    #             if tileBB_overlap>0.9:
     #                 indicator_matrix[wi][tile_idx]=1
     #                 # plt.figure()
     #                 # # plt.title(str(overlap_lst[most_overlapping_workerBB]))
@@ -231,13 +246,13 @@ def sanity_check(indicator_matrix,PLOT=False):
         plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
         plt.colorbar()
 
-def plot_coords(ob,color='red',reverse_xy=False,fill_color=""):
+def plot_coords(ob,color='red',reverse_xy=False,linestyle='-',fill_color=""):
     #Plot shapely polygon coord 
     if reverse_xy:
         x,y = ob.exterior.xy
     else:
         y,x = ob.exterior.xy
-    plt.plot(x, y, '-', color=color, zorder=1)
+    plt.plot(x, y, linestyle, color=color, zorder=1)
     if fill_color!="": plt.fill_between(x, y , facecolor=fill_color,color='none', alpha=0.5)
 
 def plot_all_tiles(tiles):

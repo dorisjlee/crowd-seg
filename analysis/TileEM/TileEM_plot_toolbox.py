@@ -1,8 +1,8 @@
 from dataset import Dataset
-from BB2tile import *
 from greedy import *
 from data import *
 from experiment import *
+from BB2TileExact import *
 import pandas as pd
 import pickle as pkl
 import shapely
@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 import warnings
 DEBUG=False
-DATA_DIR="output"
+DATA_DIR="exactOutput"
+tileIndMat_DIR = "tileIndMat"
 warnings.filterwarnings('ignore')
 
 my_BBG  = pd.read_csv("../my_ground_truth.csv")
@@ -23,20 +24,39 @@ def compute_PR(objid,solnset,tiles):
     for a given solution set and tile coordinates.
     '''
     try:
-        ML_regions = join_tiles(solnset,tiles)
+        joined_bb = join_tiles(solnset,tiles)
     except(ValueError):
         return -1,-1
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
-    recall = ML_regions.intersection(BBG).area/float(BBG.area)
-    if float(ML_regions.area)!=0:
-        precision = ML_regions.intersection(BBG).area/float(ML_regions.area)
+    if type(joined_bb)==list:
+        intersect_area =0
+        joined_bb_area =0
+        for jbb in joined_bb:
+            ia = intersection_area(BBG,jbb)
+            intersect_area += ia
+            joined_bb_area += jbb.area
+    else:
+        intersect_area=intersection_area(BBG,joined_bb)
+        joined_bb_area =joined_bb.area
+    if float(joined_bb_area)!=0:
+        precision = intersect_area/float(joined_bb_area)
     else:
         # Empty solution set
         precision = -1
+    recall = intersect_area/BBG.area
+    #This patches up PR>1 because intersect_area using the slow intersection method can sometimes be larger since overlap area may not be completely deducted, so the estimate is a bit larger than the actual area, but not by much 
+    if recall>1:
+        recall=1
+    if precision>1:
+        precision=1
     return precision,recall
-
+def intersection_area(poly1,poly2):
+    try:
+        return poly1.intersection(poly2).area
+    except(shapely.geos.TopologicalError):
+        return poly1.buffer(1e-5).intersection(poly2.buffer(1e-5)).area
 def getSolutionThreshold(gammas,threshold=0.5):
 	'''
 	Derive a solution set of tiles in BB for a given gamma tile values 
@@ -57,6 +77,23 @@ def getSolutionTopK(data,k=5):
 	#Derive a solution set of tiles of top-K gamma tile values 
 	return np.argsort(data)[::-1][:k]
 
+def compute_worker_lst_PR_obj(objid,worker_lst,EXCLUDE_BBG=True):
+    # List of PR measures of given lsit of worker ids
+    precision_lst = []
+    recall_lst = []
+
+    objBBs = bb_info[bb_info.object_id==objid]
+    ground_truth_match = my_BBG[my_BBG.object_id==objid]
+    BBG_x_locs,BBG_y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    for worker_id in worker_lst:
+        bb = objBBs[objBBs["worker_id"]==worker_id]
+        oid = bb["object_id"]
+        bbx_path= bb["x_locs"].values[0]
+        bby_path= bb["y_locs"].values[0]
+        worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+        precision_lst.append(precision([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
+        recall_lst.append(recall([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs]))
+    return np.array(precision_lst),np.array(recall_lst)
 def compute_worker_PR_obj(objid,return_worker_id=False,EXCLUDE_BBG=True):
     # List of PR measures of all workers 
     precision_lst = []
@@ -94,11 +131,11 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     '''
     INCLUDE_ALL=False
     if PLOT_HEATMAP=="all-region": INCLUDE_ALL=True
-        
+    
     precision_lst = []
     recall_lst = []
     try:
-        tiles = pkl.load(open("tiles{}.pkl".format(objid),'r'))
+        tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
         gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))#ga,gm,gl,ge
         # Deriving new solution set from different thresholding criteria
         if threshold!=-1:
@@ -114,9 +151,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
 	        	print solnset
 	        	print np.array(gammas[experiment_idx])[solnset]
         elif majority_topk!=-1:
-            os.chdir("..")
-            tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
-            os.chdir(DATA_DIR)
+            objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
             tile_votes = np.sum(objIndicatorMat[:-1],axis=0)
             procstr="Majority k={}".format(majority_topk)
             solnset = getSolutionTopK(tile_votes,k=majority_topk)
@@ -134,6 +169,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
 	        # font1.set_weight('heavy')
 	        # plt.figtext(0.45,0.7,'{0}\n P={1:.2f}, R={2:.2f}'.format(procstr,precision,recall),color='white',fontproperties=font1,ha='center')
     except(IOError):
+        print "IOERROR"
         pass
     return precision,recall
 
@@ -149,9 +185,10 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="gray",label="Worker")
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
+    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     os.chdir(DATA_DIR)
-    k_lst = np.arange(1,len(tiles))
+    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
     for  k in k_lst :
@@ -202,9 +239,10 @@ def compute_joined_PR(objid):
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
+    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     os.chdir(DATA_DIR)
-    k_lst = np.arange(1,len(tiles))
+    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
     for  k in k_lst :
@@ -311,10 +349,19 @@ def join_tiles(solutionList,tiles):
     '''
     Given a solutionList of tile indicies, join the tiles together into a Polygon/MultiPolygon object.
     '''
-    # Debugging large tile for obj26
-    #plot_coords(shapely.geometry.Polygon(zip(tiles[141][:,0],tiles[141][:,1])),color='cyan')
-    return cascaded_union([shapely.geometry.Polygon(zip(tiles[int(tidx)][:,1],tiles[int(tidx)][:,0])) for tidx in solutionList])
-
+    try:
+        return cascaded_union([tiles[tidx] for tidx in solutionList])
+    except:
+        #slow version, run through and exclude problematic solutionset item
+        Utile=tiles[0]
+        problematic_tiles =[]
+        for soln in solutionList:
+            try:
+                Utile=Utile.union(tiles[soln])
+            except(shapely.geos.TopologicalError):
+                problematic_tiles.append(tiles[soln])
+        problematic_tiles.append(Utile)
+        return problematic_tiles
 #mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True)
 def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=False,INCLUDE_ALL=False):
     from matplotlib.collections import PatchCollection
@@ -387,6 +434,7 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     '''
     Plot PR curves for each object for all T-search methods
     '''
+    print "Plot all T search PR with postprocess = ",postprocess
     experiment_names = {0:'Avrg',1:'Median',2:'Local',3:'Exhaustive'}
 
     plt.figure()
@@ -394,11 +442,11 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color='gray',label="Worker")
-
-    os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
-    os.chdir(DATA_DIR)
-    k_lst = np.arange(1,len(tiles))
+    print os.getcwd()
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    
+    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
     linestyles = ['--','-','-.','--']
     markers=['^','D','o','>']
     for experiment_idx in [2,3,0,1]:
@@ -416,7 +464,7 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
             plt.plot(Maj_topk_recall_lst[order],Maj_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1, marker=markers[experiment_idx], label=experiment_names[experiment_idx])
         elif postprocess == 'tile-threshold':
             # Plotting PR from TileEM for different thresholds
-            threshold_lst = np.linspace(0,0.95,20)
+            threshold_lst = np.linspace(0.5,0.95,19)
             TileEM_thres_precision_lst = []
             TileEM_thres_recall_lst = []
             for threshold in threshold_lst :
@@ -476,7 +524,8 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     # Plotting PR from Top-k Majority vote 
     os.chdir("..")
-    tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False,PLOT=False)
+    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     os.chdir(DATA_DIR)
     precision_lst = []
     recall_lst = []
@@ -489,7 +538,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
         plt.xlabel("k")
         plt.xlim(-0.01,len(tiles))
     elif method=="gamma_threshold":
-        param_lst = np.linspace(0,0.95,20)
+        param_lst = np.linspace(0.05,0.95,19)
         for  threshold in param_lst :
             precision,recall= compute_PR_obj(objid,threshold=threshold)
             precision_lst.append(precision)
@@ -516,3 +565,34 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     plt.ylim(0,1.05)
     if legend: plt.legend(loc="lower left",numpoints=1)
     plt.savefig("Dual_PR_{0}_{1}.pdf".format(objid,method))
+def PR_compare(objid,sampleNworkers=40):    
+    os.chdir("..")
+    # worker_lst,tiles,indicatorMat= createObjIndicatorMatrix(objid,PRINT=True,sampleNworkers=sampleNworkers,tqdm_on=False,tile_only=False)
+    worker_lst = pkl.load(open("{0}/worker{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    os.chdir(DATA_DIR)
+    
+    worker_precision_lst,worker_recall_lst = compute_worker_lst_PR_obj(objid,worker_lst)
+    best_worker =  np.argmax(worker_recall_lst)
+    print "Best worker's PR against BBG: ", max(worker_precision_lst),max(worker_recall_lst)
+
+    approved_tiles = np.where(indicatorMat[best_worker]==1)[0]
+    for tidx in approved_tiles:
+        plot_coords(tiles[tidx],color="lime")
+
+    bb_objects = bb_info[bb_info["object_id"]==objid]
+    bb_objects =  bb_objects[bb_objects.worker_id!=3]
+    best_worker_id = worker_lst[best_worker]
+    print best_worker_id
+    worker_bb_info = bb_objects[bb_objects["worker_id"]==best_worker_id]
+    worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]])))#.buffer(0)
+
+    plot_coords(worker_BB_polygon,linestyle='--',color='#0000ff')
+    
+    joined_bb = join_tiles(approved_tiles,tiles)
+    intersect_area = worker_BB_polygon.intersection(joined_bb).area
+    precision = intersect_area/joined_bb.area
+    recall = intersect_area/worker_BB_polygon.area
+    print precision,recall
+    return precision,recall

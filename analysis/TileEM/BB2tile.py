@@ -18,7 +18,7 @@ from qualityBaseline import *
 # Loading bounding box drawn by workers
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-def createObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCLUDE_BBG=True,overlap_threshold=0.5):
+def DEMOTEDcreateObjIndicatorMatrix(objid,PLOT=False,sampleNworkers=-1,PRINT=False,EXCLUDE_BBG=True,overlap_threshold=0.5):
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects = bb_info[bb_info["object_id"]==objid]
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]

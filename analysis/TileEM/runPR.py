@@ -9,7 +9,7 @@ except(IndexError):
 	  '''
 object_lst = list(object_tbl.id)
 if sys.argv[1]=='postprocess':
-	for objid in tqdm(object_lst[36:]):
+	for objid in tqdm(object_lst):
 	    plot_all_postprocess_PR_curves(objid,legend=True) 
 elif sys.argv[1]=='T-search':
 	for objid in tqdm(object_lst):

@@ -34,14 +34,15 @@ def gmat2arr(g):
 if __name__ == "__main__":
     img_info,object_tbl,bb_info,hit_info = load_info()
     object_lst = list(object_tbl.id)
-    Tfile = open("output/Tarea.txt",'a')
-    Lfile = open("output/likelihood.txt",'a')
+    Tfile = open("exactOutput/Tarea.txt",'a')
+    Lfile = open("exactOutput/likelihood.txt",'a')
     for objid in tqdm(object_lst):
         print "Working on obj:",objid
-        tiles, objIndicatorMat = createObjIndicatorMatrix(objid,PRINT=False)
+        tiles = pkl.load(open("tileIndMat/tiles{}.pkl".format(objid),'r'))
+        objIndicatorMat = pkl.load(open("tileIndMat/indMat{}.pkl".format(objid),'r'))
         print "Saving checkpoint..."
-        Tfile = open("output/Tarea.txt",'a')
-        Lfile = open("output/likelihood.txt",'a')
+        Tfile = open("exactOutput/Tarea.txt",'a')
+        Lfile = open("exactOutput/likelihood.txt",'a')
         T,L,g,soln = run_all_experiments(tiles, objIndicatorMat)
 
         Tfile.write(T.__repr__().replace('(','').replace(')','\n'))
@@ -49,8 +50,8 @@ if __name__ == "__main__":
 
         Tfile.close()
         Lfile.close()
-        pkl.dump(g,open("output/gfile{}.pkl".format(objid),'w'))
-        pkl.dump(soln,open("output/solnfile{}.pkl".format(objid),'w'))
-        pkl.dump(tiles,open("output/tiles{}.pkl".format(objid),'w'))
+        pkl.dump(g,open("exactOutput/gfile{}.pkl".format(objid),'w'))
+        pkl.dump(soln,open("exactOutput/solnfile{}.pkl".format(objid),'w'))
+        # pkl.dump(tiles,open("output/tiles{}.pkl".format(objid),'w'))
     Tfile.close()
     Lfile.close()

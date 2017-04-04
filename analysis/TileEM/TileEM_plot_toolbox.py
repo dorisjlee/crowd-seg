@@ -15,7 +15,7 @@ DEBUG=False
 DATA_DIR="exactOutput"
 tileIndMat_DIR = "tileIndMat"
 warnings.filterwarnings('ignore')
-
+NParam=10.
 my_BBG  = pd.read_csv("../my_ground_truth.csv")
 object_lst = list(object_tbl.id)
 def compute_PR(objid,solnset,tiles):
@@ -132,8 +132,6 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     INCLUDE_ALL=False
     if PLOT_HEATMAP=="all-region": INCLUDE_ALL=True
     
-    precision_lst = []
-    recall_lst = []
     try:
         tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
         gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))#ga,gm,gl,ge
@@ -141,6 +139,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
         if threshold!=-1:
             procstr = "Gamma>{}".format(threshold)
             solnset = getSolutionThreshold(gammas[experiment_idx],threshold=threshold) 
+            print "Nsolnset: ", len(solnset)
             if PLOT_HEATMAP: mask = plot_tile_heatmap(objid,solnset ,tiles,gammas[experiment_idx],PLOT_BBG=True,PLOT_GSOLN=True,INCLUDE_ALL=INCLUDE_ALL)
         elif topk!=-1:
             procstr="Gamma k={}".format(topk)
@@ -152,6 +151,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
 	        	print np.array(gammas[experiment_idx])[solnset]
         elif majority_topk!=-1:
             objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+            print objIndicatorMat
             tile_votes = np.sum(objIndicatorMat[:-1],axis=0)
             procstr="Majority k={}".format(majority_topk)
             solnset = getSolutionTopK(tile_votes,k=majority_topk)
@@ -171,6 +171,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     except(IOError):
         print "IOERROR"
         pass
+    print precision,recall
     return precision,recall
 
 
@@ -178,20 +179,22 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     '''
 	Plot PR curves for each object for all post-processing methods
 	'''
+    print "Working on object: ",objid
     plt.figure()
     plt.title("Object #{}".format(objid))
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="gray",label="Worker")
     # Plotting PR from Top-k Majority vote 
-    os.chdir("..")
-    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    os.chdir(DATA_DIR)
-    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+    print "Top k Majority Vote"
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    #k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
+    k_lst = [1,5,10,15,20,25,30]
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
     for  k in k_lst :
+        print "k = ",k
         Maj_topk_precision,Maj_topk_recall= compute_PR_obj(objid,experiment_idx,topk=k)
         Maj_topk_precision_lst.append(Maj_topk_precision)
         Maj_topk_recall_lst.append(Maj_topk_recall)
@@ -201,10 +204,13 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     plt.plot(Maj_topk_recall_lst[order],Maj_topk_precision_lst[order], linestyle='-', linewidth=1,marker='D',color="cyan",label="Majority Top-k")
 
     # Plotting PR from TileEM for different thresholds
-    threshold_lst = np.linspace(0,0.95,20)
+    #threshold_lst = np.linspace(0,1,NParam)
+    print "Gamma threshold"
+    threshold_lst = np.linspace(0.95,1,5)
     TileEM_thres_precision_lst = []
     TileEM_thres_recall_lst = []
     for threshold in threshold_lst :
+        print "threshold:", threshold
         TileEM_thres_precision, TileEM_thres_recall= compute_PR_obj(objid,threshold=threshold)
         TileEM_thres_precision_lst.append(TileEM_thres_precision)
         TileEM_thres_recall_lst.append(TileEM_thres_recall)
@@ -216,7 +222,9 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     # Plotting PR from TileEM for different Top-k
     TileEM_topk_precision_lst = []
     TileEM_topk_recall_lst = []
+    print "Gamma top-k"
     for  k in k_lst :
+        print "k : ",k
         TileEM_topk_precision, TileEM_topk_recall= compute_PR_obj(objid,topk=k)
         TileEM_topk_precision_lst.append(TileEM_topk_precision)
         TileEM_topk_recall_lst.append(TileEM_topk_recall)
@@ -231,6 +239,17 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     plt.xlabel("Recall",fontsize=13)
     if legend: plt.legend(loc="bottom left",numpoints=1)
     plt.savefig("PR_obj{}.pdf".format(objid))
+
+    # Save Data
+    
+    pkl.dump(Maj_topk_recall_lst,open("Maj_topk_recall_lst_obj{}.pkl".format(objid),'w'))
+    pkl.dump(Maj_topk_precision_lst,open("Maj_topk_precision_lst_obj{}.pkl".format(objid),'w'))
+
+    pkl.dump(TileEM_thres_recall_lst,open("TileEM_thres_recall_lst_obj{}.pkl".format(objid),'w'))
+    pkl.dump(TileEM_thres_precision_lst,open("TileEM_thres_precision_lst_obj{}.pkl".format(objid),'w'))
+
+    pkl.dump(TileEM_topk_recall_lst,open("TileEM_topk_recall_lst_obj{}.pkl".format(objid),'w'))
+    pkl.dump(TileEM_topk_precision_lst,open("TileEM_topk_recall_lst_obj{}.pkl".format(objid),'w'))
 def compute_joined_PR(objid):
     '''
 	Compute the PR values for all post-processing method
@@ -242,7 +261,7 @@ def compute_joined_PR(objid):
     tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     os.chdir(DATA_DIR)
-    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
     for  k in k_lst :
@@ -252,7 +271,7 @@ def compute_joined_PR(objid):
     Maj_topk_recall_lst = np.array(Maj_topk_recall_lst)
     Maj_topk_precision_lst = np.array(Maj_topk_precision_lst)
     # Plotting PR from TileEM for different thresholds
-    threshold_lst = np.linspace(0,0.95,20)
+    threshold_lst = np.linspace(0,1,NParam)
     TileEM_thres_precision_lst = []
     TileEM_thres_recall_lst = []
     for threshold in threshold_lst :
@@ -402,7 +421,8 @@ def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=Fal
     for tile_idx in  solnset:
         #tile =  sorted_ascend_tile_by_size[tile_idx]
         tile=tiles[tile_idx]
-        polygon = Polygon(zip(tile[:,1],tile[:,0]),closed=True,\
+        from shapely.geometry import mapping
+        polygon = Polygon(mapping(tile)["coordinates"][0],closed=True,\
                           linewidth=1,edgecolor='black',fill=False)
         patches.append(polygon)
 
@@ -442,11 +462,11 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color='gray',label="Worker")
-    print os.getcwd()
+    
     tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
     
-    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+    k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
     linestyles = ['--','-','-.','--']
     markers=['^','D','o','>']
     for experiment_idx in [2,3,0,1]:
@@ -462,9 +482,12 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
             Maj_topk_precision_lst = np.array(Maj_topk_precision_lst)
             order = np.argsort(Maj_topk_recall_lst)
             plt.plot(Maj_topk_recall_lst[order],Maj_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1, marker=markers[experiment_idx], label=experiment_names[experiment_idx])
+
+            pkl.dump(Maj_topk_recall_lst,open("exp{0}_Maj_topk_recall_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
+            pkl.dump(Maj_topk_precision_lst,open("exp{0}_Maj_topk_precision_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
         elif postprocess == 'tile-threshold':
             # Plotting PR from TileEM for different thresholds
-            threshold_lst = np.linspace(0.5,0.95,19)
+            threshold_lst = np.linspace(0,1,NParam)
             TileEM_thres_precision_lst = []
             TileEM_thres_recall_lst = []
             for threshold in threshold_lst :
@@ -476,6 +499,8 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
             #     print "{0}:{1},{2}".format(threshold,TileEM_thres_precision,TileEM_thres_recall)
             order = np.argsort(TileEM_thres_recall_lst)
             plt.plot(TileEM_thres_recall_lst[order],TileEM_thres_precision_lst[order], linestyle=linestyles[experiment_idx],linewidth=experiment_idx+1, marker=markers[experiment_idx], label=experiment_names[experiment_idx])
+            pkl.dump(TileEM_thres_recall_lst,open("exp{0}_TileEM_thres_recall_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
+            pkl.dump(TileEM_thres_precision_lst,open("exp{0}_TileEM_thres_precision_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
         elif postprocess=='tile-top-k':
             # Plotting PR from TileEM for different Top-k
             TileEM_topk_precision_lst = []
@@ -488,7 +513,8 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
             TileEM_topk_precision_lst = np.array(TileEM_topk_precision_lst)
             order = np.argsort(TileEM_topk_recall_lst)
             plt.plot(TileEM_topk_recall_lst[order],TileEM_topk_precision_lst[order], linestyle=linestyles[experiment_idx], linewidth=experiment_idx+1,marker=markers[experiment_idx], label=experiment_names[experiment_idx])
-
+            pkl.dump(TileEM_topk_recall_lst,open("exp{0}_TileEM_topk_recall_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
+            pkl.dump(TileEM_topk_precision_lst,open("exp{0}_TileEM_topk_precision_lst_obj{1}.pkl".format(experiment_idx,objid),'w'))
     plt.xlim(-0.05,1.05)
     plt.ylim(-0.05,1.05)
     plt.ylabel("Precision",fontsize=13)
@@ -496,6 +522,8 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     lgd = plt.legend( numpoints=1, loc="center right", bbox_to_anchor=(1.4, 0.5))
     plt.savefig("PR_obj{0}_{1}.pdf".format(objid,postprocess), bbox_extra_artists=(lgd,),bbox_inches='tight')
 
+
+    
 def plot_all_obj_tiles(experiment_idx,threshold=0.01,PLOT_BBG=True,PLOT_GSOLN=True):
     '''
     Plot Tile Heatmap for all objects for a given experiment index
@@ -530,7 +558,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     precision_lst = []
     recall_lst = []
     if method=='majority_top_k':
-        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
         for  k in tqdm(param_lst):
             precision,recall= compute_PR_obj(objid,majority_topk=k)
             precision_lst.append(precision)
@@ -538,7 +566,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
         plt.xlabel("k")
         plt.xlim(-0.01,len(tiles))
     elif method=="gamma_threshold":
-        param_lst = np.linspace(0.05,0.95,19)
+        param_lst = np.linspace(0,1,NParam)
         for  threshold in param_lst :
             precision,recall= compute_PR_obj(objid,threshold=threshold)
             precision_lst.append(precision)
@@ -546,7 +574,7 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
         plt.xlabel("Threshold")
         plt.xlim(-0.01,1)
     elif method=="gamma_top_k":
-        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/30.),1))
+        param_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
         for  k in param_lst :
             precision,recall= compute_PR_obj(objid,2,topk=k)
             precision_lst.append(precision)

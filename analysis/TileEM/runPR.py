@@ -1,6 +1,6 @@
 import sys
 from TileEM_plot_toolbox import *
-os.chdir("output")
+os.chdir("exactOutput")
 try:
 	print "Running PR Curves while varying ",sys.argv[1]
 except(IndexError):

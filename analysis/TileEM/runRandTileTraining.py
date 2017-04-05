@@ -3,8 +3,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from TileEM_plot_toolbox import *
-DATA_DIR="exactOutput"
-tileIndMat_DIR = "tileIndMat"
+
+DATA_DIR = "output"
 os.chdir(DATA_DIR)
 try: 
     topTilePickHeuristic=sys.argv[1]
@@ -19,9 +19,9 @@ for objid in tqdm(object_lst):
     # print "working on obj",objid
     #Get Tile information for that object
     worker_ids,worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid,return_worker_id=True)
-    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    worker_ids = pkl.load(open("../{0}/worker{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    indicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    worker_ids = pkl.load(open("../{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
+    indicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))
     if  list(gammas[0])==[] and topTilePickHeuristic=='gamma' :
         print "No Gamma information for this object, going onto the next"

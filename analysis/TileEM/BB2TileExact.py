@@ -1,10 +1,7 @@
 import os
 import pandas as pd 
-from greedy import *
-from data import *
-from experiment import *
 import pickle as pkl
-
+import json
 from PIL import Image, ImageDraw
 import shapely
 from shapely.geometry import Polygon
@@ -14,11 +11,11 @@ sys.path.append('../')
 from analysis_toolbox import *
 from qualityBaseline import *
 
-tileIndMat_DIR = "tileIndMat"
+DATA_DIR=os.getcwd().split('/')[-1]
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-
 def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleNworkers=-1,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
+
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects = bb_info[bb_info["object_id"]==objid]
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]
@@ -32,7 +29,7 @@ def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleN
         BB.append(Polygon(xyloc).buffer(0))
     #Compute Tiles 
     if load_existing_tiles:
-    	tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    	tiles = pkl.load(open("{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
     else:
 	    tiles = BB2TileExact(objid,BB,tqdm_on=tqdm_on,save_tiles=SAVE)
     if tile_only:
@@ -43,8 +40,8 @@ def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleN
     # The indicator matrix is a (N + 1) X M matrix, 
     # with first N rows indicator vectors for each annotator and
     # the last row being region sizes
-    M = len(tiles)
     worker_lst  = list(bb_objects.worker_id)
+    M = len(tiles)
     N = len(worker_lst)
     if PRINT: 
         print "Number of non-overlapping tile regions (M) : ",M
@@ -82,8 +79,8 @@ def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleN
         print "Object ",objid
         sanity_check(indicator_matrix,PLOT)
     if SAVE:
-    	pkl.dump(worker_lst,open('{0}/worker{1}.pkl'.format(tileIndMat_DIR,objid),'w'))
-    	pkl.dump(indicator_matrix,open('{0}/indMat{1}.pkl'.format(tileIndMat_DIR,objid),'w'))
+    	pkl.dump(worker_lst,open('../{0}/worker{1}.pkl'.format(DATA_DIR,objid),'w'))
+    	pkl.dump(indicator_matrix,open('../{0}/indMat{1}.pkl'.format(DATA_DIR,objid),'w'))
     return worker_lst,tiles,indicator_matrix
 def add_object_to_tiles(tiles,obj):
     if obj==[]:

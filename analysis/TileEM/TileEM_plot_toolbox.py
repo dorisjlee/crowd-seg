@@ -1,7 +1,7 @@
-from dataset import Dataset
-from greedy import *
-from data import *
-from experiment import *
+# from dataset import Dataset
+# from greedy import *
+# from data import *
+# from experiment import *
 from BB2TileExact import *
 import pandas as pd
 import pickle as pkl
@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import warnings
 DEBUG=False
-DATA_DIR="exactOutput"
-tileIndMat_DIR = "tileIndMat"
 warnings.filterwarnings('ignore')
 NParam=10.
 my_BBG  = pd.read_csv("../my_ground_truth.csv")
@@ -133,7 +131,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
     if PLOT_HEATMAP=="all-region": INCLUDE_ALL=True
     
     try:
-        tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+        tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
         gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))#ga,gm,gl,ge
         # Deriving new solution set from different thresholding criteria
         if threshold!=-1:
@@ -150,7 +148,7 @@ def compute_PR_obj(objid,experiment_idx=0,threshold=-1,topk=-1,majority_topk=-1,
 	        	print solnset
 	        	print np.array(gammas[experiment_idx])[solnset]
         elif majority_topk!=-1:
-            objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+            objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
             print objIndicatorMat
             tile_votes = np.sum(objIndicatorMat[:-1],axis=0)
             procstr="Majority k={}".format(majority_topk)
@@ -187,8 +185,8 @@ def plot_all_postprocess_PR_curves(objid,experiment_idx=0,legend=False):
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color="gray",label="Worker")
     # Plotting PR from Top-k Majority vote 
     print "Top k Majority Vote"
-    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     #k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
     k_lst = [1,5,10,15,20,25,30]
     Maj_topk_precision_lst = []
@@ -257,10 +255,8 @@ def compute_joined_PR(objid):
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     # Plotting PR from Top-k Majority vote 
-    os.chdir("..")
-    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    os.chdir(DATA_DIR)
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
     Maj_topk_precision_lst = []
     Maj_topk_recall_lst = []
@@ -463,8 +459,8 @@ def plot_all_T_search_PR_curves(objid,postprocess='majority-top-k'):
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     plt.plot(worker_recall_lst ,worker_precision_lst , '.',color='gray',label="Worker")
     
-    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     
     k_lst = np.arange(1,len(tiles),max(int((len(tiles)-1)/NParam),1))
     linestyles = ['--','-','-.','--']
@@ -551,10 +547,8 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
     # Worker Individual Precision and Recall based on their BB drawn for this object
     worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid)
     # Plotting PR from Top-k Majority vote 
-    os.chdir("..")
-    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    os.chdir(DATA_DIR)
+    tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     precision_lst = []
     recall_lst = []
     if method=='majority_top_k':
@@ -596,9 +590,9 @@ def plot_dual_PR_curves(objid,method="majority_top_k",PLOT_WORKER=False,legend=F
 def PR_compare(objid,sampleNworkers=40):    
     os.chdir("..")
     # worker_lst,tiles,indicatorMat= createObjIndicatorMatrix(objid,PRINT=True,sampleNworkers=sampleNworkers,tqdm_on=False,tile_only=False)
-    worker_lst = pkl.load(open("{0}/worker{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(tileIndMat_DIR,objid),'r'))
-    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(tileIndMat_DIR,objid),'r'))
+    worker_lst = pkl.load(open("{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
+    tiles = pkl.load(open("{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+    objIndicatorMat = pkl.load(open("{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
     os.chdir(DATA_DIR)
     
     worker_precision_lst,worker_recall_lst = compute_worker_lst_PR_obj(objid,worker_lst)

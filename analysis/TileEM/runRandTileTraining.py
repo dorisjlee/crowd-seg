@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from TileEM_plot_toolbox import *
-
+gamma_properties=True
 DATA_DIR = "output"
 os.chdir(DATA_DIR)
 try: 
@@ -22,11 +22,16 @@ for objid in tqdm(object_lst):
     tiles = pkl.load(open("../{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
     worker_ids = pkl.load(open("../{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
     indicatorMat = pkl.load(open("../{0}/indMat{1}.pkl".format(DATA_DIR,objid),'r'))
-    gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))
-    if  list(gammas[0])==[] and topTilePickHeuristic=='gamma' :
-        print "No Gamma information for this object, going onto the next"
-        continue
-
+    if gamma_properties : 
+        gammas = pkl.load(open("gfile{}.pkl".format(objid),'r'))
+        if  list(gammas[0])==[] and topTilePickHeuristic=='gamma' :
+            print "No Gamma information for this object, going onto the next"
+            continue
+    # Worker Qualities computed by ground truth   
+    Qj=pkl.load(open("../Qj.pkl",'r'))
+    Qj_mean={}
+    for wid, qj in Qj.iteritems():
+        Qj_mean[wid]=np.mean(qj)
     #using the area information in the last row 
     tile_area = np.array(indicatorMat[-1])
     # Loop through all combinations of 20 randomly chosen tiles 
@@ -70,14 +75,30 @@ for objid in tqdm(object_lst):
             #Number of votes for that tile
             region_votes.append(np.sum(indicatorMat[:-1][:,tidx]))
 
-            if gammas!=[]:
-                gvals.append(gammas[experiment_idx][tidx])
-            else:
-                gvals.append(0)
+            if gamma_properties:
+                if gammas!=[]:
+                    gvals.append(gammas[experiment_idx][tidx])
+                else:
+                    gvals.append(0)
 
             Tareas.append(Polygon(tiles[tidx]).area)
-        training_tbl.append([objid,Tprime,np.sum(region_votes), np.mean(region_votes),np.sum(gvals),np.mean(gvals),np.sum(Tareas),np.mean(Tareas),p,r])
+        
+               
+        workers = pkl.load(open("worker{}.pkl".format(objid)))
+        for k in range(len(Tprime)): 
+            plk=[]
+            for j in  range(len(workers)):
+                tk = tiles[k]
+                ljk = indicatorMat[j][k]
+                tjkInT = Tprime.contains(tk) #overlap > threshold
+                qj = Qj_mean[wid]
+                if (ljk ==1 and tjkInT) or (ljk ==0 and (not tjkInT)):
+                    plk.append(qj)
+                elif (ljk ==1 and (not tjkInT)) or (ljk ==0 and tjkInT):
+                    plk.append(1-qj)
+        pTprime=np.product(plk)
+        training_tbl.append([objid,Tprime,np.sum(region_votes), np.mean(region_votes),np.sum(gvals),np.mean(gvals),np.sum(Tareas),np.mean(Tareas),pTprime,p,r])
 
 df = pd.DataFrame(training_tbl,columns=["objid","T prime","Total Votes","Average Votes","Total gamma value","Average gamma value",\
-                                        "Total area","Average area","Precision","Recall"])
-df.to_csv("area_based_tile_combo_metric_{}.csv".format(topTilePickHeuristic))
+                                        "Total area","Average area","pTprime","Precision","Recall"])
+df.to_csv("tile_combo_metric_{}.csv".format(topTilePickHeuristic))

@@ -14,14 +14,14 @@ from qualityBaseline import *
 DATA_DIR=os.getcwd().split('/')[-1]
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleNworkers=-1,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
+def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleNworkers=-1,random_state=111,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
 
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects = bb_info[bb_info["object_id"]==objid]
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]
     # Sampling Data from Ji table 
     if sampleNworkers>0 and sampleNworkers<len(bb_objects):
-        bb_objects = bb_objects.sample(n=sampleNworkers)#,random_state=111)
+        bb_objects = bb_objects.sample(n=sampleNworkers,random_state=random_state)
     # Create a list of polygons based on worker BBs 
     xylocs = [list(zip(*process_raw_locs([x,y]))) for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"])]
     BB = []
@@ -137,15 +137,20 @@ def BB2TileExact(objid,BB,tqdm_on=False,save_tiles=True):
 	if save_tiles: pkl.dump(tiles,open('tiles{0}.pkl'.format(objid),'w'))
 	return tiles
 
-def visualizeTiles(tiles):
+def visualizeTiles(tiles,colorful=True):
     plt.figure()
+    colormap = plt.cm.rainbow
     for t in tiles: 
+        if colorful: 
+            c = colormap(i)
+        else: 
+            c="lime"
         if type(t)==shapely.geometry.polygon.Polygon:
-            plot_coords(t,color="lime",reverse_xy=True)
+            plot_coords(t,color=c,reverse_xy=True)
         elif type(t)==shapely.geometry.MultiPolygon or type(t)==shapely.geometry.collection:
             for region in t:
                 if type(t)!=shapely.geometry.LineString:
-                    plot_coords(region,color="lime",reverse_xy=True)
+                    plot_coords(region,color=c,reverse_xy=True)
 
 def sanity_check(indicator_matrix,PLOT=False): 
     print "Check that there are no all-zero rows in indicator matrix:" , len(np.where(np.sum(indicator_matrix,axis=1)==0)[0])==0

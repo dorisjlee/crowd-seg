@@ -1,0 +1,72 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in,letterpaper]{geometry}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{mathrsfs} 
+\usepackage{cancel}
+\usepackage{amsfonts}
+\usepackage[titletoc,title]{appendix}
+\usepackage{graphicx}
+\usepackage{floatrow}
+% Table float box with bottom caption, box width adjusted to content
+\newfloatcommand{capbtabbox}{table}[][\FBwidth]
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks = true,
+    citecolor={black},
+    linkcolor={red}
+}
+\usepackage{titling}
+\posttitle{\par\end{center}}
+\setlength{\droptitle}{0pt}
+\usepackage[numbers]{natbib}
+\newcommand\citeay[1]{%
+  \citeauthor{#1}~(\citeyear{#1})}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\begin{document}
+\title{Tile EM Model}
+\author{\today}
+\date{}
+\vspace{-50pt}
+\maketitle
+\vspace{-70pt}
+\section{Problem Formulation}
+\par $\mathcal{T}=\{t_k\}$ is the set of all non-overlapping tiles for an object i, where T is the ground truth tile set and $T^\prime$ is some combination of tiles chosen from $\mathcal{T}$.
+\par We define the ground truth as the tile combination $T^\prime$ that maximizes the probability that it would be ground truth, given the set of worker qualities $Q_j$ and tile indicator labels $l_{kj}$.  The indicator label $l_{kj}$ is one when worker votes on the tile $t_{kj}$(i.e. the bounding box that he draws contains $t_{kj}$), and zero otherwise. Given these definitions, the objective function of the segmentation problem is formulated as: 
+\begin{equation}
+T = \argmax_{T^\prime \subseteq \mathcal{T}}P(T=T^\prime | l_{kj},Q_j)
+\label{objective}
+\end{equation}
+Using Bayes rule we can rewrite this in terms of the posterior probability of the tile-based values($l_{kj}$) or worker-based values($Q_{j}$), which we can use for the E and M step equations respectively.
+\section{Inference}
+\par For the E step, we fix T and estimate the $Q_j$ parameters. We can rewrite Eq.\ref{objective} as: 
+\begin{equation}
+p(T^\prime| Q_j,l_{kj})
+=\frac{p(Q_j| l_{kj},T^\prime)\cancel{P(T^\prime)}}{\cancel{p(Q_j)}}
+\end{equation}
+Our worker error model follows a Bernoulli distribution by describing worker quality $Q_j=q_j$ as the probability that the worker makes a correct vote for a tile (w=1), otherwise $Q_j=1-q_j$ for an incorrect guess. 
+\begin{align}
+p(w)=q_j p(w=1)+(1-q_j)p(w=0) \\
+\end{align}
+There is a closed form of the maximum likelihood solution for the Bernoulli distribution.
+\begin{align}
+\mathcal{L}=\ln p(w)=p(w=1)\ln q_j + p(w=0)\ln(1-q_j) \\
+\frac{\partial \mathcal{L}}{\partial q_j}=\frac{p(w=1)}{\hat{q_j}}-\frac{p(w=0)}{1-\hat{q_j}}=0\\
+\end{align}
+Solving for $\hat{q_j}$: 
+\begin{align}
+\hat{q_j}=\frac{p(w=1)}{p(w=0)+p(w=1)}=\frac{\frac{n_{w=1}}{\cancel{n_{total}}}}{\frac{n_{w=0}}{\cancel{n_{total}}}+\frac{n_{w=1}}{\cancel{n_{total}}}}\\
+\boxed{\hat{q_j}=\frac{n_{correct}}{n_{total}}}
+\end{align}
+For the M step, we maximize the likelihood of the tile combination $T^\prime$ for a fixed set of worker qualities, $\{Q_j\}$. Following Eq.\ref{objective}, 
+\begin{equation}
+p(T^\prime| Q_j,l_{kj})
+=\frac{p(l_{kj}|Q_j,l_k)\cancel{P(T^\prime)}}{\cancel{p(l_{kj})}}=p(l_{kj}|Q_j,l_k)
+\end{equation}
+We can decompose $T^\prime$ into its tile components: 
+\begin{equation}
+=\prod_{t_k\in T^\prime} p(t_k\in T|Q_j,l_k)\prod_{t_k\notin T^\prime} p(t_k\notin T|Q_j,l_k)
+\end{equation}
+We can evaluate these quantities by the observed indicator labels. The worker makes a correct response in the scenario where they vote for a tile that actually lies within T or they don't vote for a tile that is excluded from T. In that case, the probability of the tile being in T is the probability that the worker had made the correct response: $p(l_k) = q_j$. Likewise, a worker makes a incorrect response when their vote contradicts with the inclusion of the tile in T ($\{t_k\in T \& l_{kj}=0\}, \{t_k\notin T \& l_{kj}=1\}$), in which case the tile is assigned a probability of $p(l_k)=1-q_j$.
+\end{document}
+

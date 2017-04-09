@@ -31,26 +31,32 @@
 \maketitle
 \vspace{-70pt}
 \section{Problem Formulation}
-\par $\mathcal{T}=\{t_k\}$ is the set of all non-overlapping tiles for an object i, where T is the ground truth tile set and $T^\prime$ is some combination of tiles chosen from $\mathcal{T}$.
-\par We define the ground truth as the tile combination $T^\prime$ that maximizes the probability that it would be ground truth, given the set of worker qualities $Q_j$ and tile indicator labels $l_{kj}$.  The indicator label $l_{kj}$ is one when worker votes on the tile $t_{kj}$(i.e. the bounding box that he draws contains $t_{kj}$), and zero otherwise. Given these definitions, the objective function of the segmentation problem is formulated as: 
+\par $\mathcal{T}=\{t_k\}$ is the set of all non-overlapping tiles for an object i. T is the ground truth tile set. $T^\prime$ is some combination of tiles chosen from $\mathcal{T}$.
+\par For our problem, we consider only finding the tile regions that could be constructed from worker bounding boxes. In other words, our objective is to find the tile combination $T^\prime$ such that we maximize the probability that it would be ground truth p($T^\prime$=T), given a set of worker qualities $Q_j$ and tile indicator labels $l_{kj}$.  The indicator label $l_{kj}$ is one when worker j votes on the tile $t_{k}$ (i.e. the bounding box that he draws contains $t_{k}$), and zero otherwise. The indicator matrix consisting of tile indicator for all workers is denoted as $\mathbf{l_{kj}}$. Given these definitions, the objective function of the segmentation problem is formulated as: 
 \begin{equation}
-T = \argmax_{T^\prime \subseteq \mathcal{T}}P(T=T^\prime | l_{kj},Q_j)
+T = \argmax_{T^\prime \subseteq \mathcal{T}}P(T=T^\prime |  \mathbf{l_{kj}},Q_j)
 \label{objective}
 \end{equation}
-Using Bayes rule we can rewrite this in terms of the posterior probability of the tile-based values($l_{kj}$) or worker-based values($Q_{j}$), which we can use for the E and M step equations respectively.
+Using Bayes rule we can rewrite this in terms of the posterior probability of the tile-based values($\mathbf{l_{kj}}$) or worker-based values($Q_{j}$), which we can use for the E and M step equations respectively.
 \section{Inference}
-\par For the E step, we fix T and estimate the $Q_j$ parameters. We can rewrite Eq.\ref{objective} as: 
+\par For the E step, we assume T' is ground truth and estimate the $Q_j$ parameters. We can rewrite Eq.\ref{objective} as: 
 \begin{equation}
-p(T^\prime| Q_j,l_{kj})
-=\frac{p(Q_j| l_{kj},T^\prime)\cancel{P(T^\prime)}}{\cancel{p(Q_j)}}
+p(T^\prime| Q_j,\mathbf{l_{kj}})
+=\frac{p(Q_j| \mathbf{l_{kj}},T^\prime)\cancel{P(T^\prime)}}{\cancel{p(Q_j)}}
 \end{equation}
-Our worker error model follows a Bernoulli distribution by describing worker quality $Q_j=q_j$ as the probability that the worker makes a correct vote for a tile (w=1), otherwise $Q_j=1-q_j$ for an incorrect guess. 
+Our optimization function then becomes: 
+\begin{equation}
+\hat{Qj} = \argmax p(Q_j| \mathbf{l_{kj}},T^\prime)
+\end{equation}
+% assume p(T') uniform or constant p(Qj), no prior information 
+We use the binary random variable w to indicate whether the worker makes a correct vote (w=1) or an incorrect vote(w=0) for a tile. Our worker error model follows a Bernoulli distribution by describing worker quality $Q_j=q_j$ as the probability that the worker makes a correct vote, otherwise $Q_j=1-q_j$ for an incorrect guess. We can write the worker quality probability as the product of the probabilities that they would assume these two independent states (correct/incorrect). 
 \begin{align}
-p(w)=q_j p(w=1)+(1-q_j)p(w=0) \\
+p(Q_j) = \prod_j p_j(w=1)\cdot p_j(w=0)\\
+=q_j^{p_j(w=1)}\cdot [1-q_j]^{p(w=0)}
 \end{align}
 There is a closed form of the maximum likelihood solution for the Bernoulli distribution.
 \begin{align}
-\mathcal{L}=\ln p(w)=p(w=1)\ln q_j + p(w=0)\ln(1-q_j) \\
+\mathcal{L}=\ln p(Q_j)=p(w=1)\ln q_j + p(w=0)\ln(1-q_j) \\
 \frac{\partial \mathcal{L}}{\partial q_j}=\frac{p(w=1)}{\hat{q_j}}-\frac{p(w=0)}{1-\hat{q_j}}=0\\
 \end{align}
 Solving for $\hat{q_j}$: 
@@ -58,15 +64,21 @@ Solving for $\hat{q_j}$:
 \hat{q_j}=\frac{p(w=1)}{p(w=0)+p(w=1)}=\frac{\frac{n_{w=1}}{\cancel{n_{total}}}}{\frac{n_{w=0}}{\cancel{n_{total}}}+\frac{n_{w=1}}{\cancel{n_{total}}}}\\
 \boxed{\hat{q_j}=\frac{n_{correct}}{n_{total}}}
 \end{align}
+
 For the M step, we maximize the likelihood of the tile combination $T^\prime$ for a fixed set of worker qualities, $\{Q_j\}$. Following Eq.\ref{objective}, 
 \begin{equation}
-p(T^\prime| Q_j,l_{kj})
-=\frac{p(l_{kj}|Q_j,l_k)\cancel{P(T^\prime)}}{\cancel{p(l_{kj})}}=p(l_{kj}|Q_j,l_k)
+p(T^\prime| Q_j,\mathbf{l_{kj}})
+=\frac{p(\mathbf{l_{kj}}|Q_j,l_k)\cancel{P(T^\prime)}}{\cancel{p(\mathbf{l_{kj}})}}=p(\mathbf{l_{kj}}|Q_j,l_k)
 \end{equation}
-We can decompose $T^\prime$ into its tile components: 
+% rephrase what your optimization function is, i.e. argmax RHS of equation p(lkj)
+Our optimization function is written as:
 \begin{equation}
-=\prod_{t_k\in T^\prime} p(t_k\in T|Q_j,l_k)\prod_{t_k\notin T^\prime} p(t_k\notin T|Q_j,l_k)
+\hat{T^\prime}=\argmax \prod_j p(\mathbf{l_{kj}}|Q_j,l_k)
 \end{equation}
-We can evaluate these quantities by the observed indicator labels. The worker makes a correct response in the scenario where they vote for a tile that actually lies within T or they don't vote for a tile that is excluded from T. In that case, the probability of the tile being in T is the probability that the worker had made the correct response: $p(l_k) = q_j$. Likewise, a worker makes a incorrect response when their vote contradicts with the inclusion of the tile in T ($\{t_k\in T \& l_{kj}=0\}, \{t_k\notin T \& l_{kj}=1\}$), in which case the tile is assigned a probability of $p(l_k)=1-q_j$.
+The product over $T^\prime$ can be further decomposed into its tile components: 
+\begin{equation}
+=\prod_j\Bigg[\prod_{t_k\in T^\prime} p(t_k\in \mathrm{T}|Q_j,l_k)\prod_{t_k\notin T^\prime} p(t_k\notin \mathrm{T}|Q_j,l_k)\Bigg]
+\end{equation}
+\par We can evaluate these quantities by the observed indicator labels. The worker makes a correct response in the scenario where they vote for a tile that actually lies within T, $t_k\in $T, or they don't vote for a tile that is excluded from T. In those cases, the probability of the tile being in T is the probability that the worker had made the correct response: $p(l_{kj}) = q_j$. Likewise, a worker makes an incorrect response when their vote contradicts with the inclusion of the tile in T ($\{t_k\in$ T$\quad\&\quad l_{kj}=0\}, \{t_k\notin $T$\quad\&\quad l_{kj}=1\}$), in which case $p(l_{kj})=1-q_j$. We compute these probabilities and take their product over all tiles and workers.
 \end{document}
 

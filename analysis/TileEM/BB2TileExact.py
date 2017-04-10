@@ -14,7 +14,7 @@ from qualityBaseline import *
 DATA_DIR=os.getcwd().split('/')[-1]
 img_info,object_tbl,bb_info,hit_info = load_info()
 
-def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleNworkers=-1,random_state=111,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
+def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False, PLOT=False,sampleNworkers=-1,random_state=111,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
 
     # Ji_tbl (bb_info) is the set of all workers that annotated object i 
     bb_objects = bb_info[bb_info["object_id"]==objid]
@@ -27,10 +27,12 @@ def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleN
     BB = []
     for xyloc in xylocs:
         BB.append(Polygon(xyloc).buffer(0))
+
     #Compute Tiles 
-    if load_existing_tiles:
-    	tiles = pkl.load(open("{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
-    else:
+    if load_existing_tiles_from_file:
+        tiles = pkl.load(open("{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
+        #worker_lst= pkl.load(open("{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
+    elif tiles!="":
 	    tiles = BB2TileExact(objid,BB,tqdm_on=tqdm_on,save_tiles=SAVE)
     if tile_only:
     	if PLOT: visualizeTiles(tiles)
@@ -40,7 +42,7 @@ def createObjIndicatorMatrix(objid,load_existing_tiles=False, PLOT=False,sampleN
     # The indicator matrix is a (N + 1) X M matrix, 
     # with first N rows indicator vectors for each annotator and
     # the last row being region sizes
-    worker_lst  = list(bb_objects.worker_id)
+    worker_lst = list(bb_objects.worker_id)
     M = len(tiles)
     N = len(worker_lst)
     if PRINT: 

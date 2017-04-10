@@ -365,7 +365,7 @@ def join_tiles(solutionList,tiles):
     Given a solutionList of tile indicies, join the tiles together into a Polygon/MultiPolygon object.
     '''
     try:
-        return cascaded_union([tiles[tidx] for tidx in solutionList])
+        return cascaded_union([tiles[tidx] for tidx in solutionList]),[]
     except:
         #slow version, run through and exclude problematic solutionset item
         Utile=tiles[0]
@@ -376,7 +376,7 @@ def join_tiles(solutionList,tiles):
             except(shapely.geos.TopologicalError):
                 problematic_tiles.append(tiles[soln])
         problematic_tiles.append(Utile)
-        return problematic_tiles
+        return Utile,problematic_tiles
 #mask = plot_tile_heatmap(objid,solnset ,tiles,tile_votes,PLOT_BBG=True,PLOT_GSOLN=True)
 def plot_tile_heatmap(objid,solnset,tiles,z_values,PLOT_BBG=False,PLOT_GSOLN=False,INCLUDE_ALL=False):
     from matplotlib.collections import PatchCollection

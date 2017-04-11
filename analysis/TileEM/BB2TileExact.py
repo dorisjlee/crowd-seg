@@ -10,7 +10,7 @@ import sys
 sys.path.append('../')
 from analysis_toolbox import *
 from qualityBaseline import *
-
+import copy
 DATA_DIR=os.getcwd().split('/')[-1]
 img_info,object_tbl,bb_info,hit_info = load_info()
 
@@ -32,8 +32,9 @@ def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False,
     if load_existing_tiles_from_file:
         tiles = pkl.load(open("{0}/tiles{1}.pkl".format(DATA_DIR,objid),'r'))
         #worker_lst= pkl.load(open("{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
-    elif tiles!="":
-	    tiles = BB2TileExact(objid,BB,tqdm_on=tqdm_on,save_tiles=SAVE)
+    elif tiles=="":
+        tiles = BB2TileExact(objid,BB,tqdm_on=tqdm_on,save_tiles=SAVE)
+        tiles = compute_unique_tileset(tiles)
     if tile_only:
     	if PLOT: visualizeTiles(tiles)
     	return tiles,0
@@ -93,51 +94,193 @@ def add_object_to_tiles(tiles,obj):
         elif type(obj)==shapely.geometry.MultiPolygon or type(obj)==shapely.geometry.collection:
             for region in obj:
                 if type(region)!=shapely.geometry.LineString and region.area>1e-8:
-                    tiles.append(region)        
-def BB2TileExact(objid,BB,tqdm_on=False,save_tiles=True):
-	'''
-	Given a list of worker polygons BB (potentially sampled) and the objectID 
-	return a list of non-overlapping tiles (shapely Polygon objects)
-	# BB is a list of polygons based on worker BBs 
-	'''	
-	tiles=[]
-	if tqdm_on: 
-	    BB_lst = tqdm(range(len(BB)))
-	else:
-	    BB_lst=range(len(BB))
-	for i in BB_lst:
-	    bi = BB[i]
-	    # base case, when i=0, only 2 polygon intersecting
-	    if i==0:
-	        tiles.append(bi)
-	    else: 
-	        xj_lst = []
-	        for tj in tiles:
-	            try:
-	                xj=tj.intersection(bi)
-	                if xj.area>1e-10: #eliminating spurious LineString-looking Polygons 
-	                    tiles.remove(tj)
-	                    add_object_to_tiles(tiles,xj)
-	                    diff_region = (tj.symmetric_difference(xj)).difference(xj)#.buffer(0)
-	                    add_object_to_tiles(tiles,diff_region)       
-	                    xj_lst.append(xj)
-	            except(shapely.errors.TopologicalError):
-	                xj_lst=xj_lst[:-1]
-	                pass
-	        try:
-	            leftovers = bi.difference(cascaded_union(xj_lst))
-	        except(shapely.errors.TopologicalError):
-	        	try: 
-		            leftovers = bi.difference(cascaded_union(xj_lst).buffer(1e-10))
-		        except(shapely.errors.TopologicalError):
-		        	leftovers=[]	
-	        except(ValueError):
-	            #ERROR:shapely.geos:TopologyException: no outgoing dirEdge 
-	            leftovers=[]
-	            
-	        add_object_to_tiles(tiles,leftovers)
-	if save_tiles: pkl.dump(tiles,open('tiles{0}.pkl'.format(objid),'w'))
-	return tiles
+                    tiles.append(region)  
+def overlap(a,b):
+    if a.area>b.area:
+        larger_area = a.area
+    else:
+        larger_area = b.area
+    return a.intersection(b).area/larger_area
+def compute_unique_tileset(tiles,PLOT=True):
+    duplicate_count = 0
+    verified_tiles = []
+    duplicated=False
+    for tidx in tqdm(range(len(tiles))): 
+        t=tiles[tidx]
+        verified_tiles_new=copy.deepcopy(verified_tiles)
+        for vtidx in range(len(verified_tiles)):
+            vt = tiles[vtidx]
+            try:
+                overlap_score=overlap(vt,t)
+                if overlap_score>0.2:
+                    print "Duplicate tiles: ",tidx,vtidx, overlap_score
+                    if PLOT:
+                        plt.figure()
+                        plt.title("[{0},{1}]{2}".format(tidx,vtidx, overlap_score))
+                        plot_coords(vt)
+                        plot_coords(t,color="blue")
+                    duplicated=True
+                    if vt.area>t.area:
+                        verified_tiles.remove(vt)
+                        new_vt = vt.difference(t)
+                        verified_tiles.append(new_vt)
+                        verified_tiles.append(t)
+                    else:
+                        try:
+                            verified_tiles.remove(t)
+                        except(ValueError):
+                            pass
+                        new_t = t.difference(vt)
+                        verified_tiles.append(new_t)
+                        verified_tiles.append(vt)
+                    duplicate_count+=1
+                    
+            except(shapely.geos.TopologicalError):
+
+                print "Topological Error",tidx,vtidx
+            verified_tiles=copy.deepcopy(verified_tiles_new)
+        if not duplicated:
+            verified_tiles.append(t)
+    return  duplicated, verified_tiles
+def slow_cascaded_union(tiles):
+    all_tiles  = copy.deepcopy(tiles)
+    Utile=tiles[0]
+    all_tiles.remove(tiles[0])
+    i=1
+    loss_tiles = []
+    while(len(all_tiles)>0):
+        tile = tiles[i]
+        try:
+            Utile = Utile.union(tile)
+        except(shapely.geos.TopologicalError):
+            try:
+                Utile =Utile.buffer(0).union(tile.buffer(0))
+            except(shapely.geos.TopologicalError):
+#                 return tile,Utile 
+                #print "Throwing away:", tile.area 
+                loss_tiles.append(tile)
+        all_tiles.remove(tile)
+        i+=1
+    try:
+        Utile=Utile.union(cascaded_union(loss_tiles))
+    except(shapely.geos.TopologicalError):
+        try:
+            Utile=Utile.buffer(9e-13).union(cascaded_union(loss_tiles).buffer(0))
+        except(shapely.geos.TopologicalError):
+            loss_area = sum([t.area for t in loss_tiles])
+            print "Throwing away:", loss_area
+    return loss_tiles,Utile
+def visualizeTilesSeparate(tiles,colorful=True):
+    plt.figure()
+    colors=cm.rainbow(np.linspace(0,1,len(tiles)))
+    for t,i in zip(tiles,range(len(tiles))): 
+#         plt.figure()
+        if colorful: 
+            c = colors[i]
+        else: 
+            c="lime"
+        if type(t)==shapely.geometry.polygon.Polygon:
+            plot_coords(t,color=c,reverse_xy=True,fill_color=c)
+        elif type(t)==shapely.geometry.MultiPolygon or type(t)==shapely.geometry.collection:
+            for region in t:
+                
+                if type(t)!=shapely.geometry.LineString:
+                    plot_coords(region,color=c,reverse_xy=True,fill_color=c)
+def BB2TileExact(objid,BB,tqdm_on=False,save_tiles=True,DEBUG=False):
+    '''
+    Given a list of worker polygons BB (potentially sampled) and the objectID 
+    return a list of non-overlapping tiles (shapely Polygon objects)
+    # BB is a list of polygons based on worker BBs 
+    '''
+    tiles=[]
+    if tqdm_on: 
+        BB_lst = tqdm(range(len(BB)))
+    else:
+        BB_lst=range(len(BB))
+
+    for i in BB_lst:
+        if DEBUG: print "------------------------------Adding BB"+str(i)+"------------------------------"
+        bi = BB[i]
+        # base case, when i=0, only 2 polygon intersecting
+        if i==0:
+            tiles.append(bi)
+        else: 
+            xj_lst = []
+            tiles_tmp =copy.deepcopy(tiles)
+            for tj in tiles:
+                try:
+                    xj=tj.intersection(bi)
+                    if xj.area>1e-10:# and overlap(xj,tj)<0.2: #eliminating spurious LineString-looking Polygons 
+                        diff_region = tj.difference(xj)
+                        if diff_region.area>1e-10:  # If highly overlapping then the differnce would be ~0, don't put in overlapping tiles
+                            tiles_tmp.remove(tj)
+                            #print "Adding intersection starting: ",len(tiles)
+                            add_object_to_tiles(tiles_tmp,xj)
+                            #print "Adding diff_region starting: ",len(tiles)
+                            add_object_to_tiles(tiles_tmp,diff_region)
+                            if DEBUG:
+                                if xj.intersection(diff_region).area>1e-8:
+                                    print "break #1"
+                                    break
+                                if not np.isclose(xj.union(diff_region).area,tj.area,rtol=1e-8):
+                                    print "break#2"
+                                    print xj.union(diff_region).area
+                                    print tj.area
+                                    print xj.union(diff_region).area==tj.area
+                                    break
+                            xj_lst.append(xj)
+                        else:
+                            xj_lst.append(tj)
+                except(shapely.errors.TopologicalError):
+                    if DEBUG: print "xj list last item ignored"
+                    xj_lst=xj_lst[:-1]
+                    pass
+            if DEBUG: 
+                duplicated,uniquify_tiles = compute_unique_tileset(tiles)
+
+                if duplicated:
+                    print "before leftover BAD: BB,continue",i
+                    #tiles = uniquify_tiles
+                    break 
+                else:
+                    print "----------- All tiles before leftover calculation is non-overlapping ---------------"
+
+                print "Bi-(Bi intersect Uorig_tiles)"
+            leftovers = bi
+            throw_out_later = []
+            for tidx,t in enumerate(tiles_tmp): #tiles cause topolgical error
+                try:
+                    leftovers = leftovers.difference(t) 
+                except(shapely.geos.TopologicalError):
+                    if DEBUG: print "First toplological error, tile",tidx
+                    try:
+                        leftovers = leftovers.difference(t.buffer(-1e-10))
+                    except(shapely.geos.TopologicalError):
+                        if DEBUG: print "Throw out later : Topological error #67, tile",tidx
+                        throw_out_later.append(t)              
+
+            for tidx,tile in  enumerate(throw_out_later):
+                if DEBUG: print "diffing tile#",tidx
+                try:
+                    leftovers = leftovers.difference(tile) 
+                except(shapely.geos.TopologicalError):
+                    try:
+                        leftovers = leftovers.difference(tile.buffer(1e-10))
+                    except(shapely.geos.TopologicalError):
+                        try:
+                            leftovers = leftovers.buffer(1e-10).difference(tile)
+                        except(shapely.geos.TopologicalError):
+                            try:
+                                leftovers = leftovers.buffer(-1e-10).difference(tile)
+                            except(shapely.geos.TopologicalError):
+                                leftovers = leftovers.buffer(-1e-10).difference(tile.buffer(-1e-10))
+            tiles =copy.deepcopy(tiles_tmp)
+
+            if DEBUG: print "Adding leftovers starting: ",len(tiles)
+            add_object_to_tiles(tiles,leftovers)
+            if DEBUG: print "Finished leftovers starting: ",len(tiles)
+    if save_tiles: pkl.dump(tiles,open('tiles{0}.pkl'.format(objid),'w'))
+    return tiles
 
 def visualizeTiles(tiles,colorful=True):
     plt.figure()

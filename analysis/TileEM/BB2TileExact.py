@@ -118,11 +118,11 @@ def compute_unique_tileset(tiles,PLOT=False):
                     print "Duplicate tiles: ",tidx,vtidx, overlap_score, vt.area, t.area
                     duplicated=True
                     if overlap_score<0.99:
-                            verified_tiles_new.remove(vt)
-                            overlap_region = vt.intersection(t)
-                            add_object_to_tiles(verified_tiles_new,overlap_region)
-                            add_object_to_tiles(verified_tiles_new,vt.difference(overlap_region))
-                            add_object_to_tiles(verified_tiles_new,t.difference(overlap_region))
+                        verified_tiles_new.remove(vt)
+                        overlap_region = vt.intersection(t)
+                        add_object_to_tiles(verified_tiles_new,overlap_region)
+                        add_object_to_tiles(verified_tiles_new,vt.difference(overlap_region))
+                        add_object_to_tiles(verified_tiles_new,t.difference(overlap_region))
 
                     if PLOT: 
                         plt.figure()

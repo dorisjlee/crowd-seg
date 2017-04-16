@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from TileEM_plot_toolbox import *
+from TileEM_Models import *
 gamma_properties=True
 DATA_DIR = "output"
 os.chdir(DATA_DIR)
@@ -29,9 +30,7 @@ for objid in tqdm(object_lst):
             continue
     # Worker Qualities computed by ground truth   
     Qj=pkl.load(open("../Qj.pkl",'r'))
-    Qj_mean={}
-    for wid, qj in Qj.iteritems():
-        Qj_mean[wid]=np.mean(qj)
+    Qj_mean = compute_Qj_mean(Qj)
     #using the area information in the last row 
     tile_area = np.array(indicatorMat[-1])
     # Loop through all combinations of 20 randomly chosen tiles 
@@ -40,7 +39,7 @@ for objid in tqdm(object_lst):
     x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
     tile_area_ratio = tile_area/BBG.area
-     
+
     if topTilePickHeuristic=="area": 
         # Loop through all combinations of 40 top-area tiles 
         # print "area heuristic"
@@ -58,12 +57,7 @@ for objid in tqdm(object_lst):
         NumTilesInCombo= np.random.randint(0,topk)
         tidxInCombo= np.random.choice(tile_subset_idx,NumTilesInCombo,replace=False)
         rand_subset.append(tidxInCombo)
-    # combs = []
-    # for i in range(1, len(tile_subset_idx)+1):
-    #     els = [list(x) for x in itertools.combinations(tile_subset_idx, i)]
-    #     combs.extend(els)
-    # # Compute metric values for 3000 of these tile combinations
-    # rand_subset = np.random.choice(combs,3000)
+    # Compute feature properties for T'
     for Tprime in rand_subset:
         p,r =compute_PR(objid,Tprime,tiles)
         gvals=[]
@@ -82,21 +76,7 @@ for objid in tqdm(object_lst):
                     gvals.append(0)
 
             Tareas.append(Polygon(tiles[tidx]).area)
-        
-               
-        workers = pkl.load(open("worker{}.pkl".format(objid)))
-        for k in range(len(Tprime)): 
-            plk=[]
-            for j in  range(len(workers)):
-                tk = tiles[k]
-                ljk = indicatorMat[j][k]
-                tjkInT = Tprime.contains(tk) #overlap > threshold
-                qj = Qj_mean[wid]
-                if (ljk ==1 and tjkInT) or (ljk ==0 and (not tjkInT)):
-                    plk.append(qj)
-                elif (ljk ==1 and (not tjkInT)) or (ljk ==0 and tjkInT):
-                    plk.append(1-qj)
-        pTprime=np.product(plk)
+        pTprime = TprimeBasic(Qj_mean,Tprime,BBG)
         training_tbl.append([objid,Tprime,np.sum(region_votes), np.mean(region_votes),np.sum(gvals),np.mean(gvals),np.sum(Tareas),np.mean(Tareas),pTprime,p,r])
 
 df = pd.DataFrame(training_tbl,columns=["objid","T prime","Total Votes","Average Votes","Total gamma value","Average gamma value",\

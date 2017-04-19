@@ -11,7 +11,8 @@ sys.path.append('../')
 from analysis_toolbox import *
 from qualityBaseline import *
 import copy
-DATA_DIR=os.getcwd().split('/')[-1]
+# DATA_DIR=os.getcwd().split('/')[-1]
+DATA_DIR="sampletopworst5"
 img_info,object_tbl,bb_info,hit_info = load_info()
 
 def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False, PLOT=False,sampleNworkers=-1,random_state=111,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
@@ -82,8 +83,8 @@ def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False,
         print "Object ",objid
         sanity_check(indicator_matrix,PLOT)
     if SAVE:
-    	pkl.dump(worker_lst,open('../{0}/worker{1}.pkl'.format(DATA_DIR,objid),'w'))
-    	pkl.dump(indicator_matrix,open('../{0}/indMat{1}.pkl'.format(DATA_DIR,objid),'w'))
+    	pkl.dump(worker_lst,open('{0}/worker{1}.pkl'.format(DATA_DIR,objid),'w'))
+    	pkl.dump(indicator_matrix,open('{0}/indMat{1}.pkl'.format(DATA_DIR,objid),'w'))
     return worker_lst,tiles,indicator_matrix
 def add_object_to_tiles(tiles,obj):
     if obj==[]:
@@ -184,6 +185,10 @@ def visualizeTilesSeparate(tiles,colorful=True):
                 
                 if type(t)!=shapely.geometry.LineString:
                     plot_coords(region,color=c,reverse_xy=True,fill_color=c)
+    #xylocs of the largest tile for estimating the obj size
+    xlocs,ylocs = tiles[np.argmax([t.area for t in tiles])].exterior.coords.xy
+    plt.ylim(np.min(ylocs)-50,np.max(ylocs)+50)
+    plt.gca().invert_yaxis()
 def BB2TileExact(objid,BB,tqdm_on=False,save_tiles=True):
     '''
     Given a list of worker polygons BB (potentially sampled) and the objectID 

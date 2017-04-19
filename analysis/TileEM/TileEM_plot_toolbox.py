@@ -21,14 +21,18 @@ def compute_PR(objid,solnset,tiles):
     Compute precision recall against ground truth bounding box
     for a given solution set and tile coordinates.
     '''
-    try:
-        joined_bb,problematic_tiles = join_tiles(solnset,tiles)
-    except(ValueError):
-        return -1,-1
+    if len(solnset)==1:
+        joined_bb=tiles[solnset]
+        problematic_tiles=[]
+    else:
+        try:
+            joined_bb,problematic_tiles = join_tiles(solnset,tiles)
+        except(ValueError):
+            return -1,-1
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
-    if problematic_tiles==[]:
+    if problematic_tiles!=[]:
         intersect_area =0
         joined_bb_area =0
         for jbb in joined_bb:

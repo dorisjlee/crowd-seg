@@ -18,6 +18,7 @@ analysis/TileEM/step500_output/
 analysis/old_data/
 analysis/plots/*.pdf
 analysis/plots/*.png
+analysis/bbplots/
 analysis/*.pdf
 analysis/*.png
 *output*

@@ -78,6 +78,22 @@ def getSolutionThreshold(gammas,threshold=0.5):
 def getSolutionTopK(data,k=5):
 	#Derive a solution set of tiles of top-K gamma tile values 
 	return np.argsort(data)[::-1][:k]
+def compute_worker_lst_jaccard_obj(objid,worker_lst,EXCLUDE_BBG=True):
+    # List of Jaccard Index (IOU) of given list of workers
+    jaccard_lst = []
+
+    objBBs = bb_info[bb_info.object_id==objid]
+    ground_truth_match = my_BBG[my_BBG.object_id==objid]
+    BBG_x_locs,BBG_y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    for worker_id in worker_lst:
+        bb = objBBs[objBBs["worker_id"]==worker_id]
+        oid = bb["object_id"]
+        bbx_path= bb["x_locs"].values[0]
+        bby_path= bb["y_locs"].values[0]
+        worker_x_locs,worker_y_locs= process_raw_locs([bbx_path,bby_path])
+        jaccard = intersection([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs])/union([worker_x_locs,BBG_x_locs],[worker_y_locs,BBG_y_locs])
+        jaccard_lst.append(jaccard)
+    return jaccard_lst
 
 def compute_worker_lst_PR_obj(objid,worker_lst,EXCLUDE_BBG=True):
     # List of PR measures of given lsit of worker ids

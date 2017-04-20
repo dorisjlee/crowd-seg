@@ -5,20 +5,25 @@ import numpy as np
 from TileEM_plot_toolbox import *
 from TileEM_Models import *
 gamma_properties=False
-DATA_DIR="sampletopworst5"
+DATA_DIR="final_all_tiles"
 os.chdir(DATA_DIR)
 try: 
     topTilePickHeuristic=sys.argv[1]
 except(IndexError):
     topTilePickHeuristic="area"
-
-# topk = 40
+fixedtopk=5
+topk = 40
 training_tbl = []
 my_BBG  = pd.read_csv("../../my_ground_truth.csv")
 import itertools
-topk = 10
-selected_objids=[ 5,  6,  8,  9, 14, 15, 18, 19, 20, 21, 23, 24, 25, 27, 29, 30,33, 35, 37, 46]
+#topk = 10
+selected_objids=[2, 3, 13, 16, 17, 26, 34, 36, 38, 39, 43, 44, 45, 47]
+
+topTilePickHeuristic="snowball"
+np.random.seed(0)
+
 for objid in tqdm(selected_objids):
+#for objid in tqdm(object_lst):
     print "Working on obj:",objid
     #Get Tile information for that object
     #worker_ids,worker_precision_lst,worker_recall_lst = compute_worker_PR_obj(objid,return_worker_id=True)
@@ -51,11 +56,19 @@ for objid in tqdm(selected_objids):
         # print "majvote"
         tile_votes = np.sum(indicatorMat[:-1],axis=0)
         tile_subset_idx = np.argsort(tile_votes)[::-1][:topk]
+    elif topTilePickHeuristic=="snowball": 
+        #pick some large area (central) tiles and then randomly subset around the smaller tiles
+        sorted_tidx = tile_area_ratio.argsort()[::-1][:topk]
+        fixed_tidx = sorted_tidx[:fixedtopk]
+        tile_subset_idx =sorted_tidx[fixedtopk:topk]
     print "Creating random subsets from topk tiles"
     rand_subset =[]
-    for i in range(500):#3000
-        NumTilesInCombo= np.random.randint(1,topk)#at least one tile must be selected
-        tidxInCombo= np.random.choice(tile_subset_idx,NumTilesInCombo,replace=False)
+    flexiblek=topk-fixedtopk
+    for i in range(300): 
+        NumTilesInCombo= np.random.randint(1,flexiblek)#at least one tile must be selected
+        tidxInCombo= list(np.random.choice(tile_subset_idx,NumTilesInCombo,replace=False))
+        if topTilePickHeuristic=="snowball": 
+            tidxInCombo.extend(fixed_tidx)
         rand_subset.append(tidxInCombo)
     print "Compute feature properties for T prime "
     for Tprime in tqdm(rand_subset):
@@ -76,18 +89,22 @@ for objid in tqdm(selected_objids):
                     gvals.append(0)
 
             Tareas.append(Polygon(tiles[tidx]).area)
-        pTprime_val = pTprimeBasic(objid,Tprime,BBG)
-        pTprimeLSA_val1 = pTprimeLSA(objid,Tprime,BBG,1)
-        pTprimeLSA_val10 = pTprimeLSA(objid,Tprime,BBG,10)
-        pTprimeLSA_val50 = pTprimeLSA(objid,Tprime,BBG,50)
-        pTprimeLSA_val100 = pTprimeLSA(objid,Tprime,BBG,100)
+        #pTprime_val = pTprimeBasic(objid,Tprime,BBG)
+        #pTprimeLSA_val1 = pTprimeLSA(objid,Tprime,BBG,1)
+        #pTprimeLSA_val10 = pTprimeLSA(objid,Tprime,BBG,10)
+        #pTprimeLSA_val50 = pTprimeLSA(objid,Tprime,BBG,50)
+        #pTprimeLSA_val100 = pTprimeLSA(objid,Tprime,BBG,100)
+        pTprimeGTLSA_val1 = pTprimeGTLSA(objid,Tprime,BBG,1)
+        pTprimeGTLSA_val5 = pTprimeGTLSA(objid,Tprime,BBG,5)
+        pTprimeGTLSA_val10 = pTprimeGTLSA(objid,Tprime,BBG,10)
+        #pTprimeGTLSA_val5 = pTprimeGTLSA(objid,Tprime,BBG,50)
         #if pTprime_val==0: break
-        training_tbl.append([objid,Tprime,np.sum(region_votes), np.mean(region_votes),np.sum(gvals),np.mean(gvals),\
-                             np.sum(Tareas),np.mean(Tareas),pTprime_val,pTprimeLSA_val1,pTprimeLSA_val10,pTprimeLSA_val50,\
-                             pTprimeLSA_val100,p,r])
 
+        #pTprime_val,pTprimeLSA_val1,pTprimeLSA_val10,pTprimeLSA_val50,\pTprimeLSA_val100,pTprimeGTLSA_val1,
+        training_tbl.append([objid,list(Tprime),np.sum(region_votes), np.mean(region_votes),np.sum(gvals),np.mean(gvals),\
+                             np.sum(Tareas),np.mean(Tareas),pTprimeGTLSA_val1,pTprimeGTLSA_val5,pTprimeGTLSA_val10,p,r])
 
+#"pTprime","pTprime[Athres>1]","pTprime[Athres>10]",\"pTprime[Athres>50]","pTprime[Athres>100]",
 df = pd.DataFrame(training_tbl,columns=["objid","T prime","Total Votes","Average Votes","Total gamma value","Average gamma value",\
-                                         "Total area","Average area","pTprime","pTprime[Athres>1]","pTprime[Athres>10]",\
-                                         "pTprime[Athres>50]","pTprime[Athres>100]","Precision","Recall"])
+                                         "Total area","Average area","pTprimeGTLSA[Athres>1]","pTprimeGTLSA[Athres>5]","pTprimeGTLSA[Athres>10]","Precision","Recall"])
 df.to_csv("all_tile_combo_metric_{}.csv".format(topTilePickHeuristic))

@@ -104,6 +104,148 @@ def QjLSA(A_thres,SAVE=False):
         pkl.dump(Qj,open("Qj12_A>{}.pkl".format(A_thres),'w'))
     os.chdir("..")
     return Qj
+def QjGTLSA(A_thres,SAVE=False):
+    '''
+    GT inclusion, Large Small Area (LSA) Tile EM Worker model 
+    Compute the set of Worker qualities
+    A_thres: Area threshold
+    Qn1,Qp1,Qn1,Qp2
+    ngt : not included in ground truth 
+    gt : included in ground truth 
+    '''
+    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    os.chdir(DATA_DIR)
+    Qp1=[]
+    Qp2=[]
+    Qn1=[]
+    Qn2=[]
+    for object_id in tqdm(list(set(my_BBG.object_id))):
+        ground_truth_match = my_BBG[my_BBG.object_id==object_id]
+        x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+        T = Polygon(zip(x_locs,y_locs))
+        tiles = pkl.load(open("vtiles{}.pkl".format(object_id)))
+        indMat = pkl.load(open("indMat{}.pkl".format(object_id)))
+        workers = pkl.load(open("worker{}.pkl".format(object_id)))
+        for wid,j in zip(workers,range(len(workers))):
+            large_gt_Ncorrect=0
+            large_gt_Nwrong = 0
+            small_gt_Ncorrect=0
+            small_gt_Nwrong = 0
+            large_ngt_Ncorrect=0
+            large_ngt_Nwrong = 0
+            small_ngt_Ncorrect=0
+            small_ngt_Nwrong = 0
+            for k in range(len(tiles)): 
+                tk = tiles[k]
+                ljk = indMat[j][k]
+                try:
+                    overlap = T.intersection(tk).area/T.area>0.8
+                    tjkInT = T.contains(tk) or overlap
+                except(shapely.geos.TopologicalError):
+                    overlap=True
+                    tjkInT = T.contains(tk)
+                if tk.area>A_thres:
+                    if (ljk ==1 and tjkInT):
+                        large_gt_Ncorrect+=1
+                    elif (ljk ==0 and tjkInT):
+                        large_gt_Nwrong+=1
+                    elif (ljk ==0 and (not tjkInT)):
+                        large_ngt_Ncorrect+=1
+                    elif (ljk ==1 and (not tjkInT)):
+                        large_ngt_Nwrong+=1
+                else:
+                    if (ljk ==1 and tjkInT):
+                        small_gt_Ncorrect+=1
+                    elif (ljk ==0 and tjkInT):
+                        small_gt_Nwrong+=1
+                    elif (ljk ==0 and (not tjkInT)):
+                        small_ngt_Ncorrect+=1
+                    elif (ljk ==1 and (not tjkInT)):
+                        small_ngt_Nwrong+=1
+            try:
+                qp1 = large_gt_Ncorrect/float(large_gt_Ncorrect+large_gt_Nwrong)
+            except(ZeroDivisionError):
+                qp1 = -1
+            try:
+                qn1 = large_ngt_Ncorrect/float(large_ngt_Ncorrect+large_ngt_Nwrong)
+            except(ZeroDivisionError):
+                qn1 = -1
+            try:
+                qp2 = small_gt_Ncorrect/float(small_gt_Ncorrect+small_gt_Nwrong)
+            except(ZeroDivisionError):
+                qp2 = -1
+            try:
+                qn2 = small_ngt_Ncorrect/float(small_ngt_Ncorrect+small_ngt_Nwrong)
+            except(ZeroDivisionError):
+                qn2 = -1
+
+            Qp1.append([object_id,wid,qp1])
+            Qp2.append([object_id,wid,qp2])
+            Qn1.append([object_id,wid,qn1])
+            Qn2.append([object_id,wid,qn2])
+    Qp1_tbl = pd.DataFrame(Qp1,columns=["object_id","worker_id","Qp1"])
+    Qp2_tbl = pd.DataFrame(Qp2,columns=["object_id","worker_id","Qp2"])
+    Qn1_tbl = pd.DataFrame(Qn1,columns=["object_id","worker_id","Qn1"])
+    Qn2_tbl = pd.DataFrame(Qn2,columns=["object_id","worker_id","Qn2"])
+    Qp = Qp1_tbl.merge(Qp2_tbl)
+    Qn = Qn1_tbl.merge(Qn2_tbl)
+    Qj = Qp.merge(Qn)
+    if SAVE:
+        pkl.dump(Qj,open("Qgt12_A>{}.pkl".format(A_thres),'w'))
+    os.chdir("..")
+    return Qj
+def pTprimeGTLSA(objid,Tprime,T,A_thres):
+    '''
+    Area Based Tile EM Worker model 
+    Given a tile combination Tprime, compute likelihood of that T'=T
+    '''
+    Qj=pkl.load(open("Qgt12_A>{}.pkl".format(A_thres),'r'))
+    Qj_obj = Qj[(Qj["object_id"]==objid)]
+    tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
+    workers = pkl.load(open("worker{}.pkl".format(objid)))
+    indicatorMat= pkl.load(open("indMat{}.pkl".format(objid)))
+    plk=1
+    plk_lst=[]
+    
+    for k in Tprime: 
+        for j in range(len(workers)):
+            tk = tiles[k]
+            ljk = indicatorMat[j][k]
+            tjkInT = T.contains(tk) 
+            wid=workers[j]
+            qp1 = float(Qj_obj[Qj_obj["worker_id"]==wid]["Qp1"])
+            qp2 = float(Qj_obj[Qj_obj["worker_id"]==wid]["Qp2"])
+            qn1 = float(Qj_obj[Qj_obj["worker_id"]==wid]["Qn1"])
+            qn2 = float(Qj_obj[Qj_obj["worker_id"]==wid]["Qn2"])
+            if tk.area>A_thres:
+                if ljk ==1:
+                    if tjkInT:
+                        plk+=np.log(qp1)
+                    else:
+                        plk+=np.log(1-qn1)
+                else:
+                    if tjkInT:
+                        plk+=np.log(1-qp1)
+                    elif not tjkInT:
+                        plk+=np.log(qn1)
+            else:
+                if ljk ==1:
+                    if tjkInT:
+                        plk+=np.log(qp2)
+                    else:
+                        plk+=np.log(1-qn2)    
+                else:
+                    if tjkInT:
+                        plk+=np.log(1-qp2)
+                    else:
+                        plk+=np.log(qn2)
+#     if plk==-np.inf or plk==np.inf:
+#         pTprime=0
+#     else:
+#         print plk
+#         pTprime= e**plk
+    return plk
+    
 def pTprimeBasic(objid,Tprime,T):
     '''
     Basic Tile EM Worker model 

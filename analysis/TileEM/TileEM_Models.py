@@ -43,13 +43,53 @@ def QjBasic(SAVE=False):
     Qj_tbl = pd.DataFrame(Qj,columns=["object_id","worker_id","Qj"])
     if SAVE: pkl.dump(Qj_tbl,open("Qj.pkl",'w'))
     os.chdir("..")
-    return Qj
-def QjLSA(A_thres,SAVE=False):
+    return Qj_tbl
+def correct(ljk,tjkInT):
+    if (ljk ==1 and tjkInT) or (ljk ==0 and (not tjkInT)):
+        return 1
+    elif (ljk ==1 and (not tjkInT)) or (ljk ==0 and tjkInT):
+        return 0
+def QjArea(SAVE=False):
+    '''
+    Area weighted worker quality scoring function
+    '''
+    my_BBG  = pd.read_csv("my_ground_truth.csv")
+    Qj=[]
+    os.chdir(DATA_DIR)
+    for object_id in tqdm(list(set(my_BBG.object_id))):
+        ground_truth_match = my_BBG[my_BBG.object_id==object_id]
+        x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+        T = Polygon(zip(x_locs,y_locs))
+        tiles = pkl.load(open("vtiles{}.pkl".format(object_id)))
+        indMat = pkl.load(open("indMat{}.pkl".format(object_id)))
+        workers = pkl.load(open("worker{}.pkl".format(object_id)))
+        for wid,j in zip(workers,range(len(workers))):
+            numerator=0
+            denominator= 0
+            for k in range(len(tiles)): 
+                tk = tiles[k]
+                ljk = indMat[j][k]
+                try:
+                    overlap = T.intersection(tk).area/T.area>0.8
+                    tjkInT = T.contains(tk) or overlap
+                except(shapely.geos.TopologicalError):
+                    overlap=True
+                    tjkInT = T.contains(tk)
+                numerator+=tk.area*correct(ljk,tjkInT)
+                denominator+=tk.area
+            qj =numerator/float(denominator)
+            Qj.append([object_id,wid,qj])
+    Qj_tbl = pd.DataFrame(Qj,columns=["object_id","worker_id","Qj_area"])
+    if SAVE: pkl.dump(Qj_tbl,open("Qj_area.pkl",'w'))
+    os.chdir("..")
+    return Qj_tbl
+def QjLSA(A_percentile,SAVE=False):
     '''
     Large Small Area (LSA) Tile EM Worker model 
     Compute the set of Worker qualities
     A_thres: Area threshold
     '''
+
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     os.chdir(DATA_DIR)
     Qj1=[]
@@ -61,6 +101,8 @@ def QjLSA(A_thres,SAVE=False):
         tiles = pkl.load(open("vtiles{}.pkl".format(object_id)))
         indMat = pkl.load(open("indMat{}.pkl".format(object_id)))
         workers = pkl.load(open("worker{}.pkl".format(object_id)))
+        tile_area = np.array(indMat[-1])
+        A_thres = np.percentile(tile_area,A_percentile)
         for wid,j in zip(workers,range(len(workers))):
             large_Ncorrect=0
             large_Nwrong = 0
@@ -101,10 +143,10 @@ def QjLSA(A_thres,SAVE=False):
     Qj2_tbl = pd.DataFrame(Qj2,columns=["object_id","worker_id","Q2"])
     Qj = Qj1_tbl.merge(Qj2_tbl)
     if SAVE:
-        pkl.dump(Qj,open("Qj12_A>{}.pkl".format(A_thres),'w'))
+        pkl.dump(Qj,open("Qj12_A>{}%.pkl".format(A_percentile),'w'))
     os.chdir("..")
     return Qj
-def QjGTLSA(A_thres,SAVE=False):
+def QjGTLSA(A_percentile,SAVE=False):
     '''
     GT inclusion, Large Small Area (LSA) Tile EM Worker model 
     Compute the set of Worker qualities
@@ -126,6 +168,8 @@ def QjGTLSA(A_thres,SAVE=False):
         tiles = pkl.load(open("vtiles{}.pkl".format(object_id)))
         indMat = pkl.load(open("indMat{}.pkl".format(object_id)))
         workers = pkl.load(open("worker{}.pkl".format(object_id)))
+        tile_area = np.array(indMat[-1])
+        A_thres = np.percentile(tile_area,A_percentile)
         for wid,j in zip(workers,range(len(workers))):
             large_gt_Ncorrect=0
             large_gt_Nwrong = 0
@@ -191,7 +235,7 @@ def QjGTLSA(A_thres,SAVE=False):
     Qn = Qn1_tbl.merge(Qn2_tbl)
     Qj = Qp.merge(Qn)
     if SAVE:
-        pkl.dump(Qj,open("Qgt12_A>{}.pkl".format(A_thres),'w'))
+        pkl.dump(Qj,open("Qgt12_A>{}%.pkl".format(A_percentile),'w'))
     os.chdir("..")
     return Qj
 def pTprimeGTLSA(objid,Tprime,T,A_thres):
@@ -245,7 +289,7 @@ def pTprimeGTLSA(objid,Tprime,T,A_thres):
 #         print plk
 #         pTprime= e**plk
     return plk
-    
+
 def pTprimeBasic(objid,Tprime,T):
     '''
     Basic Tile EM Worker model 

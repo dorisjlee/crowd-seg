@@ -4,6 +4,7 @@ from TileEM_Models import *
 my_BBG  = pd.read_csv("my_ground_truth.csv")
 os.chdir(DATA_DIR)
 df = pd.read_csv("all_tile_combo_metric_snowball.csv",index_col=0)
+df = df[:100]
 def add_column_to_Tprime_tbl(df,func_name_lst):
     all_val_lst=[]
     for Tprime_data in tqdm(df.iterrows()):
@@ -11,12 +12,12 @@ def add_column_to_Tprime_tbl(df,func_name_lst):
         objid = Tprime_data[1]["objid"]
         Tprime_idx = ast.literal_eval(Tprime_data[1]["T prime"])
         tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
-        # Ground truth 
+        # Ground truth
         ground_truth_match = my_BBG[my_BBG.object_id==objid]
         x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
         BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
         ########### Insert Function calls here ############
-        #for func in func_lst: 
+        #for func in func_lst:
         #os.chdir("final_all_tiles/")
         val_lst=[]
         val_lst.append(AreaTprimeScore(objid,Tprime_idx,BBG))
@@ -29,8 +30,8 @@ def add_column_to_Tprime_tbl(df,func_name_lst):
     # print funcVal
     #print len(funcVal[0])
     #print len(df)
-    for func_name,val_lst in zip(func_name_lst,funcVal): 
-        df[func_name]=val_lst 
+    for func_name,val_lst in zip(func_name_lst,funcVal):
+        df[func_name]=val_lst
     return df
 def compute_jaccard(objid,solnset,tiles):
     '''
@@ -69,4 +70,4 @@ def compute_jaccard(objid,solnset,tiles):
 # df_new = add_column_to_Tprime_tbl(df,AreaTprimeScore,"AreaTprimeScore")
 # pTprimeGTLSA(objid,Tprime,T,A_percentile)
 new_df = add_column_to_Tprime_tbl(df,["AreaTprimeScore","pTprimeGTLSA[Athres>90%]","pTprimeGTLSA[Athres>95%]","pTprimeGTLSA[Athres>99%]"])
-new_df.to_csv("new_all_tile_combo_metric_snowball.csv")
+new_df.to_csv("test_new_all_tile_combo_metric_snowball.csv")

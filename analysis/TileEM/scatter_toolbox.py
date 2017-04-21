@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import linear_model
 from sklearn.preprocessing import StandardScaler
-def regression_results(df,x_attr,y_attr,PLOT=False,normScale=False):
+def regression_results(df,x_attr,y_attr,PLOT=False,normScale=False,ylim01=False):
     print "---------------------------------------------"
     print "Regression x={0};y={1}".format(x_attr,y_attr)
     regr = linear_model.LinearRegression()
@@ -26,7 +26,7 @@ def regression_results(df,x_attr,y_attr,PLOT=False,normScale=False):
         plt.figure()
         plt.plot(Xtest,Ytest,'o')
         plt.plot(Xtest,regr.predict(Xtest),'r-')
-        plt.ylim(0,1)
+        if ylim01: plt.ylim(0,1)
         plt.title("MSE=%.2f"% np.mean((regr.predict(Xtest) - Ytest) ** 2)+'; R^2=%.2f' % regr.score(Xtest, Ytest))
         plt.xlabel(x_attr[0],fontsize=13)
         plt.ylabel(y_attr[0],fontsize=13)
@@ -56,10 +56,10 @@ def bucketize(data,Nbuckets):
     #print len(bucketized_data),len(data)
     assert len(bucketized_data)==len(data)
     return bucketized_data
-def scatterplot(df,x_attr,y_attr,z_attr,z_data="",bucketize=True,cmap = plt.cm.rainbow):
+    
+def scatterplot(df,x_attr,y_attr,z_attr,z_data="",bucketize=True,cmap = plt.cm.rainbow,zlim01=False):
     fig=plt.figure()
 
-    
     plt.xlim(0,1.03)
     plt.ylim(0,1.03)
     plt.xlabel(x_attr,fontsize=14)
@@ -74,7 +74,8 @@ def scatterplot(df,x_attr,y_attr,z_attr,z_data="",bucketize=True,cmap = plt.cm.r
     else:
         plt.scatter(df[x_attr],df[y_attr],c=df[z_attr],edgecolors='none',alpha=0.7,cmap=cmap)
         plt.colorbar()
-        plt.clim(0,1)
+        if zlim01: plt.clim(0,1)
+
 def plot_attr_histo(attr):
     data = df[attr]
     a = plt.hist(data,bins=50,normed=True)

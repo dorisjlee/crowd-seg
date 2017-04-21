@@ -238,23 +238,23 @@ def QjGTLSA(A_percentile,SAVE=False):
         pkl.dump(Qj,open("Qgt12_A>{}%.pkl".format(A_percentile),'w'))
     os.chdir("..")
     return Qj
-def pTprimeGTLSA(objid,Tprime,T,A_thres):
+def pTprimeGTLSA(objid,Tprime,T,A_percentile):
     '''
     Area Based Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
     '''
-    Qj=pkl.load(open("Qgt12_A>{}.pkl".format(A_thres),'r'))
+    Qj=pkl.load(open("Qgt12_A>{}%.pkl".format(A_percentile),'r'))
     Qj_obj = Qj[(Qj["object_id"]==objid)]
     tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
     workers = pkl.load(open("worker{}.pkl".format(objid)))
-    indicatorMat= pkl.load(open("indMat{}.pkl".format(objid)))
-    plk=1
-    plk_lst=[]
-    
+    indMat = pkl.load(open("indMat{}.pkl".format(objid)))
+    tile_area = np.array(indMat[-1])
+    A_thres = np.percentile(tile_area,A_percentile)
+    plk=1    
     for k in Tprime: 
         for j in range(len(workers)):
             tk = tiles[k]
-            ljk = indicatorMat[j][k]
+            ljk = indMat[j][k]
             tjkInT = T.contains(tk) 
             wid=workers[j]
             qp1 = float(Qj_obj[Qj_obj["worker_id"]==wid]["Qp1"])
@@ -283,11 +283,6 @@ def pTprimeGTLSA(objid,Tprime,T,A_thres):
                         plk+=np.log(1-qp2)
                     else:
                         plk+=np.log(qn2)
-#     if plk==-np.inf or plk==np.inf:
-#         pTprime=0
-#     else:
-#         print plk
-#         pTprime= e**plk
     return plk
 
 def pTprimeBasic(objid,Tprime,T):
@@ -343,3 +338,36 @@ def pTprimeLSA(objid,Tprime,T,A_thres):
                     plk.append(1-qj2)
     pTprime=np.product(plk)
     return pTprime
+def AreaTprimeScore(objid,Tprime,T):
+    '''
+    Area-Weighted Tile EM Worker model 
+    Given a tile combination Tprime, compute area-weighted score for that T'=T
+    '''
+    Qj=pkl.load(open("Qj_area.pkl",'r'))
+    tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
+    workers = pkl.load(open("worker{}.pkl".format(objid)))
+    indicatorMat= pkl.load(open("indMat{}.pkl".format(objid)))
+    TprimeScore=0
+    for k in Tprime: 
+        for j in range(len(workers)):
+            tk = tiles[k]
+            ljk = indicatorMat[j][k]
+            wid=workers[j]
+            tjkInT = T.contains(tk) #overlap > threshold
+            qj = float(Qj[(Qj["object_id"]==objid)&(Qj["worker_id"]==wid)]["Qj_area"])
+            if tjkInT: 
+                if ljk ==1:
+                    TprimeScore+=qj
+                    #print +qj
+                else: 
+                    TprimeScore-=qj
+                    #print -qj
+            else: 
+                if ljk==1:
+                    TprimeScore-=qj
+                    #print -qj
+                else: 
+                    TprimeScore+=qj
+                    #print +qj
+        #print "score(T'):",TprimeScore
+    return TprimeScore

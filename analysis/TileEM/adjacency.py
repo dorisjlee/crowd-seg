@@ -73,8 +73,8 @@ def visualizeTilesScore(tiles,tidx_score,INT_Z=True,colorful=True):
     else:
         plt.colorbar(s_m)
     #xylocs of the largest tile for estimating the obj size
-    xlocs,ylocs = tiles[argmax([t.area for t in tiles])].exterior.coords.xy
-    plt.ylim(min(ylocs)-50,max(ylocs)+50)
+    xlocs,ylocs = tiles[np.argmax([t.area for t in tiles])].exterior.coords.xy
+    plt.ylim(np.min(ylocs)-50,np.max(ylocs)+50)
     plt.gca().invert_yaxis()
 def adjacent(tileA,tileB):
     return tileA.buffer(0.1).overlaps(tileB.buffer(0.1))

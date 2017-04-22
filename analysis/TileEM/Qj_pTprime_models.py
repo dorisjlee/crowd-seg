@@ -11,9 +11,10 @@ DATA_DIR="final_all_tiles"
 ############################################################### WOKER QUALITY CALCULATIONS ########################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
-def QjBasic(indMat,T,j):
+def QjBasic(tiles,indMat,T,j,args):
     '''
     Compute MLE of QJ given fixed T=T'for worker j
+    args is a dummy argument
     '''
     Ncorrect=0
     Nwrong = 0
@@ -33,7 +34,7 @@ def QjBasic(indMat,T,j):
     qj = Ncorrect/float(Ncorrect+Nwrong)
     return qj
 
-def QjLSA(indMat,T,j,A_percentile):
+def QjLSA(tiles,indMat,T,j,A_percentile):
     '''
     Large Small Area (LSA) Tile EM Worker model 
     '''
@@ -72,7 +73,7 @@ def QjLSA(indMat,T,j,A_percentile):
     except(ZeroDivisionError):
         q2 = -1
     return q1,q2
-def QjGTLSA(indMat,T,j,A_percentile):
+def QjGTLSA(tiles,indMat,T,j,A_percentile):
     '''
     GT inclusion, Large Small Area (LSA) Tile EM Worker model 
     Compute the set of Worker qualities
@@ -81,6 +82,8 @@ def QjGTLSA(indMat,T,j,A_percentile):
     ngt : not included in ground truth 
     gt : included in ground truth 
     '''
+    tile_area = np.array(indMat[-1])
+    A_thres = np.percentile(tile_area,A_percentile)
     large_gt_Ncorrect=0
     large_gt_Nwrong = 0
     small_gt_Ncorrect=0
@@ -140,9 +143,10 @@ def correct(ljk,tjkInT):
     elif (ljk ==1 and (not tjkInT)) or (ljk ==0 and tjkInT):
         return 0
 
-def QjArea(indMat,T,j):
+def QjArea(tiles,indMat,T,j,args):
     '''
     Area weighted worker quality scoring function
+    args is a dummy argument
     '''    
     numerator=0
     denominator= 0
@@ -165,10 +169,11 @@ def QjArea(indMat,T,j):
 ###################################################################################################################################################
 ###################################################################################################################################################
 
-def pTprimeBasic(objid,Tprime,Qj,T,tiles,indMat,workers):
+def pTprimeBasic(objid,Tprime,Qj,T,tiles,indMat,workers,args):
     '''
     Basic Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
+    args is a dummy argument
     '''
     plk=0
     for k in Tprime: 
@@ -189,7 +194,7 @@ def pTprimeLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
     Area Based Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
     '''
-    Q1,Q2=Qj
+    Q1,Q2=zip(*Qj)
     plk=0
     for k in Tprime: 
         for j in range(len(workers)):
@@ -216,7 +221,7 @@ def pTprimeGTLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
     Area Based Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
     '''
-    Qn1,Qn2,Qp1,Qp2 = Qj
+    Qn1,Qn2,Qp1,Qp2 = zip(*Qj)
     tile_area = np.array(indMat[-1])
     A_thres = np.percentile(tile_area,A_percentile)
     plk=0
@@ -254,15 +259,12 @@ def pTprimeGTLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
                         plk+=np.log(qn2)
     return plk
 
-def AreaTprimeScore(objid,Tprime,T):
+def AreaTprimeScore(objid,Tprime,Qj,T,tiles,indMat,workers,args):
     '''
     Area-Weighted Tile EM Worker model 
     Given a tile combination Tprime, compute area-weighted score for that T'=T
+    args is a dummy argument
     '''
-    Qj=pkl.load(open("Qj_area.pkl",'r'))
-    tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
-    workers = pkl.load(open("worker{}.pkl".format(objid)))
-    indicatorMat= pkl.load(open("indMat{}.pkl".format(objid)))
     TprimeScore=0
     for k in Tprime: 
         for j in range(len(workers)):

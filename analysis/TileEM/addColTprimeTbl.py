@@ -1,7 +1,7 @@
 from TileEM_plot_toolbox import *
 from scatter_toolbox import *
 from TileEM_Models import *
-my_BBG  = pd.read_csv("my_ground_truth.csv")
+my_BBG  = pd.read_csv("../my_ground_truth.csv")
 os.chdir(DATA_DIR)
 df = pd.read_csv("all_tile_combo_metric_snowball.csv",index_col=0)
 df = df[:100]

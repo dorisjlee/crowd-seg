@@ -111,8 +111,8 @@ def parametric_interpolate(obj_x_locs,obj_y_locs,numPts=50,PLOT=False):
             interpolated_obj_y_locs.append(obj_y_locs[i])
     return interpolated_obj_x_locs,interpolated_obj_y_locs
 
-from scipy.spatial.distance import cdist,pdist
-from munkres import Munkres, print_matrix
+#from scipy.spatial.distance import cdist,pdist
+#from munkres import Munkres, print_matrix
 def MunkresEuclidean(obj_x_locs,obj_y_locs,numPts=50,PRINT=False):
     '''
     Given two worker's responses, 

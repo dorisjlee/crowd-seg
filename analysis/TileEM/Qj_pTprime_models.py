@@ -229,7 +229,13 @@ def pTprimeGTLSA(objid,Tprime,Qj,tiles,indMat,workers,A_percentile):
     for k,tk in enumerate(tiles): 
         for j in range(len(workers)):
             ljk = indMat[j][k]
-            tjkInT = Tprime.contains(tk) 
+            try: 
+                tjkInT = Tprime.contains(tk) 
+            except(shapely.geos.TopologicalError):
+		pkl.dump(tk,open("problematic_tk_{}.pkl".format(k),'w'))
+		pkl.dump(Tprime,open("problematic_Tprime_{}.pkl".format(k),'w'))
+		tjkInT = False
+		print "Topological Error Exception, coerce tjkInT to be False" 
             wid=workers[j]
             qp1 = Qp1[j]
             qp2 = Qp2[j]

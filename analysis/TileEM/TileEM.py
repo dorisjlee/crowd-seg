@@ -109,9 +109,9 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 if __name__ =="__main__":
     DATA_DIR="sampletopworst5"
     exp_num=6
-    for objid in [14]:#,3,47,17,20,23]:
+    for objid in [47]:#,17,20,23]:
         Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
-                                            Niter=3,NTprimes=100,PLOT_LIKELIHOOD=False,DEBUG=True)
+                                            Niter=10,NTprimes=500,PLOT_LIKELIHOOD=False,DEBUG=True)
         pkl.dump(Tprime_lst,open("Tprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
         pkl.dump(pTprime_lst,open("pTprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
         pkl.dump(T_lst,open("T_lst_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))

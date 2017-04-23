@@ -129,7 +129,7 @@ def runTileEM2(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=1
         T_lst.append(Tidx)
         Qj_lst.append(Qjhat)
     return Tprime_lst,pTprime_lst,Qj_lst,T_lst
-def runTileEM2(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
+def runTileEM3(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
     '''
     Tfunc : how to get ground truth
     Tprimefunc : how to pick T'
@@ -160,7 +160,7 @@ def runTileEM2(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=1
         T_lst.append(Tidx)
         Qj_lst.append(Qjhat)
     return Tprime_lst,pTprime_lst,Qj_lst,T_lst
-def runTileEM3(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
+def runTileEM4(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
     '''
     Tfunc : how to get ground truth
     Tprimefunc : how to pick T'
@@ -192,38 +192,38 @@ def runTileEM3(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=1
     return Tprime_lst,pTprime_lst,Qj_lst,T_lst
 if __name__ =="__main__":
     DATA_DIR="sampletopworst5"
-    exp_num=3
-    for objid in [14,3,47,17,20,23]:
+    #exp_num=3
+    #for objid in [14,3,47,17,20,23]:
         #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
         #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
-        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
-                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
-        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    exp_num=4
-    for objid in [14,3,47,17,20,23]:
+    #    Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+       #                                     Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
+       # pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+       # pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+       # pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+       # pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #exp_num=4
+    #for objid in [14,3,47]:
         #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
         #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
-        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM2(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
-                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
-        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    exp_num=5
-    for objid in [14,3,47,17,20,23]:
+    #    Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM2(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+                                           # Niter=3,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
+    #    pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #exp_num=5
+    #for objid in [14]:#,3,47]:
         #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
         #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
-        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM3(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
-                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
-        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM3(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+    #                                        Niter=3,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
+    #    pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #    pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
     exp_num=6
-    for objid in [14,3,47,17,20,23]:
+    for objid in [14]:#,3,47,17,20,23]:
         #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
         #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
         Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM4(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\

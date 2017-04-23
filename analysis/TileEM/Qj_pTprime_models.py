@@ -169,19 +169,19 @@ def QjArea(tiles,indMat,T,j,args):
 ###################################################################################################################################################
 ###################################################################################################################################################
 
-def pTprimeBasic(objid,Tprime,Qj,T,tiles,indMat,workers,args):
+def pTprimeBasic(objid,Tprime,Qj,tiles,indMat,workers,args):
     '''
     Basic Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
     args is a dummy argument
     '''
-    plk=0
-    for k in Tprime: 
+    plk=0 
+    for k,tk in enumerate(tiles): 
         for j in range(len(workers)):
             tk = tiles[k]
             ljk = indMat[j][k]
             wid=workers[j]
-            tjkInT = T.contains(tk) #overlap > threshold
+            tjkInT = Tprime.contains(tk) #overlap > threshold
             qj = Qj[j]
             if (ljk ==1 and tjkInT) or (ljk ==0 and (not tjkInT)):
                 plk+=np.log(qj)
@@ -189,18 +189,18 @@ def pTprimeBasic(objid,Tprime,Qj,T,tiles,indMat,workers,args):
                 plk+=np.log(1-qj)
     return plk
 
-def pTprimeLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
+def pTprimeLSA(objid,Tprime,Qj,tiles,indMat,workers,A_percentile):
     '''
     Area Based Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
     '''
     Q1,Q2=zip(*Qj)
     plk=0
-    for k in Tprime: 
+
+    for k,tk in enumerate(tiles): 
         for j in range(len(workers)):
-            tk = tiles[k]
             ljk = indicatorMat[j][k]
-            tjkInT = T.contains(tk) 
+            tjkInT = Tprime.contains(tk) 
             wid=workers[j]
             qj1 = Q1[j]
             qj2 = Q2[j]
@@ -216,7 +216,7 @@ def pTprimeLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
                     plk+=np.log(1-qj2)
     return plk
 
-def pTprimeGTLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
+def pTprimeGTLSA(objid,Tprime,Qj,tiles,indMat,workers,A_percentile):
     '''
     Area Based Tile EM Worker model 
     Given a tile combination Tprime, compute likelihood of that T'=T
@@ -225,11 +225,11 @@ def pTprimeGTLSA(objid,Tprime,Qj,T,tiles,indMat,workers,A_percentile):
     tile_area = np.array(indMat[-1])
     A_thres = np.percentile(tile_area,A_percentile)
     plk=0
-    for k in Tprime: 
+    
+    for k,tk in enumerate(tiles): 
         for j in range(len(workers)):
-            tk = tiles[k]
             ljk = indMat[j][k]
-            tjkInT = T.contains(tk) 
+            tjkInT = Tprime.contains(tk) 
             wid=workers[j]
             qp1 = Qp1[j]
             qp2 = Qp2[j]

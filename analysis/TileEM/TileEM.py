@@ -1,4 +1,5 @@
 import pandas as pd
+from Qj_pTprime_models import *
 from analysis_toolbox import *
 from TileEM_plot_toolbox import *
 from adjacency import *
@@ -95,8 +96,9 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 
 if __name__ =="__main__":
 	DATA_DIR="sampletopworst5"
-	for objid in [14,3,47]:
+	exp_num=2
+	for objid in tqdm([14,3,47]):
 		pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
-	                                             Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
+	                                             Niter=20,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
 		pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-		pkl.dump(T_lst,open("pTprime_exp#{}_obj{1}.pkl".format(exp_num,objid),'w'))
+		pkl.dump(T_lst,open("T_lst_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))

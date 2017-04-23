@@ -5,10 +5,11 @@ from TileEM_plot_toolbox import *
 from adjacency import *
 from tqdm import tqdm
 import numpy as np
-def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile):
+def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile,DEBUG=False):
     Qj=[]
     for wid,j in zip(workers,range(len(workers))):
         Qj.append(Qjfunc(tiles,indMat,T,j,A_percentile))
+    if DEBUG: print "Qj: ",Qj
     return Qj
 def computeT(objid,T,tiles,indMat,workers,Tprime_lst,Qj,pTprimefunc,A_percentile,DEBUG=False,PLOT_LIKELIHOOD=False):
     # Loop through Tprime_lst find the argmax T' s.t pTprime is max given fixed Qj
@@ -60,7 +61,7 @@ def Tprime_snowball_area(objid,indMat,fixedtopk=3, topk = 40,NTprimes=300):
     #Creating random subsets from topk tiles
     rand_subset =[]
     flexiblek=topk-fixedtopk
-    for i in range(NTprimes): 
+    for i in range(NTprimes):
         NumTilesInCombo= np.random.randint(1,flexiblek)#at least one tile must be selected
         tidxInCombo= list(np.random.choice(tile_subset_idx,NumTilesInCombo,replace=False))
         tidxInCombo.extend(fixed_tidx)
@@ -69,7 +70,7 @@ def Tprime_snowball_area(objid,indMat,fixedtopk=3, topk = 40,NTprimes=300):
 
 def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
     '''
-    Tfunc : how to get ground truth 
+    Tfunc : how to get ground truth
     Tprimefunc : how to pick T'
     pTprimefunc : Model used for computing p(T')
     Qjfunc : Model used for estimating Qj parameters
@@ -80,25 +81,154 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
     workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
     T_lst = []
     pTprime_lst=[]
-    if DEBUG: print "Coming up with T' combinations to search through" 
+    Qj_lst=[]
+    if DEBUG: print "Coming up with T' combinations to search through"
     Tprime_lst = Tprimefunc(objid,indMat,fixedtopk=3, topk = 40,NTprimes=NTprimes)
+    
     for _i in tqdm(range(Niter)):
         if _i ==0:
+            if DEBUG: print "Initializing tiles "
             T=initT(tiles,indMat)
         if DEBUG: print "E-step : Estimate Qj parameters"
-        Qjhat = estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile)
+        Qjhat = estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile,DEBUG=DEBUG)
         ####potentially adaptive way of getting a new set of T', currently a fixed set of T' #####
-        if DEBUG: print "Mstep: Picking the max-likelihood T' " 
+        if DEBUG: print "Mstep: Picking the max-likelihood T' "
         pTprimes,Tidx,T, max_likelihood= computeT(objid,T,tiles,indMat,workers,Tprime_lst,Qjhat,pTprimefunc,A_percentile,PLOT_LIKELIHOOD=PLOT_LIKELIHOOD,DEBUG=DEBUG)
         pTprime_lst.append(pTprimes)
         T_lst.append(Tidx)
-    return pTprime_lst,T_lst
+        Qj_lst.append(Qjhat)
+    return Tprime_lst,pTprime_lst,Qj_lst,T_lst
 
+def runTileEM2(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
+    '''
+    Tfunc : how to get ground truth
+    Tprimefunc : how to pick T'
+    pTprimefunc : Model used for computing p(T')
+    Qjfunc : Model used for estimating Qj parameters
+    objid,A_percentile
+    '''
+    tiles = pkl.load(open(DATA_DIR+"/vtiles{}.pkl".format(objid)))
+    indMat = pkl.load(open(DATA_DIR+"/indMat{}.pkl".format(objid)))
+    workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
+    T_lst = []
+    pTprime_lst=[]
+    Qj_lst=[]
+    if DEBUG: print "Coming up with T' combinations to search through"
+    Tprime_lst = Tprimefunc(objid,indMat,fixedtopk=1, topk = 40,NTprimes=NTprimes)
+    
+    for _i in tqdm(range(Niter)):
+        if _i ==0:
+            if DEBUG: print "Initializing tiles "
+            T=initT(tiles,indMat)
+        if DEBUG: print "E-step : Estimate Qj parameters"
+        Qjhat = estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile,DEBUG=DEBUG)
+        ####potentially adaptive way of getting a new set of T', currently a fixed set of T' #####
+        if DEBUG: print "Mstep: Picking the max-likelihood T' "
+        pTprimes,Tidx,T, max_likelihood= computeT(objid,T,tiles,indMat,workers,Tprime_lst,Qjhat,pTprimefunc,A_percentile,PLOT_LIKELIHOOD=PLOT_LIKELIHOOD,DEBUG=DEBUG)
+        pTprime_lst.append(pTprimes)
+        T_lst.append(Tidx)
+        Qj_lst.append(Qjhat)
+    return Tprime_lst,pTprime_lst,Qj_lst,T_lst
+def runTileEM2(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
+    '''
+    Tfunc : how to get ground truth
+    Tprimefunc : how to pick T'
+    pTprimefunc : Model used for computing p(T')
+    Qjfunc : Model used for estimating Qj parameters
+    objid,A_percentile
+    '''
+    tiles = pkl.load(open(DATA_DIR+"/vtiles{}.pkl".format(objid)))
+    indMat = pkl.load(open(DATA_DIR+"/indMat{}.pkl".format(objid)))
+    workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
+    T_lst = []
+    pTprime_lst=[]
+    Qj_lst=[]
+    
+    
+    for _i in tqdm(range(Niter)):
+        if _i ==0:
+            if DEBUG: print "Initializing tiles "
+            T=initT(tiles,indMat)
+        if DEBUG: print "E-step : Estimate Qj parameters"
+        Qjhat = estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile,DEBUG=DEBUG)
+        ####potentially adaptive way of getting a new set of T', currently a fixed set of T' #####
+        if DEBUG: print "Coming up with T' combinations to search through"
+        Tprime_lst = Tprimefunc(objid,indMat,fixedtopk=1, topk = 40,NTprimes=NTprimes)
+        if DEBUG: print "Mstep: Picking the max-likelihood T' "
+        pTprimes,Tidx,T, max_likelihood= computeT(objid,T,tiles,indMat,workers,Tprime_lst,Qjhat,pTprimefunc,A_percentile,PLOT_LIKELIHOOD=PLOT_LIKELIHOOD,DEBUG=DEBUG)
+        pTprime_lst.append(pTprimes)
+        T_lst.append(Tidx)
+        Qj_lst.append(Qjhat)
+    return Tprime_lst,pTprime_lst,Qj_lst,T_lst
+def runTileEM3(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
+    '''
+    Tfunc : how to get ground truth
+    Tprimefunc : how to pick T'
+    pTprimefunc : Model used for computing p(T')
+    Qjfunc : Model used for estimating Qj parameters
+    objid,A_percentile
+    '''
+    tiles = pkl.load(open(DATA_DIR+"/vtiles{}.pkl".format(objid)))
+    indMat = pkl.load(open(DATA_DIR+"/indMat{}.pkl".format(objid)))
+    workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
+    T_lst = []
+    pTprime_lst=[]
+    Qj_lst=[]
+    if DEBUG: print "Coming up with T' combinations to search through"
+    Tprime_lst = Tprimefunc(objid,indMat,fixedtopk=1, topk = 100,NTprimes=NTprimes)
+    
+    for _i in tqdm(range(Niter)):
+        if _i ==0:
+            if DEBUG: print "Initializing tiles "
+            T=initT(tiles,indMat)
+        if DEBUG: print "E-step : Estimate Qj parameters"
+        Qjhat = estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_percentile,DEBUG=DEBUG)
+        ####potentially adaptive way of getting a new set of T', currently a fixed set of T' #####
+        if DEBUG: print "Mstep: Picking the max-likelihood T' "
+        pTprimes,Tidx,T, max_likelihood= computeT(objid,T,tiles,indMat,workers,Tprime_lst,Qjhat,pTprimefunc,A_percentile,PLOT_LIKELIHOOD=PLOT_LIKELIHOOD,DEBUG=DEBUG)
+        pTprime_lst.append(pTprimes)
+        T_lst.append(Tidx)
+        Qj_lst.append(Qjhat)
+    return Tprime_lst,pTprime_lst,Qj_lst,T_lst
 if __name__ =="__main__":
-	DATA_DIR="sampletopworst5"
-	exp_num=2
-	for objid in tqdm([14,3,47]):
-		pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
-	                                             Niter=20,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
-		pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-		pkl.dump(T_lst,open("T_lst_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    DATA_DIR="sampletopworst5"
+    exp_num=3
+    for objid in [14,3,47,17,20,23]:
+        #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
+        #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
+        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
+        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    exp_num=4
+    for objid in [14,3,47,17,20,23]:
+        #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
+        #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
+        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM2(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
+        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    exp_num=5
+    for objid in [14,3,47,17,20,23]:
+        #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
+        #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
+        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM3(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
+        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    exp_num=6
+    for objid in [14,3,47,17,20,23]:
+        #pTprime_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=99,\
+        #                                         Niter=5,NTprimes=2000,PLOT_LIKELIHOOD=True,DEBUG=True)
+        Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM4(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=95,\
+                                            Niter=8,NTprimes=2000,PLOT_LIKELIHOOD=False,DEBUG=True)
+        pkl.dump(Tprime_lst,open("Tprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(pTprime_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(T_lst,open("pTprime_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+        pkl.dump(Qj_lst,open("Qj_exp#{0}_obj{1}.pkl".format(exp_num,objid),'w'))

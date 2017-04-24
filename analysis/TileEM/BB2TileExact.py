@@ -68,7 +68,7 @@ def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False,
             		tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
             		if tileBB_overlap>=overlap_threshold:
             			indicator_matrix[wi][tile_i]=1
-            	except(shapely.errors.TopologicalError):
+            	except(shapely.geos.TopologicalError):
             		pass
 
     # The last row of the indicator matrix is the tile area
@@ -218,15 +218,15 @@ def BB2TileExact(objid,BB,tqdm_on=False,save_tiles=True):
                         diff_region = (tj.symmetric_difference(xj)).difference(xj)#.buffer(0)
                         add_object_to_tiles(tiles,diff_region)       
                         xj_lst.append(xj)
-                except(shapely.errors.TopologicalError):
+                except(shapely.geos.TopologicalError):
                     xj_lst=xj_lst[:-1]
                     pass
             try:
                 leftovers = bi.difference(cascaded_union(xj_lst))
-            except(shapely.errors.TopologicalError):
+            except(shapely.geos.TopologicalError):
                 try: 
                     leftovers = bi.difference(cascaded_union(xj_lst).buffer(1e-10))
-                except(shapely.errors.TopologicalError):
+                except(shapely.geos.TopologicalError):
                     leftovers=[]    
             except(ValueError):
                 #ERROR:shapely.geos:TopologyException: no outgoing dirEdge 

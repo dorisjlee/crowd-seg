@@ -1,36 +1,36 @@
-python runIndicatorMat.py 5	 111
-python runIndicatorMat.py 5   237
-# python indMatrunIndicatorMat.py 5	 532
-# python indMatrunIndicatorMat.py 5	 721
-# python indMatrunIndicatorMat.py 5	 845
-# python indMatrunIndicatorMat.py 5	 779
-# python indMatrunIndicatorMat.py 5	 213
-# python indMatrunIndicatorMat.py 5	 989
-# python indMatrunIndicatorMat.py 5	 123
-# python indMatrunIndicatorMat.py 5	 121
+python2.7 runIndicatorMat.py 5	 111
+python2.7 runIndicatorMat.py 5   237
+python2.7 indMatrunIndicatorMat.py 5	 532
+python2.7 indMatrunIndicatorMat.py 5	 721
+python2.7 indMatrunIndicatorMat.py 5	 845
+python2.7 indMatrunIndicatorMat.py 5	 779
+python2.7 indMatrunIndicatorMat.py 5	 213
+python2.7 indMatrunIndicatorMat.py 5	 989
+python2.7 indMatrunIndicatorMat.py 5	 123
+python2.7 indMatrunIndicatorMat.py 5	 121
 
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
-# python indMatrunIndicatorMat.py 10	 121
+python2.7 indMatrunIndicatorMat.py 10	 141
+python2.7 indMatrunIndicatorMat.py 10	 211
+python2.7 indMatrunIndicatorMat.py 10	 151
+python2.7 indMatrunIndicatorMat.py 10	 161
+python2.7 indMatrunIndicatorMat.py 10	 171
+python2.7 indMatrunIndicatorMat.py 10	 191
+python2.7 indMatrunIndicatorMat.py 10	 181
+python2.7 indMatrunIndicatorMat.py 10	 621
 
-# python indMatrunIndicatorMat.py 15	 121
-# python indMatrunIndicatorMat.py 15	 121
-# python indMatrunIndicatorMat.py 15	 121
-# python indMatrunIndicatorMat.py 15	 121
-# python indMatrunIndicatorMat.py 15	 121
-# python indMatrunIndicatorMat.py 15	 121
+python2.7 indMatrunIndicatorMat.py 15	 191
+python2.7 indMatrunIndicatorMat.py 15	 127
+python2.7 indMatrunIndicatorMat.py 15	 129
+python2.7 indMatrunIndicatorMat.py 15	 123
+python2.7 indMatrunIndicatorMat.py 15	 112
+python2.7 indMatrunIndicatorMat.py 15	 110
 
-# python indMatrunIndicatorMat.py 20	 121
-# python indMatrunIndicatorMat.py 20	 121
-# python indMatrunIndicatorMat.py 20	 121
-# python indMatrunIndicatorMat.py 20	 121
+python2.7 indMatrunIndicatorMat.py 20	 345
+python2.7 indMatrunIndicatorMat.py 20	 125
+python2.7 indMatrunIndicatorMat.py 20	 129
+python2.7 indMatrunIndicatorMat.py 20	 126
 
-# python indMatrunIndicatorMat.py 25	 121
-# python indMatrunIndicatorMat.py 25	 121
+python2.7 indMatrunIndicatorMat.py 25	 141
+python2.7 indMatrunIndicatorMat.py 25	 149
 
-# python indMatrunIndicatorMat.py 30	 121
+python2.7 indMatrunIndicatorMat.py 30	 189

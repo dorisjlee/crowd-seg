@@ -11,8 +11,9 @@ sys.path.append('../')
 from analysis_toolbox import *
 from qualityBaseline import *
 import copy
-# DATA_DIR=os.getcwd().split('/')[-1]
-DATA_DIR="sampletopworst5"
+#DATA_DIR="sample/"+os.getcwd().split('/')[-1]
+DATA_DIR="."
+#DATA_DIR="sampletopworst5"
 img_info,object_tbl,bb_info,hit_info = load_info()
 
 def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False, PLOT=False,sampleNworkers=-1,random_state=111,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
@@ -35,7 +36,7 @@ def createObjIndicatorMatrix(objid,tiles="",load_existing_tiles_from_file=False,
         #worker_lst= pkl.load(open("{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
     elif tiles=="":
         tiles = BB2TileExact(objid,BB,tqdm_on=tqdm_on,save_tiles=SAVE)
-        tiles = compute_unique_tileset(tiles)
+        tiles = compute_unique_tileset(objid,tiles,SAVE=SAVE)
     if tile_only:
     	if PLOT: visualizeTiles(tiles)
     	return tiles,0
@@ -102,7 +103,7 @@ def overlap(a,b):
     else:
         larger_area = b.area
     return a.intersection(b).area/larger_area
-def compute_unique_tileset(tiles,PLOT=False):
+def compute_unique_tileset(objid,tiles,SAVE=False,PLOT=False):
     verified_tiles = []
     for tidx in tqdm(range(len(tiles))): 
         t=tiles[tidx]
@@ -140,6 +141,7 @@ def compute_unique_tileset(tiles,PLOT=False):
         if not duplicated:
             verified_tiles_new.append(t)
         verified_tiles=verified_tiles_new[:]
+    if SAVE: pkl.dump(verified_tiles,open("{0}/vtiles{1}.pkl".format(DATA_DIR,objid),'w'))
     return verified_tiles
 def slow_cascaded_union(tiles):
     all_tiles  = copy.deepcopy(tiles)

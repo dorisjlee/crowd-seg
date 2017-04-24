@@ -67,7 +67,7 @@ def Tprime_snowball_area(objid,tiles,indMat,fixedtopk=3, topk = 40,NTprimes=300)
         NumTilesInCombo= np.random.randint(1,flexiblek)#at least one tile must be selected
         tidxInCombo= list(np.random.choice(tile_subset_idx,NumTilesInCombo,replace=False))
         tidxInCombo.extend(fixed_tidx)
-        Tprime_lst.append(join_tiles(tidxInCombo,tiles)[0])
+        Tprime_lst.append(join_tiles(tidxInCombo,tiles)[0].buffer(0))
         Tprime_idx_lst.append(tidxInCombo)
     return Tprime_lst, Tprime_idx_lst
 # def runTileEMGreedy(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
@@ -220,7 +220,7 @@ if __name__ =="__main__":
     objid=3
     init = time.time()
     Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=90,\
-                                        Niter=10,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
+                                        Niter=5,NTprimes=300,PLOT_LIKELIHOOD=False,DEBUG=True)
     pkl.dump(Tprime_lst,open("Tprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
     pkl.dump(pTprime_lst,open("pTprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
     pkl.dump(T_lst,open("T_lst_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
@@ -228,13 +228,13 @@ if __name__ =="__main__":
     end = time.time()
     print "Time Elapsed: ",end-init
     # T initialization with E start
-    exp_num=10
-    objid=3
-    Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM2(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=90,\
-                                        Niter=10,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
-    pkl.dump(Tprime_lst,open("Tprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    pkl.dump(pTprime_lst,open("pTprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    pkl.dump(T_lst,open("T_lst_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    pkl.dump(Qj_lst,open("Qj_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
-    end2 = time.time()
-    print "Time Elapsed: ",end2-end
+    #exp_num=10
+    #objid=3
+    #Tprime_lst,pTprime_lst,Qj_lst,T_lst = runTileEM2(objid,Tprime_snowball_area,pTprimeGTLSA,QjGTLSA,A_percentile=90,\
+    #                                    Niter=10,NTprimes=1000,PLOT_LIKELIHOOD=False,DEBUG=True)
+    #pkl.dump(Tprime_lst,open("Tprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #pkl.dump(pTprime_lst,open("pTprime_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #pkl.dump(T_lst,open("T_lst_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #pkl.dump(Qj_lst,open("Qj_exp{0}_obj{1}.pkl".format(exp_num,objid),'w'))
+    #end2 = time.time()
+    #print "Time Elapsed: ",end2-end

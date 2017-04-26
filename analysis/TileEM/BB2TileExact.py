@@ -269,7 +269,7 @@ def sanity_check(indicator_matrix,PLOT=False):
         plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
         plt.colorbar()
 
-def plot_coords(obj,color='red',reverse_xy=False,linestyle='-',fill_color=""):
+def plot_coords(obj,color='red',reverse_xy=False,linewidth=2,linestyle='-',fill_color=""):
     #Plot shapely polygon coord 
     if type(obj)!=shapely.geometry.MultiPolygon:
         obj=[obj]
@@ -278,7 +278,7 @@ def plot_coords(obj,color='red',reverse_xy=False,linestyle='-',fill_color=""):
             x,y = ob.exterior.xy
         else:
             y,x = ob.exterior.xy
-        plt.plot(x, y, linestyle, color=color, zorder=1)
+        plt.plot(x, y, linestyle, color=color,linewidth=linewidth zorder=1)
         if fill_color!="": plt.fill_between(x, y , facecolor=fill_color,color='none', alpha=0.5)
 
 def plot_all_tiles(tiles):

@@ -135,8 +135,7 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
         A_thres = np.median(tile_area[Iidx])
     Qjhat = estimate_Qj(Tinit,tiles,indMat,workers,Qjfunc,A_thres=A_thres,DEBUG=DEBUG)
     Qn1,Qn2,Qp1,Qp2 = zip(*Qjhat)
-    all_pInT_lst=[]
-    all_pNotInT_lst=[]
+
     for i in tqdm(range(Niter)):
         if DEBUG: print "Iteration #", i
         plk=0
@@ -157,8 +156,7 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
         past_shell_tkidxs= Tidx
         if DEBUG: print "Add core tiles to first occurence of tk satisfying criterion"
         Tstar_lst.append([Tstar_lst[0][0]])
-        pInT_lst=[]
-        pNotInT_lst=[]
+
 
         while (good_dPrime_tcount!=0 or len(current_shell_tkidxs)!=0):
             ######
@@ -206,8 +204,6 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                                 pInT+=np.log(1-qp2)
                             if qn2!=-1:
                                 pNotInT+=np.log(qn2)
-                    pInT_lst.append(pInT)
-                    pNotInT_lst.append(pNotInT)
                 # Check if tk satisfy constraint
                 if pInT<pNotInT:
                     plk+=pNotInT
@@ -272,10 +268,8 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
         Qj_lst.append(Qjhat)
         Tstar_idx_lst.append(Tidx_lst)
         likelihood_lst.append(plk)
-        all_pInT_lst.append(pInT_lst)
-        all_pNotInT_lst.append(pNotInT_lst)
 
-    return Tstar_idx_lst , likelihood_lst, Qj_lst,Tstar_lst,all_pInT_lst,all_pNotInT_lst
+    return Tstar_idx_lst , likelihood_lst, Qj_lst,Tstar_lst
 
 def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
     '''
@@ -322,7 +316,7 @@ if __name__ =="__main__":
         print "Working on Object #",objid
         try:
             end = time.time()
-            Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst,pInT,pNotInT=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=True,PLOT_LIKELIHOOD=False)
+            Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=True,PLOT_LIKELIHOOD=False)
             pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
             pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
             pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))

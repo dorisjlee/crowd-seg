@@ -73,7 +73,7 @@ def QjLSA(tiles,indMat,T,j,A_percentile):
     except(ZeroDivisionError):
         q2 = -1
     return q1,q2
-def QjGTLSA(tiles,indMat,T,j,A_percentile):
+def QjGTLSA(tiles,indMat,T,j,A_thres):
     '''
     GT inclusion, Large Small Area (LSA) Tile EM Worker model 
     Compute the set of Worker qualities
@@ -83,7 +83,7 @@ def QjGTLSA(tiles,indMat,T,j,A_percentile):
     gt : included in ground truth 
     '''
     tile_area = np.array(indMat[-1])
-    A_thres = np.percentile(tile_area,A_percentile)
+    # if A_percentile!=-1: A_thres = np.percentile(tile_area,A_percentile)
     large_gt_Ncorrect=0
     large_gt_Nwrong = 0
     small_gt_Ncorrect=0

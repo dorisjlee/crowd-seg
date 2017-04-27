@@ -48,7 +48,7 @@ def poly_recall(poly,BBG,round_dig=2):
     #print "BBG:",BBG.area
     poly=poly.buffer(0)
     BBG = BBG.buffer(0)
-    return poly.intersection(BBG).area/BBG.area,round_dig
+    return poly.intersection(BBG).area/BBG.area
 def plot_likelihood(likelihood_lst):
     plt.figure()
     plt.plot(likelihood_lst)

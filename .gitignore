@@ -22,6 +22,7 @@ analysis/plots/*.png
 analysis/bbplots/
 analysis/*.pdf
 analysis/*.png
+analysis/TileEM/sample/
 Image-Segmentation
 *output*
 *.sql

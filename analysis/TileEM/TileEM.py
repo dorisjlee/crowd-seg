@@ -40,7 +40,7 @@ def core(tiles,indMat,topk=1):
     tidx = np.argsort(norm_area_vote)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
 def initT(tiles,indMat):
-    # In the initial step, 
+    # In the initial step,
     # pick the tiles that at least 50% of the workers have voted on
     votes =indMat[:-1].sum(axis=0)
     Nworkers = np.shape(indMat)[0]
@@ -48,9 +48,9 @@ def initT(tiles,indMat):
     return join_tiles(tidx,tiles)[0],list(tidx)
 def find_all_tk_in_shell(tiles,current_shell_idx,exclude_idx=[]):
     # Find all tiles at the shell d=d+1
-    # add all tiles adjacent to currentShell front 
+    # add all tiles adjacent to currentShell front
     filtered_tidxs = np.delete(np.arange(len(tiles)),exclude_idx)
-    
+
     adjacent_tkidxs =[]
     for ctidx in current_shell_idx:
         ck = tiles[ctidx]
@@ -93,7 +93,7 @@ def Tprime_snowball_area(objid,tiles,indMat,fixedtopk=3, topk = 40,NTprimes=300)
     return Tprime_lst, Tprime_idx_lst
 def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Niter=10,DEBUG=False,PLOT_LIKELIHOOD=False,PLOT=False):
     '''
-    Initilaize with majority vote tile , get good Qj estimates based on that 
+    Initilaize with majority vote tile , get good Qj estimates based on that
     Input:
     _____
     Tfunc : how to get ground truth
@@ -107,13 +107,13 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
     Qj_lst : list of worker qualities at everystep
     Tstar_lst : Tstar at every step
     '''
-    # ML Construction with E step as usual 
+    # ML Construction with E step as usual
     tiles = pkl.load(open(DATA_DIR+"/vtiles{}.pkl".format(objid)))
     indMat = pkl.load(open(DATA_DIR+"/indMat{}.pkl".format(objid)))
     workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
 
     tile_area = np.array(indMat[-1])
-    
+
     Qj_lst=[]
     #if DEBUG: print "Coming up with T' combinations to search through"
     #Tprime_lst, Tprime_idx_lst = Tprimefunc(objid,tiles,indMat,fixedtopk=3, topk = 40,NTprimes=NTprimes)
@@ -165,12 +165,12 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
             print "Excluding",exclude_idx
             current_shell_tkidxs = find_all_tk_in_shell(tiles,past_shell_tkidxs,list(exclude_idx))
 
-            if DEBUG: 
+            if DEBUG:
                 print "d'={0}; good_dPrime_tcount={1}".format(dPrime,good_dPrime_tcount)
                 print "Number of tks in shell: ",len(current_shell_tkidxs)
                 print "Current shell index:",current_shell_tkidxs
             good_dPrime_tcount=0
-            
+
             for k in current_shell_tkidxs:
                 pInT = 0
                 pNotInT = 0
@@ -178,12 +178,12 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                 # Compute pInT and pNotInT
                 for j in range(len(workers)):
                     ljk = indMat[j][k] #NOTE k doesn't correspond to k in tiles but in current_shell_tks so this is not good
-                    wid=workers[j] 
+                    wid=workers[j]
                     qp1 = Qp1[j]
                     qp2 = Qp2[j]
                     qn1 = Qn1[j]
                     qn2 = Qn2[j]
-                    
+
                     if tk.area>A_thres:
                         if ljk ==1:
                             if qp1!=-1:
@@ -212,7 +212,7 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                 if pInT<pNotInT:
                     plk+=pNotInT
                 elif pInT>=pNotInT:
-                    plk+=pInT 
+                    plk+=pInT
                     # if satisfy criterion, then add to Tstar
                     good_dPrime_tcount+=1
                     if DEBUG: print "Adding tk",k
@@ -260,14 +260,14 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                 plt.ylim(40,100)
 
 
-            
+
             #Updates
             Tstar = Tstar_lst[i][0].buffer(0)
             dPrime+=1
             past_shell_tkidxs= current_shell_tkidxs
             exclude_idx= exclude_idx.union(current_shell_tkidxs)
-        
-    
+
+
         #Storage
         Qj_lst.append(Qjhat)
         Tstar_idx_lst.append(Tidx_lst)
@@ -318,7 +318,8 @@ if __name__ =="__main__":
     import time
     #Experiments
     DATA_DIR="output_15"
-    for objid in object_lst:
+    for objid in object_lst[33:]:
+        print "Working on Object #",objid
         try:
             end = time.time()
             Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst,pInT,pNotInT=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=True,PLOT_LIKELIHOOD=False)

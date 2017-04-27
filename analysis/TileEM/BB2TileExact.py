@@ -278,7 +278,7 @@ def plot_coords(obj,color='red',reverse_xy=False,linewidth=2,linestyle='-',fill_
             x,y = ob.exterior.xy
         else:
             y,x = ob.exterior.xy
-        plt.plot(x, y, linestyle, color=color,linewidth=linewidth zorder=1)
+        plt.plot(x, y, linestyle, color=color,linewidth=linewidth, zorder=1)
         if fill_color!="": plt.fill_between(x, y , facecolor=fill_color,color='none', alpha=0.5)
 
 def plot_all_tiles(tiles):

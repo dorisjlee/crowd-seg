@@ -31,13 +31,13 @@ def computeT(objid,tiles,indMat,workers,Tprime_lst, Tprime_idx_lst,Qj,pTprimefun
 ###################################################################################################################################################
 ###################################################################################################################################################
 
-def initT(tiles,indMat):
+def initT(tiles,indMat,topk=1):
     # In the initial step, we pick T to be the top 5 area-vote score
     # where we combine the area and vote in a 1:5 ratio
     area = np.array(indMat[-1])
     votes =indMat[:-1].sum(axis=0)
     norm_area_vote = area/max(area)+5*votes/max(votes)
-    tidx = np.argsort(norm_area_vote)[::-1][:2]
+    tidx = np.argsort(norm_area_vote)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
 
 def ground_truth_T(object_id):

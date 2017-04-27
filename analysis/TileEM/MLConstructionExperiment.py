@@ -2,13 +2,14 @@ from TileEM import *
 from Qj_pTprime_models import *
 def plot_worker_histo(Qj_lst,step_size=10):
     # Plotting Worker Quality Histogram
+    kv = {0:'Qn1',1:'Qn2',2:'Qp1',3:'Qp2'}
     for Qiter,Qj in enumerate(Qj_lst):
         if Qiter%step_size==0:
             Qjs = zip(*Qj)
             plt.figure()
             for i in range(len(Qjs)):
                 plt.title("Worker Quality; Iteration #{}".format(Qiter))
-                plt.hist(Qjs[i],bins=len(Qj),label="Q{}".format(i))
+                plt.hist(Qjs[i],bins=len(Qj),label=kv[i])
                 plt.legend(loc= "top left")
             plt.xlim(0,1.1)
 def plot_Ts(objid,T_lst,Tstar_idx_lst,step_size=10):

@@ -29,13 +29,18 @@ def compute_PR(objid,solnset,tiles):
             joined_bb,problematic_tiles = join_tiles(solnset,tiles)
         except(ValueError):
             return -1,-1
+    
     ground_truth_match = my_BBG[my_BBG.object_id==objid]
     x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
     if problematic_tiles!=[]:
         intersect_area =0
         joined_bb_area =0
-        for jbb in joined_bb:
+        if type(joined_bb)==Polygon:
+            joined_bb_iter=[joined_bb]
+        else:
+            joined_bb_iter=joined_bb
+        for jbb in joined_bb_iter:
             ia = intersection_area(BBG,jbb)
             intersect_area += ia
             joined_bb_area += jbb.area

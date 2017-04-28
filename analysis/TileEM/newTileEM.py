@@ -9,6 +9,8 @@ import numpy as np
 import pickle as pkl
 def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_thres,DEBUG=False):
     Qj=[]
+    print T
+    print T.area 
     for wid,j in zip(workers,range(len(workers))):
         Qj.append(Qjfunc(tiles,indMat,T,j,A_thres))
     if DEBUG: print "Qj: ",Qj
@@ -45,6 +47,10 @@ def initT(tiles,indMat):
     votes =indMat[:-1].sum(axis=0)
     Nworkers = np.shape(indMat)[0]
     tidx =np.where(votes>Nworkers/2.)[0]
+    if len(tidx)==0:
+        #If no tiles satisfy 50% votes, then just pick the top-1 tile
+	topk=1 
+        tidx = np.argsort(votes)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
 def find_all_tk_in_shell(tiles,current_shell_idx,exclude_idx=[]):
     # Find all tiles at the shell d=d+1
@@ -215,31 +221,31 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                     try:
                         Tstar_lst[i]=[Tstar_lst[i][0].union(tk)]
                         Tidx_lst.append(k)
-                    except:
+                    except(shapely.geos.TopologicalError):
                         try:
                             Tstar_lst[i]=[Tstar_lst[i][0].buffer(0).union(tk.buffer(-1e-10))]
                             Tidx_lst.append(k)
-                        except:
+                        except(shapely.geos.TopologicalError):
                             try:
                                 Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk)]
                                 Tidx_lst.append(k)
-                            except:
+                            except(shapely.geos.TopologicalError):
                                 try:
                                     Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk.buffer(-1e-10))]
                                     Tidx_lst.append(k)
-                                except:
+                                except(shapely.geos.TopologicalError):
                                     try:
                                         Tstar_lst[i]=[Tstar_lst[i][0].union(tk.buffer(1e-10))]
                                         Tidx_lst.append(k)
-                                    except:
+                                    except(shapely.geos.TopologicalError):
                                         try:
                                             Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk)]
                                             Tidx_lst.append(k)
-                                        except:
+                                        except(shapely.geos.TopologicalError):
                                             try:
                                                 Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk.buffer(1e-10))]
                                                 Tidx_lst.append(k)
-                                            except:
+                                            except(shapely.geos.TopologicalError):
                                                 print "Shapely Topological Error: unable to add tk, Tstar unchanged; at k=",k
                                                 pkl.dump(Tstar_lst[i][0],open("problematic_Tstar_{0}.pkl".format(k),'w'))
                                                 pkl.dump(tk,open("problematic_tk_{0}.pkl".format(k),'w'))
@@ -311,19 +317,16 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    for batch_id in [4]:#range(2,9):
-	print "Working on Batch #",batch_id
-    	DATA_DIR="sample/5worker_rand{}".format(batch_id)
-    	for objid in object_lst[1:]:
+    for batch_id in range(8):
+        print "Working on Batch #",batch_id
+        DATA_DIR="sample/10worker_rand{}".format(batch_id)
+        for objid in object_lst[33:]:
             print "Working on Object #",objid
-            
-	    end = time.time()
-	    Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
-	    pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
-	    pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
-	    pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
-	    pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
-	    end2 = time.time()
-	    print "Time Elapsed: ",end2-end
-            #except:
-            #    print "Object #{} failed".format(objid)
+            end = time.time()
+            Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
+            pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
+            pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
+            pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
+            pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
+            end2 = time.time()
+            print "Time Elapsed: ",end2-end

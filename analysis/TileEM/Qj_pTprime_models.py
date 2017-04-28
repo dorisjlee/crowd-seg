@@ -100,7 +100,26 @@ def QjGTLSA(tiles,indMat,T,j,A_thres):
             tjkInT = T.contains(tk) or overlap
         except(shapely.geos.TopologicalError):
             overlap=True
-            tjkInT = T.contains(tk)
+	    try:
+                tjkInT = T.contains(tk)
+	    except(shapely.geos.TopologicalError):
+		try:
+		    tjkInT = T.buffer(1e-10).contains(tk) 
+		except(shapely.geos.TopologicalError):
+		    try:
+		        tjkInT = T.intersection(tk.buffer(-1e-10)).area/T.area>0.8
+		    except(shapely.geos.TopologicalError):
+		        print "Problematic containment check"
+		        pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
+			pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
+		        tjkInT=False
+		        pass 
+	    except(shapely.geos.PredicateError):
+	    	print "PredicateError Problematic containment check"
+	    	pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
+            	pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
+            	tjkInT=False
+            	pass
         if tk.area>A_thres:
             if (ljk ==1 and tjkInT):
                 large_gt_Ncorrect+=1

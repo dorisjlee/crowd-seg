@@ -219,31 +219,31 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                     try:
                         Tstar_lst[i]=[Tstar_lst[i][0].union(tk)]
                         Tidx_lst.append(k)
-                    except(shapely.errors.TopologicalError):
+                    except(shapely.geos.TopologicalError):
                         try:
                             Tstar_lst[i]=[Tstar_lst[i][0].buffer(0).union(tk.buffer(-1e-10))]
                             Tidx_lst.append(k)
-                        except(shapely.errors.TopologicalError):
+                        except(shapely.geos.TopologicalError):
                             try:
                                 Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk)]
                                 Tidx_lst.append(k)
-                            except(shapely.errors.TopologicalError):
+                            except(shapely.geos.TopologicalError):
                                 try:
                                     Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk.buffer(-1e-10))]
                                     Tidx_lst.append(k)
-                                except(shapely.errors.TopologicalError):
+                                except(shapely.geos.TopologicalError):
                                     try:
                                         Tstar_lst[i]=[Tstar_lst[i][0].union(tk.buffer(1e-10))]
                                         Tidx_lst.append(k)
-                                    except(shapely.errors.TopologicalError):
+                                    except(shapely.geos.TopologicalError):
                                         try:
                                             Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk)]
                                             Tidx_lst.append(k)
-                                        except(shapely.errors.TopologicalError):
+                                        except(shapely.geos.TopologicalError):
                                             try:
                                                 Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk.buffer(1e-10))]
                                                 Tidx_lst.append(k)
-                                            except(shapely.errors.TopologicalError):
+                                            except(shapely.geos.TopologicalError):
                                                 print "Shapely Topological Error: unable to add tk, Tstar unchanged; at k=",k
                                                 pkl.dump(Tstar_lst[i][0],open("problematic_Tstar_{0}.pkl".format(k),'w'))
                                                 pkl.dump(tk,open("problematic_tk_{0}.pkl".format(k),'w'))
@@ -317,17 +317,19 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    DATA_DIR="output_15"
-    for objid in object_lst[33:]:
-        print "Working on Object #",objid
-        try:
-            end = time.time()
-            Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst,pInT,pNotInT=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=True,PLOT_LIKELIHOOD=False)
-            pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
-            end2 = time.time()
-            print "Time Elapsed: ",end2-end
-        except:
-            print "Object #{} failed".format(objid)
+    for batch_id in range(9):
+	print "Working on Batch #",batch_id
+    	DATA_DIR="sample/5worker_rand{}".format(batch_id)
+    	for objid in object_lst:
+            print "Working on Object #",objid
+            try:
+                end = time.time()
+                Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst,pInT,pNotInT=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
+                pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
+                pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
+                pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
+                pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
+                end2 = time.time()
+                print "Time Elapsed: ",end2-end
+            except:
+                print "Object #{} failed".format(objid)

@@ -9,8 +9,6 @@ import numpy as np
 import pickle as pkl
 def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_thres,DEBUG=False):
     Qj=[]
-    print T
-    print T.area 
     for wid,j in zip(workers,range(len(workers))):
         Qj.append(Qjfunc(tiles,indMat,T,j,A_thres))
     if DEBUG: print "Qj: ",Qj

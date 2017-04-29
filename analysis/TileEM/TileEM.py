@@ -317,10 +317,10 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    for batch_id in range(8):
+    for batch_id in [4]:#range(2,6):
         print "Working on Batch #",batch_id
-        DATA_DIR="sample/10worker_rand{}".format(batch_id)
-        for objid in object_lst[33:]:
+        DATA_DIR="sample/15worker_rand{}".format(batch_id)
+        for objid in object_lst[14:]:
             print "Working on Object #",objid
             end = time.time()
             Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)

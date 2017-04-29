@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm 
 import ast
-
+import pickle as pkl
 # Given all the x and y annotations for that object, which contains all responses from every worker
 # If we want to compute ground truth comparison simply input 
 # obj_x_locs = [[worker i response],[ground truth]]
@@ -338,6 +338,29 @@ def visualize_metric_histograms():
         ax.set_xlim(0,1.03)
     fig.tight_layout()
     fig.savefig('metric_histogram.pdf')
+def majority_vote(objid,heuristic="50%"):
+    from TileEM_plot_toolbox import *
+    #Compute PR for majority voted region
+    tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
+    indMat = pkl.load(open("indMat{}.pkl".format(objid)))
+    workers = pkl.load(open("worker{}.pkl".format(objid)))
+    
+    area = indMat[-1]
+    votes = indMat[:-1].sum(axis=0)
+    if heuristic=="50%":
+        tidx=np.where(votes>np.shape(indMat[:-1])[0]/2.)[0]
+    elif heuristic=="topk":
+        topk=10
+        tidx = np.argsort(votes)[::-1][:topk]
+    elif heuristic=="topPercentile":
+        percentile=95
+        tidx=np.where(votes>np.percentile(votes,percentile))[0]
+    P,R = compute_PR(objid,tidx,tiles)
+    if len(tidx)==0:
+        P=0
+        R=0
+    return P,R
+
 if __name__ =="__main__":
     import sys
     start_time = time.time()

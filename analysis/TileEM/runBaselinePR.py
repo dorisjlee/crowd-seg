@@ -6,9 +6,58 @@ from glob import glob
 from collections import OrderedDict
 from problematic_vtiles import * 
 df = pd.read_csv("../computed_my_COCO_BBvals.csv",index_col=0)
-worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
+worker_Nbatches={5:10,10:8,15:6}#,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
-mode="aggregate_sample_table"
+#mode="aggregate_sample_table"
+mode="recompute_sample_batch_table"
+
+def compute_PR_intersection_union(objid,solnset,tiles):
+    '''
+    Compute precision recall against ground truth bounding box
+    for a given solution set and tile coordinates.
+    '''
+    if len(solnset)==1:
+        joined_bb=tiles[solnset]
+        problematic_tiles=[]
+    else:
+        try:
+            joined_bb,problematic_tiles = join_tiles(solnset,tiles)
+        except(ValueError):
+            return -1,-1
+    ground_truth_match = my_BBG[my_BBG.object_id==objid]
+    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
+    if problematic_tiles!=[]:
+        intersect_area =0
+        joined_bb_area =0
+        for jbb in joined_bb:
+            ia = intersection_area(BBG,jbb)
+            intersect_area += ia
+            joined_bb_area += jbb.area
+	try: 
+            union_area = BBG.union(joined_bb).area
+	except(shapely.geos.TopologicalError): 
+	    union_area = BBG.buffer(-1e-10).union(joined_bb.buffer(-1e-10)).area
+    else:
+        intersect_area=intersection_area(BBG,joined_bb)
+        joined_bb_area =joined_bb.area
+        #First union joined_bb with BBG then union that with problematic_tiles
+        union_tile = BBG.union(joined_bb).area
+        union_tile = union_tile.cascade_union(problematic_tiles)
+        union_area = union_tile.area
+    if float(joined_bb_area)!=0:
+        precision = intersect_area/float(joined_bb_area)
+    else:
+        # Empty solution set
+        precision = -1
+    recall = intersect_area/BBG.area
+    #This patches up PR>1 because intersect_area using the slow intersection method can sometimes be larger since overlap area may not be completely deducted, so the estimate is a bit larger than the actual area, but not by much
+    if recall>1:
+        recall=1
+    if precision>1:
+        precision=1
+    return precision,recall,intersection_area, union_area, joined_bb_area,BBG.area
+
 if mode =="recompute_sample_batch_table":
 	# Compute and save a  PR_tbl_all.csv into each sample_batch folder 
 	for Nworker in sampleN_lst:
@@ -49,7 +98,8 @@ if mode =="recompute_sample_batch_table":
 				tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
 				#Tile EM
 				Tstar_lst = pkl.load(open("Tstar_idx_obj{}.pkl".format(objid)))
-				TileEMP,TileEMR=compute_PR(objid,np.array(Tstar_lst[-1]),tiles)
+				TileEMP,TileEMR,intersection_area,union_area,bb_area, BBG_area=compute_PR_intersection_union(objid,np.array(Tstar_lst[-1]),tiles)
+				print TileEMP,TileEMR,union_area,bb_area, BBG_area
 				# Majority Vote 
 				PMVT,RMVT = majority_vote(objid,heuristic="50%")
 				PMVTtopk,RMVTtopk = majority_vote(objid,heuristic="topk")
@@ -71,6 +121,7 @@ elif mode =="aggregate_sample_table" :
             batch_i_data=pd.read_csv(dir_name+"/PR_tbl_all.csv",index_col=0)
             #Drop the object rows where the objects have bad vtiles to begin with 
             bad_vtile_objs = list(problematic[(problematic["Nworker"]==Nworker)&(problematic["batch_num"]==batch_num)].objid)
+	    bad_vtile_objs.extend([35,41]) # Discard ambiguous objects 
             batch_i_data=batch_i_data.drop(bad_vtile_objs,errors='ignore')
             #batch_i_data[~batch_i_data["object_id"].isin(bad_vtile_objs)]
             # First set the object_id column the index, then reindex based on this index to correspond to object lst
@@ -93,3 +144,5 @@ elif mode =="aggregate_sample_table" :
             batch_all_data.to_csv("sample{}_PR.csv".format(Nworker))
         except(ZeroDivisionError):
             print "No data for worker=",Nworker 
+
+

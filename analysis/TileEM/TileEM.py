@@ -317,16 +317,19 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    for batch_id in [1]:
+    for batch_id in [3]:
         print "Working on Batch #",batch_id
-        DATA_DIR="sample/25worker_rand{}".format(batch_id)
-        for objid in object_lst[12:]:
-            print "Working on Object #",objid
-            end = time.time()
-            Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
-            pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
-            pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
-            end2 = time.time()
-            print "Time Elapsed: ",end2-end
+        DATA_DIR="sample/20worker_rand{}".format(batch_id)
+        for objid in object_lst[30:]:
+            try:    
+		print "Working on Object #",objid
+            	end = time.time()
+            	Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
+            	pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
+            	pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
+            	pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
+            	pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
+            	end2 = time.time()
+		print "Time Elapsed: ",end2-end
+	    except(shapely.geos.PredicateError):
+		print "Failed Object #",objid 

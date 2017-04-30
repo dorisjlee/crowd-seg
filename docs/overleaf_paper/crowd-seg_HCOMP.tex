@@ -1,0 +1,290 @@
+\def\year{2017}\relax
+%File: formatting-instruction.tex
+\documentclass[letterpaper]{article} %DO NOT CHANGE THIS
+\usepackage{aaai17}  %Required
+\usepackage{times}  %Required
+\usepackage{helvet}  %Required
+\usepackage{courier}  %Required
+\usepackage{url}  %Required
+\usepackage{graphicx}  %Required
+\frenchspacing  %Required
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{mathrsfs} 
+\usepackage{cancel}
+\usepackage{amsfonts}
+\usepackage[titletoc,title]{appendix}
+\usepackage{graphicx}
+\usepackage{floatrow}
+\usepackage[draft]{todonotes}   % notes showed
+\usepackage[]{algorithm2e}
+
+\setlength{\pdfpagewidth}{8.5in}  %Required
+\setlength{\pdfpageheight}{11in}  %Required
+\pdfinfo{
+/Title (Insert Your Title Here)
+/Author (Put All Your Authors Here, Separated by Commas)}
+\setcounter{secnumdepth}{0}  
+\DeclareMathOperator*{\argmax}{arg\,max} 
+ \begin{document}
+
+%Section Numbers
+% Uncomment if you want to use section numbers
+% and change the 0 to a 1 or 2
+% \setcounter{secnumdepth}{0}
+
+% The file aaai.sty is the style file for AAAI Press 
+% proceedings, working notes, and technical reports.
+%
+\title{Tile-Based Quality Evaluation Methods for Crowdsourcing Image Segmentation}
+\author{Authors removed for Anonymity}
+\maketitle
+\begin{abstract}
+Abstract
+\end{abstract}
+
+\section{Introduction}
+Visual scene understanding is an important -----. 
+\par Object segmentation is important part of understanding the ----- visual scene \cite{Lin2014} ----, contextual information between everyday objects for 
+ autonomous vehicles (CITE). While ----- object localization and detection, many downstream applications such as biomedical image segmentation and ------ require precise segmentation of ----. CV algo not good at semantic segmentation, tend to produce oversegmented images, fails when object occulsion or large numbers of object, shading --- (CITE). For the purpose of semantic segmentation, he CV outputs often needs to be combined with ---- worker-labelled textual information to provide \cite{Russakovsky2015,Li2009,Bearman2016}.
+so crowdsourcing used for this. 
+A detailed survey on ----- can be found in \cite{Kovashka2016}.
+\par Crowd is :
+- noisy 
+	- CITE previous literature show three types of error : worker response can identify the wrong object (ambiguous), low-precision BBs (sloppy), underdraw/overdraw. 
+	\todo[inline]{- basic characterization of our dataset to show that the worker responses are indeed noisy} 
+		- stats: \% overdraw and underdraw
+		- variance in ground truth P,R 
+%\begin{itemize}
+%\item Most segmentation evaluation strategy people use are summarization/heuristic based, require ground truth, we come up with a more formal tile based model which does not require ground truth.
+%\item Summarization based method says this BB is good, that BB is bad, but doesn’t allow partial inclusion of a region
+%\item In the limit of small number of workers with noisy output, that means that if no BB is very good, we would only get an okay-ish BB. (c.f. dumbell example)
+%\item Tile based methods give us a way to allow partial inclusion of a region. 
+%\item This concept is similar to picking the majority voted region, but majority vote doesn’t account for worker qualities
+%\item With a worker error model + tile based scoring function, we can take make use of the best responses from many workers.
+%\item another argument for using tile based worker error model is that it tells us the type of worker error at a tile based level, previously we could only measure how good the worker's BB is, now we know worker's tiles close to center or far away, or whether they overbound/underbound, which gives us finer details on how workers perform.
+%\item Explain why its important to beat : 
+%\begin{itemize}
+%\item summarization-based methods
+%\item tile based majority vote (Problem with majority vote is that sometimes there are slivers that are highly voted in the center, but they can be small. like in box in the the computer example.)
+%\item Individual worker responses
+%\item Computer vision methods 
+%\end{itemize}
+%\end{itemize}
+
+\section{Related Works}
+\todo[inline]{NOTE: Add related works on CV methods for object segmentation, what their problem is and why we need crowdsourcing responses (CITE GraphCut, CRFs)}
+\par Despite several large-scale efforts to collect crowdsourced image segmentation~\cite{Lin2014,MartinFTM01,Torralba2010,pascal-voc-2012}, most have relied on summarization-based metrics to quantify their segmentation data quality. Summarization-based scores are functions that measures the quality of a worker's bounding box given the ground truth. Common summarization methods include precision, recall, area ratio or number of control points in the bounding box~\cite{Vittayakorn2011}. While these are fairly discriminative measures of bounding box, the scoring calculation requires the use of ground truth to compare against. Other heuristic approaches that doesn't require ground truth segmentation include quantifying the user types and their click-stream behavior to determine work quality\cite{Cabezas2015,Sameki2015} and comparing the worker responses to features extracted from computer vision algorithms\cite{Vittayakorn2011,Russakovsky2015}.
+\par Dawid and Skene\shortcite{Dawid1979} is the first work that used the EM algorithm to model an individual's biases and skills in the absence of ground truth data, by using a confusion matrix. Welinder and Perona~\shortcite{OCWelinder2010} proposes a general model that separately models annotator quality and the biases applied to binary, multivalued and continuous annotations. Welinder and Perona~\shortcite{MDWWelinder2010} develops a multidimensional concept of worker qualities and task difficulties by considering object-presence labeling as a noise generation process. The objective truth label is captured by a multidimensional quantity of task-specific measurements and deformed by worker and image related noise, the noisy vector obtained after this process is projected onto the vector of user expertise (which summarizes how well the user perceives each of these measurements), and finally the score is binarized into an inferred label. Many have extended this line of work beyond binary classifications by developing EM-like approaches that works on multiple-choice \cite{Karger2013} as well as free-form responses \cite{Lin2012}, but these have not been directly applied to the task of object segmentation.
+\par However, while EM algorithms assign probabilities regarding  \textit{how good a worker's bounding box is}, for the task of object segmentation, we are ultimately more interested the end goal of \textit{what is the best bounding box that we can get from these data}. Since these formal probabilistic models treats worker bounding box as the base quantity for modeling worker quality, the best bounding box that one could derive from such algorithm can only be as good as the best worker bounding box in the dataset.  Even though the annotation probabilities are sufficient for determining the best binary-labels, image information such as overlapping areas would be useful and not account for in these algorithms. We suspect that this is why many area-based metrics are still more commonly used in practice than EM approaches.
+\section{Model}
+\subsection{Definitions}
+%Describe Tile based models. Briefly describe construction of tiles from BBs.
+
+\par The basic unit used for conducting inference on object boundary are tiles. We first transform the set of worker bounding boxes into tiles, as shown in Fig a,b. Our goal is to find the best tile combination that makes up the object in the image. Since the basic unit ---  is tiles, we can not ------ not proposed by any workers, however, our approach is still more finer-grained ---- that models -- individual worker bounding boxes. 
+%Clarify that our search space is tile combination formed by all the worker's tiles not the space of all possible coordinates. (i.e. we assume that a region can not be inside the BB if no workers bounded that region) 
+Tiles are finer grained than bounding boxes. Our tile-based approach is inspired by the S-T graph in the classical graph cut problem, where the goal of image segmentation is to find a vertex partition between the object and background regions.
+
+\par $\mathcal{T}=\{t_k\}$ is the set of all non-overlapping tiles for an object i. T is the ground truth tile set. $T^\prime$ is some combination of tiles chosen from $\mathcal{T}$.
+ The indicator label $l_{kj}$ is one when worker j votes on the tile $t_{k}$ (i.e. the bounding box that he draws contains $t_{k}$), and zero otherwise. The indicator matrix consisting of tile indicator for all workers is denoted as $\mathbf{l_{kj}}$.
+
+\subsection{Worker Error Model}
+We propose three different worker error models describing the probability of a worker j's vote on a specific tile $t_k$, given the tile's inclusion in ground truth and a set of worker qualities $Q_j$. 
+\begin{enumerate}
+\item Basic: single-parameter Bernoulli model, where $q_j$ is the probability of the worker getting a tile correct. A worker is correct when his vote ($l_{jk}$) matches with the ground truth inclusion of the tile ($t_k\in T$). A worker makes an incorrect response when their vote contradicts with the inclusion of the tile in T ($\{t_k\in$ T$\quad\&\quad l_{kj}=0\}, \{t_k\notin $T$\quad\&\quad l_{kj}=1\}$)
+\begin{equation}
+p(l_{jk}|t_k\in T, Qj) = \begin{cases}
+               q_j, \quad l_{jk}=1\\
+               1-q_j, \quad l_{jk}=0\\
+            \end{cases}
+\end{equation}
+\item Large Small Area (LSA): The basic model equally weighs all tiles, but intuitively a worker should be rewarded more if they get a large-area tile correct. We use a two-parameter Bernoulli to model two different tile sizes determined by a threshold $A^*$.
+\begin{equation}
+p(l_{jk}|t_k\in T,Q_j) = \begin{cases}
+               q_{j1}, \quad l_{jk}=1 \& A(t_k)\geq A^*\\
+               1-q_{j1}, \quad l_{jk}=0 \& A(t_k)\geq A^*\\
+                q_{j2}, \quad l_{jk}=1 \& A(t_k)< A^*\\
+               1-q_{j2}, \quad l_{jk}=0 \& A(t_k)< A^*\\
+            \end{cases}
+\end{equation}
+\item Ground truth inclusion, large small area (GTLSA): We observe in our experiment that there can be many large area tiles that lies outside of the ground truth drawn by workers who tend to draw loose, overbounding boxes. Our 4 parameter Bernoulli model distinguishes between false and true positive rates, by taking into account the positive and negative regions (i.e. regions that lies inside or outside of T). 
+In the case where $A(t_k)\geq A^*$: 
+\begin{equation}
+p(l_{jk}|t_k\in T,Q_j) = \begin{cases}
+               q_{p1}, \quad l_{jk}=1  \\
+               1-q_{p1}, \quad l_{jk}=0  \\
+            \end{cases}
+\end{equation}
+\begin{equation}
+p(l_{jk}|t_k\notin T,Q_j) = \begin{cases}
+               q_{n1}, \quad l_{jk}=0  \\
+               1-q_{n1}, \quad l_{jk}=1  \\
+            \end{cases}
+\end{equation}
+%\item Area-weighted scoring: 
+From the worker error model, we can also derive the probability that a tile is in ground truth $p(t_k\in T|Q_j, l_{jk})$ using Bayes rule, assuming the prior probabilities as constant.
+
+\end{enumerate}
+\subsection{Problem Statement}
+%Describe assumptions on pdfs and inference process. (E and M steps). How are parameters in the models determined empirically.
+\par For our problem, we consider only finding tile regions that could be constructed from worker bounding boxes. In other words, our objective is to find the tile combination $T^\prime$ that maximizes the probability that it is the ground truth p($T^\prime$=T), given a set of worker qualities $Q_j$ and tile indicator labels $l_{jk}$: 
+
+\begin{equation}
+T = \argmax_{T^\prime \subseteq \mathcal{T}}p(T=T^\prime |  \mathbf{l_{kj}},Q_j)
+\label{objective}
+\end{equation}
+Using Bayes rule we can rewrite this in terms of the posterior probability of the tile-based values($\mathbf{l_{kj}}$) or worker-based values($Q_{j}$), which we can use for the E and M step equations respectively. 
+\subsection{Inference}
+\par For the E step, we assume T' is ground truth and estimate the $Q_j$ parameters. We can rewrite Eq.\ref{objective} as: 
+\begin{equation}
+p(T^\prime| Q_j,\mathbf{l_{kj}})
+\approx p(l_{kj}| Q,T^\prime)
+\end{equation}
+where we treat the priors $p(T^\prime),p(Q_j)$ as constants.
+Our goal is to find the maximum likelihood parameters of $Q_j$: 
+\begin{equation}
+\hat{Qj} = \argmax_{Q_j} p(Q_j| \mathbf{l_{kj}},T^\prime)
+\end{equation}
+% assume p(T') uniform or constant p(Qj), no prior information 
+We use the binary random variable w to indicate whether the worker makes a correct vote (w=1) or an incorrect vote(w=0) for a tile. We can write the worker quality probability as the product of the probabilities that they would assume these two independent states (correct/incorrect). 
+\begin{align}
+p(Q_j) = \prod_j q_j^{p_j(w=1)}\cdot [1-q_j]^{p(w=0)}
+\end{align}
+The closed form of the maximum likelihood solution for the Bernoulli distribution reduces down to: 
+\begin{equation}
+\hat{q_j}=\frac{n_{correct}}{n_{total}}
+\end{equation}
+\par For the M step, we maximize the likelihood of the tile combination $T^\prime$ for a fixed set of worker qualities, $\{Q_j\}$. Following Eq.\ref{objective} from Bayes rule, 
+\begin{equation}
+p(T^\prime| Q_j,\mathbf{l_{kj}})
+\approx p(\mathbf{l_{kj}}|Q_j,l_k)
+\end{equation}
+% rephrase what your optimization function is, i.e. argmax RHS of equation p(lkj)
+Our optimization function is written as:
+\begin{equation}
+\hat{T^\prime}=\argmax_{T^\prime\supseteq \{T^\prime\} } \prod_j p(\mathbf{l_{kj}}|Q_j,l_k)
+\end{equation}
+ The product over $T^\prime$ can be further decomposed into its tile components. The likelihoods of these tiles can be computed via the worker error model: 
+\begin{equation}
+=\argmax_{T^\prime\supseteq \{T^\prime\}} \prod_j\Bigg[\prod_{t_k\in T^\prime} p(t_k\in \mathrm{T}|Q_j,l_k)\prod_{t_k\notin T^\prime} p(t_k\notin \mathrm{T}|Q_j,l_k)\Bigg]
+\end{equation}
+% * <akashds.iitk@gmail.com> 2017-04-25T02:53:10.683Z:
+% 
+% The term summing over, $T' \subsetof \mathbf{T} $ can have slightly better notation. Introduce some bold T as space of all possible tile combinations, and use T' subsetof T.
+% 
+% ^.
+\subsection{Optimization}
+%Explain heuristics used for avoiding to search through all T'. 
+Since the space of possible $\{T^{\prime}\}$ to search through is $2^{N}$ where number of tiles (N) for an average object with 30$\sim$40 worker is on the order of thousands, we develop several strategies to narrow the search space for making the problem computationally feasible. 
+\subsubsection{High-confidence snowball}
+The goal of the snowball method is to come up with smaller subsample of tile combinations $T^\prime$ that are good candidates of ground truth. First, we use tile properties such as area or votes as a heuristic to derive a fixed set of high-confidence tiles as the core. Then, using the same heuristic, we randomly generate subsets from other medium confidence tiles and combined with these core tiles. Tiles picked with such heuristics often have high recall, which means that our TileEM algorithm essentially helps us find a more precise $T^{\prime}$ from $\{T^{\prime}\}$. In our experiment, we define our confidence score as 2$\cdot$votes+area, with 3 high-confidence, fixed core tiles and 40 flexible medium confidence tiles. 
+\todo[inline]{NOTE: Might want to consider adjacency-based snowball approach too}
+\subsubsection{Maximum likelihood Construction}
+Apart from constructing a set of  $\{T^{\prime}\}$ for picking the best  $T^{\prime}$, we can instead directly construct the maximum likelihood tile $T^*$ by choosing tiles that satisfy the criterion: 
+\begin{equation}
+T^* = \{t_k|p(t_k\in T|l_k,Q_j)\geq p(t_k\notin T|l_k,Q_j)\}
+\end{equation}
+\subsubsection{Proof:}
+We show that this tile-picking heuristic is at least as likely as any tile combination that we would pick with the $\{T^{\prime}\}$ selection method. Suppose there is a $T^\prime$ such that it consists of the same tiles as $T^*$, but we randomly drop a tile $t_{k^\prime}$
+\begin{equation}
+p(T^*=T^\prime|l_k,Q_j)=\prod_{t_k} p(t_k\in T^*)\cdot p(t_{k^\prime}\notin T^*)
+\end{equation}
+By definition all tiles in $T^*$ must satisfy $p(t_k\in T|l_k,Q_j)\geq p(t_k\notin T|l_k,Q_j)$, so the dropped tile must have lower probability than $T^\prime$.
+\begin{align}
+p(T=T^\prime)=p(T^*\setminus t_k^\prime) p(t_k^\prime \notin T^*) \\
+% * <akashds.iitk@gmail.com> 2017-04-25T03:02:53.207Z:
+% 
+% > T^*
+% T'
+% 
+% ^.
+p(T=T^*)=p(T^*\setminus t_k^\prime) p(t_k^\prime \in T^*) 
+\end{align}
+By dropping multiple $t_{k^\prime}$ from $T^*$ or adding $t_{k^\prime}$ not previously in $T^*$, the above result can be generalized to arbitrary $T^\prime$.
+\begin{algorithm}[ht!]
+ \KwData{fixed $Q_j$}
+ %\KwResult{}
+ Initialize $T^*$\;
+ \For{$t_k \in \mathcal{T}$ }{
+  \If{$p(t_k\in T)\geq p(t_k\notin T)$ }{
+   $T^*\leftarrow T^* \cup t_k$;
+   }
+ }
+ \caption{M step algorithm. For the initialization of $T^*$, we could start from either an empty set or a high-confidence tileset. The set of $\mathcal{T}$ to chose from can either be the set of all tiles or all tiles adjacent to $T^*$. }\label{Mstep}
+\end{algorithm}
+
+\begin{algorithm}[ht!]
+ \KwData{fixed $Q_j$}
+ %\KwResult{}
+ $T^*$ = high confidence tiles\;
+ $d^\prime$=0\;
+ good tile count at $d^\prime$=1\;
+ \While{good tile count at $d^\prime \neq 0$}{
+ 	$\{t_{k,d=d^\prime}\}\leftarrow$ find all tiles at d=$d^\prime$ shell\;
+    \For{$t_k \in \{t_{k,d=d^\prime}\}$}{
+    	\If{$p(t_k\in T)\geq p(t_k\notin T)$ }{
+   			$T^*\leftarrow T^* \cup t_k$\;
+            good tile count at $d^\prime$ ++\;
+   		}    
+ 	}
+    $d^\prime$++\;
+ }
+ \caption{Shell-based M step algorithm enforces tiles that are added into $T^*$ must be adjacent to one another.}\label{Mstep}
+\end{algorithm}
+
+\section{Experiments}
+\par We collected data from Amazon Mechanical Turk where each HIT consisted of one annotation task for a specific pre-labelled object in the image. There is a total of 46 objects in 9 images from the MSCOCO dataset~\cite{Lin2014}. These tasks represent a variety of image difficulty (based on object clutterness), potential logical error and level of ambiguity. For each object, we collected annotations from a total of 40 independent workers. We eliminated all bounding boxes from workers that were self-intersecting.
+\par A sub-sampled dataset was created from the full dataset to determine how our algorithms behave if only small number of worker responses were collected. For every object, we randomly sample workers with replacement. 
+\subsection{Baselines}
+Description of baselines: 
+- vision (Akash) 
+- best summarization 
+- MVT variant 
+distinguish method require/not require GT 
+\todo[inline]{show upper limit to tile-based method > upper limit for summarization based method when Nworker low.}
+\subsection{Evaluation Metrics}
+\begin{table}[ht]
+\centering
+\label{batch_sample}
+\caption{For small worker samples, we average our results over larger number of batches than for large worker samples (which have lower variance, since the sample size is close to the original data size)}
+\begin{tabular}{l|llllll}
+\# of workers & 5  & 10 & 15 & 20 & 25 & 30 \\ \hline
+\# of batches & 10 & 8  & 6  & 4  & 2  & 1 
+\end{tabular}
+
+\end{table}
+\begin{table*}[ht]
+\begin{tabular}{lrrrrrr}
+\hline
+           &   Num Points &   Area Ratio &   Jaccard [Self] &   Precision [Self] &   Recall [Self] &   Vision \\
+\hline
+ Precision &         0.71 &         0.56 &             0.95 &               0.98 &            0.73 &     0.91 \\
+ Recall    &         0.84 &         0.87 &             0.95 &               0.76 &            0.99 &     0.74 \\
+\hline
+\end{tabular}
+\caption{The average precision recall compared against ground truth over all objects based on various segmentation algorithm. For the first 5 summarization based method, we pick the best bounding box based on that metric. Only the Num Point, Area Ratio and Vision algorithm doesn't require ground truth to compute.}
+\todo[inline]{NOTE: Will add additional columns from our TileEM algorithm later.}
+\end{table*}
+
+\begin{itemize}
+\item plot PR curves for each algorithm, compute AUC
+\item PR values in a table of all algorithms compared against baseline
+\item show that our experiment works well on smaller, noisier datasets
+\item Baselines: 
+\begin{itemize}
+\item summarization-based methods
+\begin{itemize}
+\item Jaccard, PR
+\item Heuristics: NumPts, Area
+\end{itemize}
+\item tile based majority vote 
+\item color-based computer vision
+\item Individual worker responses
+\end{itemize}
+\end{itemize}
+\section{Conclusion}
+- Future work: model task difficulty and worker qualities across tasks
+
+\bibliographystyle{aaai}
+\bibliography{reference}
+\end{document}

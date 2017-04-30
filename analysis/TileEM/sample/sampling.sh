@@ -4,12 +4,12 @@
 #python2.7 runIndicatorMat.py 5	 721
 #python2.7 runIndicatorMat.py 5	 845
 #python2.7 runIndicatorMat.py 5	 779
-python2.7 runIndicatorMat.py 5	 213
+#python2.7 runIndicatorMat.py 5	 213
 #python2.7 runIndicatorMat.py 5	 989
-python2.7 runIndicatorMat.py 5	 123
-#python2.7 runIndicatorMat.py 5	 121
-
-python2.7 runIndicatorMat.py 10	 141
+#python2.7 runIndicatorMat.py 5	 123
+##python2.7 runIndicatorMat.py 5	 121
+python2.7 runIndicatorMat.py 5 787
+#python2.7 runIndicatorMat.py 10	 141
 #python2.7 runIndicatorMat.py 10	 211
 #python2.7 runIndicatorMat.py 10	 151
 #python2.7 runIndicatorMat.py 10	 161
@@ -31,6 +31,6 @@ python2.7 runIndicatorMat.py 10	 141
 #python2.7 runIndicatorMat.py 20	 126
 
 #python2.7 runIndicatorMat.py 25	 141
-#python2.7 runIndicatorMat.py 25	 149
+python2.7 runIndicatorMat.py 25	 149
 
 #python2.7 runIndicatorMat.py 30	 189

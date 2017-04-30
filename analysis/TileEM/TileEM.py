@@ -9,6 +9,8 @@ import numpy as np
 import pickle as pkl
 def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_thres,DEBUG=False):
     Qj=[]
+    print T
+    print T.area 
     for wid,j in zip(workers,range(len(workers))):
         Qj.append(Qjfunc(tiles,indMat,T,j,A_thres))
     if DEBUG: print "Qj: ",Qj
@@ -245,8 +247,8 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
                                                 Tidx_lst.append(k)
                                             except(shapely.geos.TopologicalError):
                                                 print "Shapely Topological Error: unable to add tk, Tstar unchanged; at k=",k
-                                                pkl.dump(Tstar_lst[i][0],open("problematic_Tstar_{0}.pkl".format(k),'w'))
-                                                pkl.dump(tk,open("problematic_tk_{0}.pkl".format(k),'w'))
+                                                #pkl.dump(Tstar_lst[i][0],open("problematic_Tstar_{0}.pkl".format(k),'w'))
+                                                #pkl.dump(tk,open("problematic_tk_{0}.pkl".format(k),'w'))
                                                 pass
 
             ############################################################################################################
@@ -315,10 +317,10 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    for batch_id in [4]:#range(2,6):
+    for batch_id in [4]:
         print "Working on Batch #",batch_id
         DATA_DIR="sample/15worker_rand{}".format(batch_id)
-        for objid in object_lst[14:]:
+        for objid in object_lst[30:]:
             print "Working on Object #",objid
             end = time.time()
             Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)

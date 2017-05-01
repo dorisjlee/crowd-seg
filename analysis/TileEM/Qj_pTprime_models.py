@@ -110,14 +110,14 @@ def QjGTLSA(tiles,indMat,T,j,A_thres):
 		        tjkInT = T.intersection(tk.buffer(-1e-10)).area/T.area>0.8
 		    except(shapely.geos.TopologicalError):
 		        print "Problematic containment check"
-		        pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
-			pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
+		        #pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
+			#pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
 		        tjkInT=False
 		        pass 
 	    except(shapely.geos.PredicateError):
 	    	print "PredicateError Problematic containment check"
-	    	pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
-            	pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
+	    	#pkl.dump(tk,open("problematic_containment_{}.pkl".format(k),'w'))
+            	#pkl.dump(T,open("problematic_T_containment_{}.pkl".format(k),'w'))
             	tjkInT=False
             	pass
         if tk.area>A_thres:

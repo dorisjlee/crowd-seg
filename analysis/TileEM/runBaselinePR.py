@@ -4,13 +4,15 @@ from TileEM_plot_toolbox import *
 from qualityBaseline import *
 from glob import glob
 from collections import OrderedDict
-from problematic_vtiles import * 
+from bad_vtiles import * 
 df = pd.read_csv("../computed_my_COCO_BBvals.csv",index_col=0)
-worker_Nbatches={5:10,10:8,15:6}#,20:4,25:2,30:1}
+worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
+#worker_Nbatches={10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
-#mode="aggregate_sample_table"
-mode="recompute_sample_batch_table"
-
+mode="aggregate_sample_table"
+#mode="recompute_sample_batch_table"
+#object_lst.remove(35)
+#object_lst.remove(41)
 def compute_PR_intersection_union(objid,solnset,tiles):
     '''
     Compute precision recall against ground truth bounding box
@@ -82,24 +84,40 @@ if mode =="recompute_sample_batch_table":
 					workers=pkl.load(open("worker{}.pkl".format(objid)))
 					filtered_df = df[(df["worker_id"].isin(workers))&(df["object_id"]==objid)] #only look at summarization scores of sampled workers
 					best_worker_BB = filtered_df[filtered_df[attr]==filtered_df[attr].max()]
-					tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0],\
-					best_worker_BB["TPR [Self]"].values[0],best_worker_BB["FNR [Self]"].values[0],best_worker_BB["TNR [Self]"].values[0],\
-					best_worker_BB["FPR [Self]"].values[0],best_worker_BB["Jaccard [Self]"].values[0],\
-					best_worker_BB["Intersection [Self]"].values[0],best_worker_BB["Union [Self]"].values[0]])
-				tmp_PR_tbl = pd.DataFrame(tbl,columns=["object_id","Precision","Recall","TPR","FNR",\
-									"TNR","FPR","Jaccard","Intersection","Union"])
+					#print best_worker_BB
+					#print best_worker_BB["Precision [Self]"]
+					#print best_worker_BB["Precision [Self]"].values[0]
+					if objid not in [35,41]:
+					    tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0]])
+					else:
+					    tbl.append([objid,-1,-1])
+					#tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0],\
+					#best_worker_BB["TPR [Self]"].values[0],best_worker_BB["FNR [Self]"].values[0],best_worker_BB["TNR [Self]"].values[0],\
+					#best_worker_BB["FPR [Self]"].values[0],best_worker_BB["Jaccard [Self]"].values[0],\
+					#best_worker_BB["Intersection [Self]"].values[0],best_worker_BB["Union [Self]"].values[0]])
+				#tmp_PR_tbl = pd.DataFrame(tbl,columns=["object_id","Precision","Recall","TPR","FNR",\
+				#						"TNR","FPR","Jaccard","Intersection","Union"])
+				tmp_PR_tbl = pd.DataFrame(tbl,columns=["object_id","Precision","Recall"])
 				PR_tbl["P [{}]".format(attr)]=tmp_PR_tbl["Precision"]
 				PR_tbl["R [{}]".format(attr)]=tmp_PR_tbl["Recall"]
-				PR_tbl["Jaccard [{}]".format(attr)]=tmp_PR_tbl["Jaccard"]
-				PR_tbl["TPR [{}]".format(attr)]=tmp_PR_tbl["TPR"]
-				PR_tbl["FNR [{}]".format(attr)]=tmp_PR_tbl["FNR"]
-				PR_tbl["TNR [{}]".format(attr)]=tmp_PR_tbl["TNR"]
-				PR_tbl["FPR [{}]".format(attr)]=tmp_PR_tbl["FPR"]
-			# Vision based methods 
+				#PR_tbl["Jaccard [{}]".format(attr)]=tmp_PR_tbl["Jaccard"]
+				#PR_tbl["TPR [{}]".format(attr)]=tmp_PR_tbl["TPR"]
+				#PR_tbl["FNR [{}]".format(attr)]=tmp_PR_tbl["FNR"]
+				#PR_tbl["TNR [{}]".format(attr)]=tmp_PR_tbl["TNR"]
+				#PR_tbl["FPR [{}]".format(attr)]=tmp_PR_tbl["FPR"]
+			# Vision based methods
+			print os.getcwd()
+			visionPR = pd.read_csv("../../Vision-stuff/VisionGTComparisons/{}/best_Area_Ratio_BBs/box/prec50/PR.csv".format(dir_name))
+			PR_tbl["P [Vision Best Area Ratio 50%]"] = visionPR["precision"] 
+			PR_tbl["R [Vision Best Area Ratio 50%]"] = visionPR["recall"]
+			
+			visionPR = pd.read_csv("../../Vision-stuff/VisionGTComparisons/{}/best_Num_Points_BBs/box/prec50/PR.csv".format(dir_name))
+			PR_tbl["P [Vision Best Num Points 50%]"] = visionPR["precision"]
+                        PR_tbl["R [Vision Best Num Points 50%]"] = visionPR["recall"]	 
 			for threshold in [10,50,90]:
 				visionPR = pd.read_csv("../../../PR{}.csv".format(threshold))
-				PR_tbl["P [Vision{}%]".format(threshold)] = visionPR["precision"]
-				PR_tbl["R [Vision{}%]".format(threshold)] = visionPR["recall"]
+				PR_tbl["P [Vision GT {}%]".format(threshold)] = visionPR["precision"]
+				PR_tbl["R [Vision GT {}%]".format(threshold)] = visionPR["recall"]
 			#MVT, Tile
 			tbl=[]
 			for fname in glob("Tstar_idx_obj*.pkl"):
@@ -107,8 +125,9 @@ if mode =="recompute_sample_batch_table":
 				tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
 				#Tile EM
 				Tstar_lst = pkl.load(open("Tstar_idx_obj{}.pkl".format(objid)))
-				TileEMP,TileEMR,intersection_area,union_area,bb_area, BBG_area=compute_PR_intersection_union(objid,np.array(Tstar_lst[-1]),tiles)
-				print TileEMP,TileEMR,union_area,bb_area, BBG_area
+				#TileEMP,TileEMR,intersection_area,union_area,bb_area, BBG_area=compute_PR_intersection_union(objid,np.array(Tstar_lst[-1]),tiles)
+				TileEMP,TileEMR = compute_PR(objid,np.array(Tstar_lst[-1]),tiles)
+				#print TileEMP,TileEMR,union_area,bb_area, BBG_area
 				# Majority Vote 
 				PMVT,RMVT = majority_vote(objid,heuristic="50%")
 				PMVTtopk,RMVTtopk = majority_vote(objid,heuristic="topk")
@@ -139,7 +158,8 @@ elif mode =="aggregate_sample_table" :
              # Add a row of non-nan count for averaging 
             nan_rowidx= list(batch_i_data[batch_i_data["P [Num Points]"]==0].index)
             non_nan_count = np.ones_like(object_lst)
-            for row in nan_rowidx: non_nan_count[row-1]=0
+            #non_nan_count = np.ones(47)
+	    for row in nan_rowidx: non_nan_count[row-1]=0
             batch_i_data["non_nan_count"]=non_nan_count
             if batch_num==0:
                 batch_all_data=batch_i_data

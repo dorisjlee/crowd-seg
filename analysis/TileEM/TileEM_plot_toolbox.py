@@ -45,8 +45,13 @@ def compute_PR(objid,solnset,tiles):
             intersect_area += ia
             joined_bb_area += jbb.area
     else:
-        intersect_area=intersection_area(BBG,joined_bb)
+	try:
+            intersect_area=intersection_area(BBG,joined_bb)
+	except(shapely.geos.TopologicalError):
+	    return -1,-1
         joined_bb_area =joined_bb.area
+    if intersect_area ==-1:
+	return -1,-1
     if float(joined_bb_area)!=0:
         precision = intersect_area/float(joined_bb_area)
     else:
@@ -63,7 +68,16 @@ def intersection_area(poly1,poly2):
     try:
         return poly1.intersection(poly2).area
     except(shapely.geos.TopologicalError):
-        return poly1.buffer(1e-5).intersection(poly2.buffer(1e-5)).area
+	#return poly1.buffer(1e-5).intersection(poly2.buffer(1e-5)).area
+	try: 
+            return poly1.buffer(1e-5).intersection(poly2.buffer(1e-5)).area
+	except(shapely.geos.TopologicalError):
+	    try:
+	    	return poly1.buffer(-1e-10).intersection(poly2.buffer(-1e-10)).area
+	    except(shapely.geos.TopologicalError):
+		return -1 
+
+	
 def getSolutionThreshold(gammas,threshold=0.5):
 	'''
 	Derive a solution set of tiles in BB for a given gamma tile values 

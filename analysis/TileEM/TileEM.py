@@ -317,10 +317,10 @@ if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
     #Experiments
-    for batch_id in [3]:
+    for batch_id in [1]:
         print "Working on Batch #",batch_id
-        DATA_DIR="sample/20worker_rand{}".format(batch_id)
-        for objid in object_lst[30:]:
+        DATA_DIR="sample/25worker_rand{}".format(batch_id)
+        for objid in object_lst[28:]:
             try:    
 		print "Working on Object #",objid
             	end = time.time()

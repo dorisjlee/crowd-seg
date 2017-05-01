@@ -82,10 +82,19 @@ if mode =="recompute_sample_batch_table":
 					workers=pkl.load(open("worker{}.pkl".format(objid)))
 					filtered_df = df[(df["worker_id"].isin(workers))&(df["object_id"]==objid)] #only look at summarization scores of sampled workers
 					best_worker_BB = filtered_df[filtered_df[attr]==filtered_df[attr].max()]
-					tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0]])
-				tmp_PR_tbl = pd.DataFrame(tbl,columns=["object_id","Precision","Recall"])
+					tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0],\
+					best_worker_BB["TPR [Self]"].values[0],best_worker_BB["FNR [Self]"].values[0],best_worker_BB["TNR [Self]"].values[0],\
+					best_worker_BB["FPR [Self]"].values[0],best_worker_BB["Jaccard [Self]"].values[0],\
+					best_worker_BB["Intersection [Self]"].values[0],best_worker_BB["Union [Self]"].values[0]])
+				tmp_PR_tbl = pd.DataFrame(tbl,columns=["object_id","Precision","Recall","TPR","FNR",\
+									"TNR","FPR","Jaccard","Intersection","Union"])
 				PR_tbl["P [{}]".format(attr)]=tmp_PR_tbl["Precision"]
 				PR_tbl["R [{}]".format(attr)]=tmp_PR_tbl["Recall"]
+				PR_tbl["Jaccard [{}]".format(attr)]=tmp_PR_tbl["Jaccard"]
+				PR_tbl["TPR [{}]".format(attr)]=tmp_PR_tbl["TPR"]
+				PR_tbl["FNR [{}]".format(attr)]=tmp_PR_tbl["FNR"]
+				PR_tbl["TNR [{}]".format(attr)]=tmp_PR_tbl["TNR"]
+				PR_tbl["FPR [{}]".format(attr)]=tmp_PR_tbl["FPR"]
 			# Vision based methods 
 			for threshold in [10,50,90]:
 				visionPR = pd.read_csv("../../../PR{}.csv".format(threshold))

@@ -7,14 +7,7 @@ from TileEM import *
 from tqdm import tqdm
 import numpy as np
 import pickle as pkl
-def estimate_Qj(T,tiles,indMat,workers,Qjfunc,A_thres,DEBUG=False):
-    Qj=[]
-    print T
-    print T.area 
-    for wid,j in zip(workers,range(len(workers))):
-        Qj.append(Qjfunc(tiles,indMat,T,j,A_thres))
-    if DEBUG: print "Qj: ",Qj
-    return Qj
+
 def computeT(objid,tiles,indMat,workers,Tprime_lst, Tprime_idx_lst,Qj,pTprimefunc,A_percentile,DEBUG=False,PLOT_LIKELIHOOD=False):
     # Loop through Tprime_lst find the argmax T' s.t pTprime is max given fixed Qj
     pTprime_lst =[]
@@ -97,6 +90,78 @@ def Tprime_snowball_area(objid,tiles,indMat,fixedtopk=3, topk = 40,NTprimes=300)
         Tprime_lst.append(join_tiles(tidxInCombo,tiles)[0].buffer(0))
         Tprime_idx_lst.append(tidxInCombo)
     return Tprime_lst, Tprime_idx_lst
+def QjGTLSA(tiles,indMat,pInT_lst,pNotInT_lst,j,A_thres):
+    '''
+    GT inclusion, Large Small Area (LSA) Tile EM Worker model 
+    Compute the set of Worker qualities
+    A_thres: Area threshold
+    Qn1,Qp1,Qn1,Qp2
+    ngt : not included in ground truth 
+    gt : included in ground truth 
+    '''
+    large_gt_Ncorrect=0
+    large_gt_Nwrong = 0
+    small_gt_Ncorrect=0
+    small_gt_Nwrong = 0
+    large_ngt_Ncorrect=0
+    large_ngt_Nwrong = 0
+    small_ngt_Ncorrect=0
+    small_ngt_Nwrong = 0
+    for k in range(len(tiles)): 
+        tk = tiles[k]
+        ljk = indMat[j][k]
+        tjkInT = pInT_lst[k]>=pNotInT_lst[k]
+
+        if tk.area>A_thres:
+            if (ljk ==1 and tjkInT):
+                large_gt_Ncorrect+=1
+            elif (ljk ==0 and tjkInT):
+                large_gt_Nwrong+=1
+            elif (ljk ==0 and (not tjkInT)):
+                large_ngt_Ncorrect+=1
+            elif (ljk ==1 and (not tjkInT)):
+                large_ngt_Nwrong+=1
+        else:
+            if (ljk ==1 and tjkInT):
+                small_gt_Ncorrect+=1
+            elif (ljk ==0 and tjkInT):
+                small_gt_Nwrong+=1
+            elif (ljk ==0 and (not tjkInT)):
+                small_ngt_Ncorrect+=1
+            elif (ljk ==1 and (not tjkInT)):
+                small_ngt_Nwrong+=1
+    try:
+        qp1 = large_gt_Ncorrect/float(large_gt_Ncorrect+large_gt_Nwrong)
+    except(ZeroDivisionError):
+        qp1 = -1
+    try:
+        qn1 = large_ngt_Ncorrect/float(large_ngt_Ncorrect+large_ngt_Nwrong)
+    except(ZeroDivisionError):
+        qn1 = -1
+    try:
+        qp2 = small_gt_Ncorrect/float(small_gt_Ncorrect+small_gt_Nwrong)
+    except(ZeroDivisionError):
+        qp2 = -1
+    try:
+        qn2 = small_ngt_Ncorrect/float(small_ngt_Ncorrect+small_ngt_Nwrong)
+    except(ZeroDivisionError):
+        qn2 = -1
+    return qn1,qn2,qp1,qp2
+
+def estimate_Qj(tiles,indMat,workers,Qjfunc,pInT_lst,pNotInT_lst,DEBUG=False):
+    Qj=[]
+    # Compute area threshold 
+    high_confidence_tiles_area = []
+    for k in range(len(tiles)): 
+        if pInT_lst[k]>=pNotInT_lst[k]:
+            high_confidence_tiles_area.append(tiles[k].area)
+    A_thres = np.median(high_confidence_tiles_area)
+
+    for wid,j in zip(workers,range(len(workers))):
+        Qj.append(Qjfunc(tiles,indMat,pInT_lst,pNotInT_lst,j,A_thres))
+    if DEBUG: print "Qj: ",Qj
+    return A_thres,Qj
+
 def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Niter=10,DEBUG=False,PLOT_LIKELIHOOD=False,PLOT=False):
     '''
     Initilaize with majority vote tile , get good Qj estimates based on that
@@ -120,12 +185,8 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
 
     tile_area = np.array(indMat[-1])
 
-    Qj_lst=[]
-    #if DEBUG: print "Coming up with T' combinations to search through"
-    #Tprime_lst, Tprime_idx_lst = Tprimefunc(objid,tiles,indMat,fixedtopk=3, topk = 40,NTprimes=NTprimes)
     Tstar_lst = []
-    Tstar_idx_lst =[]
-    likelihood_lst=[]
+    Tstar_idx_lst = []
 
     if DEBUG: print "Compute Core Tiles"
     Tstar,Tidx=core(tiles,indMat,1)
@@ -133,149 +194,81 @@ def runTileAdjacentMLConstruction(objid,workerErrorfunc,Qjfunc,A_percentile,Nite
     Tstar_idx_lst.append(Tidx)
 
     if DEBUG: print "Initialize Tiles"
-    Tinit,Iidx=initT(tiles,indMat)
+    Tinit,Iidx=initT(tiles,indMat) # 50% MVT solution
     if DEBUG: print "Estimate based on initial tileset and get good Qjs"
-    if A_percentile!=-1:
-        A_thres = np.percentile(tile_area,A_percentile)
-    else:
-        A_thres = np.median(tile_area[Iidx])
-    Qjhat = estimate_Qj(Tinit,tiles,indMat,workers,Qjfunc,A_thres=A_thres,DEBUG=DEBUG)
+    # In the first step our condition for initializing T* is if 
+    # number of worker voted for a tile exceeds the number of workers 
+    # that did not vote for a tile 
+    votes =indMat[:-1].sum(axis=0)
+    noVotes = len(workers)*np.ones_like(votes)-votes
+    A_thres,Qjhat = estimate_Qj(tiles,indMat,workers,Qjfunc,votes,noVotes,DEBUG=DEBUG)
     Qn1,Qn2,Qp1,Qp2 = zip(*Qjhat)
 
-    for i in tqdm(range(Niter)):
+    
+    for i in range(Niter):
+        
         if DEBUG: print "Iteration #", i
         plk=0
+
         if i!=0:
+            # print len(tiles)
+            # print len(pInT_lst)
+            # print len(pNotInT_lst)
             if DEBUG: print "E-step : Estimate Qj parameters"
-            A_thres = np.median(tile_area[Tstar_idx_lst[i]])
-            print "Median Area Threshold:",A_thres
-            Qjhat = estimate_Qj(Tstar_lst[i][0],tiles,indMat,workers,Qjfunc,A_thres=A_thres,DEBUG=DEBUG)
+            A_thres,Qjhat = estimate_Qj(tiles,indMat,workers,Qjfunc,pInT_lst,pNotInT_lst)
+            if DEBUG: print "Qj: ",Qjhat
             Qn1,Qn2,Qp1,Qp2 = zip(*Qjhat)
+        pInT_lst = []
+        pNotInT_lst = []
+        
+        # Go through all tiles and compute their probabilities
+        for k in range(len(tiles)):
+            pInT = 0
+            pNotInT = 0
+            tk = tiles[k]
+            # Compute pInT and pNotInT
+            for j in range(len(workers)):
+                ljk = indMat[j][k] #NOTE k doesn't correspond to k in tiles but in current_shell_tks so this is not good
+                wid=workers[j]
+                qp1 = Qp1[j]
+                qp2 = Qp2[j]
+                qn1 = Qn1[j]
+                qn2 = Qn2[j]
 
-        if DEBUG: print "ML construction of Tstar"
-        dPrime = 0
-
-        exclude_idx = set(Tstar_idx_lst[0])
-        Tidx_lst = list(exclude_idx)
-        good_dPrime_tcount = len(exclude_idx)
-        current_shell_tkidxs= Tidx
-        past_shell_tkidxs= Tidx
-        if DEBUG: print "Add core tiles to first occurence of tk satisfying criterion"
-        Tstar_lst.append([Tstar_lst[0][0]])
-
-
-        while (good_dPrime_tcount!=0 or len(current_shell_tkidxs)!=0):
-            ######
-            print "Excluding",exclude_idx
-            current_shell_tkidxs = find_all_tk_in_shell(tiles,past_shell_tkidxs,list(exclude_idx))
-
-            if DEBUG:
-                print "d'={0}; good_dPrime_tcount={1}".format(dPrime,good_dPrime_tcount)
-                print "Number of tks in shell: ",len(current_shell_tkidxs)
-                print "Current shell index:",current_shell_tkidxs
-            good_dPrime_tcount=0
-
-            for k in current_shell_tkidxs:
-                pInT = 0
-                pNotInT = 0
-                tk = tiles[k]
-                # Compute pInT and pNotInT
-                for j in range(len(workers)):
-                    ljk = indMat[j][k] #NOTE k doesn't correspond to k in tiles but in current_shell_tks so this is not good
-                    wid=workers[j]
-                    qp1 = Qp1[j]
-                    qp2 = Qp2[j]
-                    qn1 = Qn1[j]
-                    qn2 = Qn2[j]
-
-                    if tk.area>A_thres:
-                        if ljk ==1:
-                            if qp1!=-1:
-                                pInT+=np.log(qp1)
-                            if qn1!=-1:
-                                pNotInT+=np.log(1-qn1)
-                        else:
-                            if qp1!=-1:
-                                pInT+=np.log(1-qp1)
-                            if qn1!=-1:
-                                pNotInT+=np.log(qn1)
+                if tk.area>A_thres:
+                    if ljk ==1:
+                        if qp1!=-1:
+                            pInT+=np.log(qp1)
+                        if qn1!=-1:
+                            pNotInT+=np.log(1-qn1)
                     else:
-                        if ljk ==1:
-                            if qp2!=-1:
-                                pInT+=np.log(qp2)
-                            if qn2!=-1:
-                                pNotInT+=np.log(1-qn2)
-                        else:
-                            if qp2!=-1:
-                                pInT+=np.log(1-qp2)
-                            if qn2!=-1:
-                                pNotInT+=np.log(qn2)
-                # Check if tk satisfy constraint
-                if pInT<pNotInT:
-                    plk+=pNotInT
-                elif pInT>=pNotInT:
-                    plk+=pInT
-                    # if satisfy criterion, then add to Tstar
-                    good_dPrime_tcount+=1
-                    if DEBUG: print "Adding tk",k
-                    try:
-                        Tstar_lst[i]=[Tstar_lst[i][0].union(tk)]
-                        Tidx_lst.append(k)
-                    except(shapely.geos.TopologicalError):
-                        try:
-                            Tstar_lst[i]=[Tstar_lst[i][0].buffer(0).union(tk.buffer(-1e-10))]
-                            Tidx_lst.append(k)
-                        except(shapely.geos.TopologicalError):
-                            try:
-                                Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk)]
-                                Tidx_lst.append(k)
-                            except(shapely.geos.TopologicalError):
-                                try:
-                                    Tstar_lst[i]=[Tstar_lst[i][0].buffer(-1e-10).union(tk.buffer(-1e-10))]
-                                    Tidx_lst.append(k)
-                                except(shapely.geos.TopologicalError):
-                                    try:
-                                        Tstar_lst[i]=[Tstar_lst[i][0].union(tk.buffer(1e-10))]
-                                        Tidx_lst.append(k)
-                                    except(shapely.geos.TopologicalError):
-                                        try:
-                                            Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk)]
-                                            Tidx_lst.append(k)
-                                        except(shapely.geos.TopologicalError):
-                                            try:
-                                                Tstar_lst[i]=[Tstar_lst[i][0].buffer(1e-10).union(tk.buffer(1e-10))]
-                                                Tidx_lst.append(k)
-                                            except(shapely.geos.TopologicalError):
-                                                print "Shapely Topological Error: unable to add tk, Tstar unchanged; at k=",k
-                                                #pkl.dump(Tstar_lst[i][0],open("problematic_Tstar_{0}.pkl".format(k),'w'))
-                                                #pkl.dump(tk,open("problematic_tk_{0}.pkl".format(k),'w'))
-                                                pass
+                        if qp1!=-1:
+                            pInT+=np.log(1-qp1)
+                        if qn1!=-1:
+                            pNotInT+=np.log(qn1)
+                else:
+                    if ljk ==1:
+                        if qp2!=-1:
+                            pInT+=np.log(qp2)
+                        if qn2!=-1:
+                            pNotInT+=np.log(1-qn2)
+                    else:
+                        if qp2!=-1:
+                            pInT+=np.log(1-qp2)
+                        if qn2!=-1:
+                            pNotInT+=np.log(qn2)
+            pInT_lst.append(pInT)
+            pNotInT_lst.append(pNotInT)
+        if DEBUG:print "pInT_lst:", pInT_lst
+        if DEBUG:print "pNotInT_lst:",pNotInT_lst
+        #Updates
+        dump_output(objid,DATA_DIR,i,Qjhat,pInT_lst,pNotInT_lst)
+        
 
-            ############################################################################################################
-            if PLOT:
-                plt.figure()
-                for c in current_shell_tkidxs:plot_coords(tiles[c],color="red",fill_color="red") #current front
-                for c in past_shell_tkidxs:plot_coords(tiles[c],color="cyan",linewidth=5,linestyle='--') #past front
-                for c in exclude_idx:plot_coords(tiles[c],color="gray",fill_color="gray")#excluded coord
-                plot_coords(Tstar_lst[i][0],linestyle="--",linewidth=2,color="blue")#current Tstar
-                for c in Tidx_lst:plot_coords(tiles[c],linewidth=2,color="green",fill_color="green")#new Tstar
-                plt.ylim(40,100)
-
-
-
-            #Updates
-            Tstar = Tstar_lst[i][0].buffer(0)
-            dPrime+=1
-            past_shell_tkidxs= current_shell_tkidxs
-            exclude_idx= exclude_idx.union(current_shell_tkidxs)
-
-
-        #Storage
-        Qj_lst.append(Qjhat)
-        Tstar_idx_lst.append(Tidx_lst)
-        likelihood_lst.append(plk)
-
-    return Tstar_idx_lst , likelihood_lst, Qj_lst,Tstar_lst
+def dump_output(objid,DATA_DIR,niter,Qj,pInT_lst,pNotInT_lst):
+    pkl.dump(Qj,open("{0}/Qj_obj{1}_iter{2}.pkl".format(DATA_DIR,objid,niter),'w'))
+    pkl.dump(pInT_lst,open("{0}/pInT_lst_obj{1}_iter{2}.pkl".format(DATA_DIR,objid,niter),'w'))
+    pkl.dump(pNotInT_lst,open("{0}/pNotInT_lst_obj{1}_iter{2}.pkl".format(DATA_DIR,objid,niter),'w'))
 
 def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=100,DEBUG=False,PLOT_LIKELIHOOD=False):
     '''
@@ -316,20 +309,44 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
+    DEBUG=False
     #Experiments
-    for batch_id in [0]:
-        print "Working on Batch #",batch_id
-        DATA_DIR="sample/25worker_rand{}".format(batch_id)
-        for objid in object_lst[40:]:
-            try:    
-		print "Working on Object #",objid
-            	end = time.time()
-            	Tstar_idx_lst ,likelihood_lst,Qj_lst,Tstar_lst=runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=5,DEBUG=True,PLOT_LIKELIHOOD=False)
-            	pkl.dump(likelihood_lst,open(DATA_DIR+"/likelihood_obj{}.pkl".format(objid),'w'))
-            	pkl.dump(Tstar_lst,open(DATA_DIR+"/Tstar_obj{}.pkl".format(objid),'w'))
-            	pkl.dump(Tstar_idx_lst,open(DATA_DIR+"/Tstar_idx_obj{}.pkl".format(objid),'w'))
-            	pkl.dump(Qj_lst,open(DATA_DIR+"/Qj_obj{}.pkl".format(objid),'w'))
-            	end2 = time.time()
-		print "Time Elapsed: ",end2-end
-	    except(shapely.geos.PredicateError):
-		print "Failed Object #",objid 
+    #mode='test'
+    mode='all'
+    if mode=="all":
+        
+        worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
+        sampleN_lst=worker_Nbatches.keys()
+        for Nworker in sampleN_lst:
+            for batch_id in range(worker_Nbatches[Nworker]):
+                DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
+                print "Working on Batch: ",DATA_DIR
+                for objid in object_lst:
+                    try:
+                        print "Working on Object #",objid
+                        #end = time.time()
+                        runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=DEBUG,PLOT_LIKELIHOOD=False)
+                        #end2 = time.time()
+                        #print "Time Elapsed: ",end2-end
+                    except(shapely.geos.PredicateError):
+                        print "Failed Object #",objid 
+    else:
+        Nworker = sys.argv[1]
+        batch_id = sys.argv[2] 
+        objid = sys.argv[3]
+
+        # Nworker=5
+        # batch_id =0
+        # objid=1
+        DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
+        print "Working on Batch: ",DATA_DIR
+        #for objid in object_lst:
+        
+        try:
+            #print "Working on Object #",objid
+            #end = time.time()
+            runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=DEBUG,PLOT_LIKELIHOOD=False)
+            #end2 = time.time()
+            #print "Time Elapsed: ",end2-end
+        except(shapely.geos.PredicateError):
+            print "Failed Object #",objid 

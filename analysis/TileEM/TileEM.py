@@ -309,7 +309,7 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
-    DEBUG=False
+    DEBUG=True
     #Experiments
     #mode='test'
     mode='all'
@@ -317,7 +317,7 @@ if __name__ =="__main__":
         
         worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
         sampleN_lst=worker_Nbatches.keys()
-        for Nworker in sampleN_lst:
+        for Nworker in sampleN_lst[2:]:
             for batch_id in range(worker_Nbatches[Nworker]):
                 DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
                 print "Working on Batch: ",DATA_DIR

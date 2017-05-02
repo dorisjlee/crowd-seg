@@ -1,6 +1,8 @@
 # visualizing vision tiles and worker / ground truth boxes
 # constructing vision baseline using vision tiles and worker / ground truth boxes
-
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
 import shapely
 from shapely.geometry import Polygon
 from matplotlib import pyplot as plt
@@ -10,8 +12,8 @@ import pickle
 import glob
 import os
 
-BASE_DIR = '/Users/akashds1/Dropbox/CrowdSourcing/Image-Segmentation/'
-ALL_SAMPLES_DIR = BASE_DIR + 'all_samples'
+BASE_DIR = '/home/jlee782/crowd-seg/analysis/TileEM/'
+ALL_SAMPLES_DIR = BASE_DIR + 'stored_ptk_run'
 
 
 def get_obj_to_img_id():
@@ -55,7 +57,7 @@ def plot_coords(obj, color='red', reverse_xy=False, linestyle='-', fill_color=""
 
 
 def visualizeTilesSeparate(tiles, reverse_xy=False, colorful=True, savename=None, invert_y=True, default_color='lime'):
-    # plt.figure()
+    
     colors = cm.rainbow(np.linspace(0, 1, len(tiles)))
     for t, i in zip(tiles, range(len(tiles))):
         # plt.figure()
@@ -170,7 +172,7 @@ def calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param):
         for tid in tiles_to_explore_next:
             tile_ids_processed.append(tid)
             current_frontier.append(tid)
-            if pInT[tid] >= thresh_param * pNotInT[tid]:
+            if pInT[tid] >= thresh_param + pNotInT[tid]:
                 # include tile
                 output_tile_ids.append(tid)
                 # Tstar.union(tiles[tid])
@@ -180,16 +182,16 @@ def calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param):
     return output_tile_ids, Tstar
 
 
-def calc_all_Tstars(indir):
+def calc_all_Tstars(indir,object_lst=range(1, 48),thres_lst=[1]):
     # objects = get_obj_to_img_id().keys()
-    for sample_path in glob.glob('{}/*/'.format(indir)):
+    for sample_path in glob.glob('{}/30*/'.format(indir)):
         print '======================================================'
         sample_name = sample_path.split('/')[-2]
         print 'Processing sample ', sample_name
         # if sample_name != '5worker_rand0':
         #     continue
         # for objid in objects:
-        for objid in range(1, 48):
+        for objid in object_lst:
             # if objid != 18:
             #     continue
             print 'Doing object ', objid
@@ -199,14 +201,16 @@ def calc_all_Tstars(indir):
             seed_tile = core(tiles, indMat)[0]
             for pInT_iter_path in glob.glob('{}pInT_lst_obj{}_iter*.pkl'.format(sample_path, objid)):
                 # load all data
-                iter_num = pInT_iter_path.split('.')[-2][-1]
+                iter_num = int(pInT_iter_path.split('.')[-2][-1])
+		if iter_num > 5: continue
                 print 'Doing iter num ', iter_num
                 pInT = pickle.load(open(pInT_iter_path))
                 pNotInT = pickle.load(open('{}pInT_lst_obj{}_iter{}.pkl'.format(sample_path, objid, iter_num)))
                 # pInT = pickle.load(open('{}indMat{}.pkl'.format(sample_path, objid)))
 
                 # continue
-                for thresh_param in [1.0]:
+                for thresh_param in thres_lst:
+		    print "Threshold: ",thresh_param
                     output_tile_ids, Tstar = calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param)
                     # print 'output tile ids: ', output_tile_ids
                     outdir = sample_path + 'obj{}/'.format(objid) + 'thresh{}/'.format(int(thresh_param * 10)) + 'iter_{}/'.format(iter_num)
@@ -228,7 +232,75 @@ def calc_all_Tstars(indir):
                     plt.close()
 
             print '-----------------------------------------------------'
+def intersection_area(poly1, poly2):
+    intersection_poly = None
+    try:
+        try:
+            intersection_poly = poly1.intersection(poly2)
+        except:
+            try:
+                intersection_poly = poly1.buffer(0).intersection(poly2)
+            except:
+                intersection_poly = poly1.buffer(1e-10).intersection(poly2)
+    except:
+        print 'intersection failed'
 
+    int_area = intersection_poly.area if intersection_poly else 0
+    return int_area
+def precision(test_poly, base_poly):
+    # returns area-based precision score of two polygons
+    int_area = intersection_area(test_poly, base_poly)
+    return (int_area / test_poly.area) if (test_poly.area != 0) else 0
+def recall(test_poly, base_poly):
+    # returns area-based recall score of two polygons
+    int_area = intersection_area(test_poly, base_poly)
+    return (int_area / base_poly.area) if (base_poly.area != 0) else 0
+def testing_cores(indir=ALL_SAMPLES_DIR,object_lst=range(1,48)):
+    precisions = []
+    recalls = []
+    for sample_path in glob.glob('{}/*/'.format(indir)):
+        # print '======================================================'
+        sample_name = sample_path.split('/')[-2]
+        print 'Processing sample ', sample_name
+        # if sample_name != '5worker_rand0':
+        #     continue
+        # for objid in objects:
+        for objid in object_lst:
+            # if objid != 18:
+            #     continue
+            # print 'Doing object ', objid
+            # print '-----------------------------------------------------'
+            tiles = pickle.load(open('{}vtiles{}.pkl'.format(sample_path, objid)))
+            indMat = pickle.load(open('{}indMat{}.pkl'.format(sample_path, objid)))
+            seed_tile = core(tiles, indMat)[0]
 
+            GTBB = get_gt(objid)
+            CORE = tiles[seed_tile]
+            plt.figure()
+            plot_coords(GTBB, color='red', fill_color='red')
+            plot_coords(CORE, color='blue', fill_color='blue')
+            outdir = sample_path + 'core_comparison/'
+            if not os.path.isdir(outdir):
+                os.makedirs(outdir)
+            plt.savefig('{}{}.png'.format(outdir, objid))
+            plt.close()
+
+            precisions.append(precision(CORE, GTBB))
+            recalls.append(recall(CORE, GTBB))
+    print 'Precision stats:'
+    print 'Mean: {}, median: {}, std: {}, min: {}, max: {}'.format(
+        np.mean(precisions), np.median(precisions), np.std(precisions), min(precisions), max(precisions))
+    print 'Recall stats:'
+    print 'Mean: {}, median: {}, std: {}, min: {}, max: {}'.format(
+        np.mean(recalls), np.median(recalls), np.std(recalls), min(recalls), max(recalls))
 if __name__ == '__main__':
-    calc_all_Tstars(ALL_SAMPLES_DIR)
+    mode='production'
+    if mode=='testing-core':
+	testing_cores(ALL_SAMPLES_DIR)
+    elif mode=="production":
+        import sys
+        object_min = int(sys.argv[1])	
+        object_max = int(sys.argv[2])+1
+        thres=int(sys.argv[3])
+        print "Working on obj{0} to {1}, with threshold={2}".format(object_min, object_max,thres)
+        calc_all_Tstars(ALL_SAMPLES_DIR,object_lst=range(object_min, object_max),thres_lst=[thres])

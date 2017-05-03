@@ -4,7 +4,7 @@ from BB2TileExact import *
 import os 
 import pickle as pkl 
 from  analysis_toolbox import * 
-OVERLAP_THRESHOLD=0.3
+OVERLAP_THRESHOLD=0.6
 
 def overlap(a,b,mode='smaller'):
     if mode=="larger":

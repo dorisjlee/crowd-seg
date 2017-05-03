@@ -1,8 +1,11 @@
+# Retreiving Tiles based on ground truth, compute P,R = upper limit to tile-based method 
 from TileEM import *
 from BB2TileExact import *
 import os 
 import pickle as pkl 
 from  analysis_toolbox import * 
+OVERLAP_THRESHOLD=0.3
+
 def overlap(a,b,mode='smaller'):
     if mode=="larger":
         if a.area>b.area:
@@ -21,11 +24,11 @@ def overlap(a,b,mode='smaller'):
 my_BBG  = pd.read_csv("my_ground_truth.csv")
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
-for Nworker in sampleN_lst[2:]:
+for Nworker in sampleN_lst:
     for batch_num in range(worker_Nbatches[Nworker]):
         DATA_DIR = "sample/{0}worker_rand{1}/".format(Nworker,batch_num)
 	print "Working on ",DATA_DIR
-        Qj=[]
+        #Qj=[]
         best_P_lst = []
         best_R_lst = []
         A_thres_lst=[]
@@ -39,7 +42,7 @@ for Nworker in sampleN_lst[2:]:
             workers = pkl.load(open(DATA_DIR+"/worker{}.pkl".format(objid)))
             bestTprime = []
             for i,tk in enumerate(tiles):
-                if overlap(tk,T)>0.5:
+                if overlap(tk,T)>OVERLAP_THRESHOLD:
                     bestTprime.append(i)
             if bestTprime==[]:
                 P=0
@@ -52,13 +55,13 @@ for Nworker in sampleN_lst[2:]:
             best_R_lst.append(R)
             A_thres_lst.append(A_thres)
 #             print P,R,A_thres
-            for wid in workers:
-                j = workers.index(wid)
-                qn1,qn2,qp1,qp2 = QjGTLSA(tiles,indMat,T,j,A_thres)
-                Qj.append([objid,wid,j,qn1,qn2,qp1,qp2])
+            #for wid in workers:
+            #    j = workers.index(wid)
+            #    qn1,qn2,qp1,qp2 = QjGTLSA(tiles,indMat,T,j,A_thres)
+            #    Qj.append([objid,wid,j,qn1,qn2,qp1,qp2])
         GTdf = pd.DataFrame(np.array([object_lst,best_P_lst,best_R_lst,A_thres_lst]).T,columns=["object_id","GT Tile-based Precision","GT Tile-based Recall","GT A_thres"])    
         GTdf.to_csv(DATA_DIR+"GT_PR.csv")
-        Qj_tbl = pd.DataFrame(Qj,columns=["object_id","worker_id","j","Qn1","Qn2","Qp1","Qp2"])
-        Qj_tbl.to_csv(DATA_DIR+"GT_Qj.csv")
+        #Qj_tbl = pd.DataFrame(Qj,columns=["object_id","worker_id","j","Qn1","Qn2","Qp1","Qp2"])
+        #Qj_tbl.to_csv(DATA_DIR+"GT_Qj.csv")
 #         break
 #     break

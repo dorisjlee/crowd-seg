@@ -45,20 +45,6 @@ def initT(tiles,indMat):
 	topk=1 
         tidx = np.argsort(votes)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
-def find_all_tk_in_shell(tiles,current_shell_idx,exclude_idx=[]):
-    # Find all tiles at the shell d=d+1
-    # add all tiles adjacent to currentShell front
-    filtered_tidxs = np.delete(np.arange(len(tiles)),exclude_idx)
-
-    adjacent_tkidxs =[]
-    for ctidx in current_shell_idx:
-        ck = tiles[ctidx]
-        for tkidx in filtered_tidxs:
-            tk = tiles[tkidx]
-            if adjacent(tk,ck):
-                adjacent_tkidxs.append(tkidx)
-    # There might be a lot of duplicate tiles that is adjacent to more than one tile on the current shell front
-    return list(set(adjacent_tkidxs))
 def ground_truth_T(object_id):
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     ground_truth_match = my_BBG[my_BBG.object_id==object_id]
@@ -309,7 +295,7 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
-    DEBUG=False
+    DEBUG=True
     #Experiments
     #mode='test'
     mode='all'
@@ -317,7 +303,7 @@ if __name__ =="__main__":
         
         worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
         sampleN_lst=worker_Nbatches.keys()
-        for Nworker in sampleN_lst:
+        for Nworker in sampleN_lst[2:]:
             for batch_id in range(worker_Nbatches[Nworker]):
                 DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
                 print "Working on Batch: ",DATA_DIR

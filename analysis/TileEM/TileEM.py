@@ -45,20 +45,6 @@ def initT(tiles,indMat):
 	topk=1 
         tidx = np.argsort(votes)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
-def find_all_tk_in_shell(tiles,current_shell_idx,exclude_idx=[]):
-    # Find all tiles at the shell d=d+1
-    # add all tiles adjacent to currentShell front
-    filtered_tidxs = np.delete(np.arange(len(tiles)),exclude_idx)
-
-    adjacent_tkidxs =[]
-    for ctidx in current_shell_idx:
-        ck = tiles[ctidx]
-        for tkidx in filtered_tidxs:
-            tk = tiles[tkidx]
-            if adjacent(tk,ck):
-                adjacent_tkidxs.append(tkidx)
-    # There might be a lot of duplicate tiles that is adjacent to more than one tile on the current shell front
-    return list(set(adjacent_tkidxs))
 def ground_truth_T(object_id):
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     ground_truth_match = my_BBG[my_BBG.object_id==object_id]

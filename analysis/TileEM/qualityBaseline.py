@@ -47,12 +47,12 @@ def compute_img_to_bb_area_ratio(img_name,worker_x_locs,worker_y_locs):
     img_area = width*height
     bb_poly = Polygon(zip(worker_x_locs,worker_y_locs))
     return bb_poly.area/float(img_area)
-def majority_vote(obj_x_locs,obj_y_locs): 
-    '''
-    Jaccard Simmilarity or Overlap Method
-    used for PASCAL VOC challenge
-    ''' 
-    return intersection(obj_x_locs,obj_y_locs)/union(obj_x_locs,obj_y_locs)
+#def majority_vote(obj_x_locs,obj_y_locs): 
+#    '''
+#    Jaccard Simmilarity or Overlap Method
+#    used for PASCAL VOC challenge
+#    ''' 
+#    return intersection(obj_x_locs,obj_y_locs)/union(obj_x_locs,obj_y_locs)
 from shapely.geometry import box,Polygon
 def intersection(obj_x_locs,obj_y_locs,debug=False):
     # Compute intersecting area
@@ -338,28 +338,34 @@ def visualize_metric_histograms():
         ax.set_xlim(0,1.03)
     fig.tight_layout()
     fig.savefig('metric_histogram.pdf')
-def majority_vote(objid,heuristic="50%"):
-    from TileEM_plot_toolbox import *
-    #Compute PR for majority voted region
-    tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
-    indMat = pkl.load(open("indMat{}.pkl".format(objid)))
-    workers = pkl.load(open("worker{}.pkl".format(objid)))
-    
-    area = indMat[-1]
-    votes = indMat[:-1].sum(axis=0)
-    if heuristic=="50%":
-        tidx=np.where(votes>np.shape(indMat[:-1])[0]/2.)[0]
-    elif heuristic=="topk":
-        topk=10
-        tidx = np.argsort(votes)[::-1][:topk]
-    elif heuristic=="topPercentile":
-        percentile=95
-        tidx=np.where(votes>np.percentile(votes,percentile))[0]
-    P,R = compute_PR(objid,tidx,tiles)
-    if len(tidx)==0:
-        P=0
-        R=0
-    return P,R
+def precision_from_list(test_list, base_poly):
+    int_area = 0.0
+    test_poly_area = 0.0
+    for test_poly in test_list:
+	#print test_poly
+	#print base_poly
+        int_area += intersection_area(test_poly, base_poly)
+        test_poly_area += test_poly.area
+    return (int_area / test_poly_area) if (test_poly_area != 0) else 0
+
+def recall_from_list(test_list, base_poly):
+    int_area = 0.0
+    for test_poly in test_list:
+        int_area += intersection_area(test_poly, base_poly)
+    return (int_area / base_poly.area) if (base_poly.area != 0) else 0
+def intersection_area(poly1, poly2):
+    intersection_poly = None
+    try:
+        try:
+            intersection_poly = poly1.intersection(poly2)
+        except:
+            try:
+                intersection_poly = poly1.buffer(0).intersection(poly2)
+            except:
+                intersection_poly = poly1.buffer(1e-10).intersection(poly2)
+    except:
+        print 'intersection failed'
+    return intersection_poly.area
 
 if __name__ =="__main__":
     import sys

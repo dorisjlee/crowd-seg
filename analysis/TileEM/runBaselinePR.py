@@ -168,6 +168,7 @@ elif mode =="aggregate_sample_table" :
         except(ZeroDivisionError):
             print "No data for worker=",Nworker 
 elif mode=="concatenate_sample_table":
+    print "Concatenating Tables" 
     for Nworker in sampleN_lst:
         print "Working on worker = ",Nworker
         batch_all_data=[]

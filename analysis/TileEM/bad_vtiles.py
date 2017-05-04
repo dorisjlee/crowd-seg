@@ -19,5 +19,5 @@ medium_severity=[[5,1,3],[5,2,4],[5,2,7],[5,2,11],[5,2,14],[5,2,19],[5,2,22],\
                  [5,6,22],[5,6,25],[5,6,39],[5,7,28],[5,8,28],[5,8,32],\
                 [10,0,7],[10,0,14],[10,0,18],[10,1,19],[10,1,30],[10,1,44],\
                  [10,1,45],[10,3,13],[10,3,37],[10,5,19],[10,6,6],[10,7,3],[10,7,37]]
-
+problematic_vtiles=problematic_vtiles+low_recall_vtiles+crashed_vtiles
 problematic = pd.DataFrame(problematic_vtiles,columns=["Nworker","batch_num","objid"])

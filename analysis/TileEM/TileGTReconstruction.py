@@ -5,7 +5,7 @@ import os
 import pickle as pkl 
 from  analysis_toolbox import * 
 OVERLAP_THRESHOLD=0.6
-
+base_dir = 'stored_ptk_run'
 def overlap(a,b,mode='smaller'):
     if mode=="larger":
         if a.area>b.area:
@@ -24,9 +24,9 @@ def overlap(a,b,mode='smaller'):
 my_BBG  = pd.read_csv("my_ground_truth.csv")
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
-for Nworker in sampleN_lst:
-    for batch_num in range(worker_Nbatches[Nworker]):
-        DATA_DIR = "sample/{0}worker_rand{1}/".format(Nworker,batch_num)
+for Nworker in [10]:#sampleN_lst[2:]:
+    for batch_num in [7]:#range(worker_Nbatches[Nworker]):
+        DATA_DIR = "{0}/{1}worker_rand{2}/".format(base_dir,Nworker,batch_num)
 	print "Working on ",DATA_DIR
         #Qj=[]
         best_P_lst = []

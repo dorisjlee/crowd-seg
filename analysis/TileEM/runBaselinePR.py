@@ -11,8 +11,8 @@ df = pd.read_csv("../computed_my_COCO_BBvals.csv",index_col=0)
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
 #mode="aggregate_sample_table"
-#mode="recompute_sample_batch_table"
-mode="concatenate_sample_table"
+mode="recompute_sample_batch_table"
+#mode="concatenate_sample_table"
 base_dir= "stored_ptk_run"
 discard_obj_lst = [35,40,41]
 def precision_from_list(test_list, base_poly):

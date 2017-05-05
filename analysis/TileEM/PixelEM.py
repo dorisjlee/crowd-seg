@@ -1,3 +1,6 @@
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
 from PIL import Image, ImageDraw
 import sys
 #sys.path.append("..")
@@ -296,8 +299,8 @@ def compile_PR():
 
 
 if __name__ == '__main__':
-    # for objid in range(1, 48):
-    #     create_all_gt_and_worker_masks(objid)
+    #for objid in range(1, 48):
+    #    create_all_gt_and_worker_masks(objid)
 
     for sample in sample_specs.keys():
         print '-----------------------------------------------'

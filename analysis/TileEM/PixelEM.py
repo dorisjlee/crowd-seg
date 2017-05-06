@@ -16,12 +16,41 @@ PIXEL_EM_DIR = BASE_DIR + 'pixel_em/'
 ORIGINAL_IMG_DIR = '../../web-app/app/static/' 
 
 sample_specs = {
-    '5workers_rand0': [5, 845]#,
-    #'10workers_rand0': [10, 129],
-    #'15worker_rand2': [15, 333],
-    #'20worker_rand3': [20, 126],
-    #'25worker_rand1': [25, 171],
-    #'30worker_rand0': [30, 189]
+    '5workers_rand0': [5, 779],
+    '5workers_rand1': [5, 111],
+    '5workers_rand2': [5, 237],
+    '5workers_rand3': [5, 721],
+    '5workers_rand4': [5, 845],
+    '5workers_rand5': [5, 779],
+    '5workers_rand6': [5, 777],
+    '5workers_rand7': [5, 989],
+    '5workers_rand8': [5, 787],
+    '5workers_rand9': [5, 121],
+
+    '10workers_rand0': [10, 129],
+    '10workers_rand1': [10, 387],
+    '10workers_rand2': [10, 999],
+    '10workers_rand3': [10, 391],
+    '10workers_rand4': [10, 171],
+    '10workers_rand5': [10, 777],
+    '10workers_rand6': [10, 333],
+
+    '15workers_rand0': [15, 999],
+    '15workers_rand1': [15, 707],
+    '15workers_rand2': [15, 333],
+    '15workers_rand3': [15, 129],
+    '15workers_rand4': [15, 979],
+    '15workers_rand5': [15, 333],
+
+    '20worker_rand0': [20, 345],
+    '20worker_rand1': [20, 125],
+    '20worker_rand2': [20, 129],
+    '20worker_rand3': [20, 126],
+    
+    '25worker_rand0': [25, 979],
+    '25worker_rand1': [25, 171],
+
+    '30worker_rand0': [30, 189]
 }
 
 
@@ -301,20 +330,28 @@ def compile_PR():
 if __name__ == '__main__':
     #for objid in range(1, 48):
     #    create_all_gt_and_worker_masks(objid)
-
-    for sample in sample_specs.keys():
-        print '-----------------------------------------------'
-        print 'Starting ', sample
-        sample_start_time = time.time()
-        # for objid in range(1, 48):
-        for objid in [1,11,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
-            obj_start_time = time.time()
-            create_mega_mask(objid, PLOT=True, sample_name=sample)
-            create_MV_mask(sample, objid)
-            do_EM_for(sample, objid)
-            obj_end_time = time.time()
-            print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
-        sample_end_time = time.time()
-        print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
+    #print sample_specs.keys()
+    #['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1', '20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
+    #sample_lst = sample_specs.keys()
+    #sample_lst = ['20worker_rand2', '20worker_rand3']
+    #sample_lst = ['15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
+    #sample_lst = ['15workers_rand2', '15workers_rand3', '15workers_rand0','15workers_rand3']
+    #sample_lst = ['10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2']
+    #sample_lst = ['10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4']
+    #sample_lst = ['20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0']
+    #for sample in sample_lst:
+    #    print '-----------------------------------------------'
+    #    print 'Starting ', sample
+    #    sample_start_time = time.time()
+    #    for objid in range(1, 48):
+    #    #for objid in [1,11,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
+    #        obj_start_time = time.time()
+    #        create_mega_mask(objid, PLOT=True, sample_name=sample)
+    #        create_MV_mask(sample, objid)
+    #        do_EM_for(sample, objid)
+    #        obj_end_time = time.time()
+    #        print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
+    #    sample_end_time = time.time()
+    #    print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
     compile_PR()

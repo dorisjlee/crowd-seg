@@ -1,0 +1,49 @@
+id,image_id,name
+1,1,man
+2,1,bag
+3,1,chocolate
+4,1,candy
+5,1,woman
+6,1,drink
+7,1,woman
+8,3,bag
+9,3,book
+10,3,coffee cup
+11,3,spoon
+12,3,knife
+13,3,cake
+14,4,dog
+15,4,car
+16,4,frisbee
+17,5,turtle
+18,5,monitor
+19,5,water bottle
+20,5,computer
+21,5,photo frame
+22,5,drink
+23,6,cell phone
+24,6,lip balm
+25,6,radio reciever
+26,6,microphone
+27,6,recorder
+28,7,flower
+29,7,flower
+30,7,flower
+31,7,vase
+32,7,vase
+33,7,vase
+34,8,helmet
+35,8,girl
+36,8,bat
+37,9,biker
+38,9,truck
+39,9,bus
+40,9,driver
+41,10,yellow banana
+42,10,green banana
+43,10,woman
+44,10,woman
+45,10,bird cage
+46,10,woman
+47,10,basket
+(47 rows)

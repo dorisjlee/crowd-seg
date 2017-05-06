@@ -1,3 +1,6 @@
+stored_ptk_run/
+stored_ptk_run_old/
+analysis/ipynb/.ipynb_checkpoints/
 analysis/TileEM/config.py
 .DS_Store
 secret.py

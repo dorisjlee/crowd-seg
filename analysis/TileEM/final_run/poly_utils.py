@@ -7,7 +7,8 @@ import numpy as np
 import csv
 import pickle
 
-BASE_DIR = '/home/jlee782/crowd-seg/analysis/TileEM/' 
+#BASE_DIR = '/home/jlee782/crowd-seg/analysis/TileEM/'
+BASE_DIR='/Users/dorislee/Desktop/Research/seg/crowd-seg/analysis/TileEM/final_run'
 OUR_DIR = BASE_DIR + 'Vision-stuff/'
 COLOR_SEGMENTED_IMG_DIR = OUR_DIR + 'color-segmented-images/'
 VISION_TILE_DIR = OUR_DIR + 'vision-tiles/'

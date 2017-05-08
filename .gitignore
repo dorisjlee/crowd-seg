@@ -19,6 +19,10 @@ web-app/flask/lib/python2.7/site-packages/*
 *.csv
 *.log
 *.dump
+analysis/TileEM/vtile_plots/
+analysis/TileEM/Vision-stuff/
+analysis/thresh*/
+analysis/TileEM/*.png
 analysis/TileEM/output/
 analysis/TileEM/step500_output/
 analysis/old_data/

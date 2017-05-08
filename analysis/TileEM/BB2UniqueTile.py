@@ -88,13 +88,13 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
             plt.savefig("{}_before.png".format(tidx))
             plt.close()
         for vtidx in range(len(verified_tiles)):
-            print "tidx:{}; vtidx{}".format(tidx,vtidx)
+            #print "tidx:{}; vtidx{}".format(tidx,vtidx)
             # try:
             vt = verified_tiles[vtidx]
             # except(IndexError):
             #     print "last element removed"
             try:
-                print "begin geo operations"
+                #print "begin geo operations"
                 overlap_score = overlap(vt, t)
                 if overlap_score > overlap_threshold:
                 # if True:
@@ -118,8 +118,11 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             plt.close()
 
                         overlap_region = vt.intersection(t_to_add)
+                        print "vt:",vt.area
+                        print "Overlap:",overlap_region.area
                         diff_region = vt.difference(overlap_region)
-
+                        print "diff_region:",diff_region.area
+                        print type(overlap_region)
                         if PLOT and len(verified_tiles_new):
                             print 'Before adding overlap region'
                             plt.figure()
@@ -147,8 +150,16 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             plot_coords(diff_region, linestyle='--', fill_color='green', hatch='-')
                             plt.show()
                             plt.close()
-
+                        t_to_add_prev = t_to_add
+                        print "t_to_add:",t_to_add_prev.area
+                        print "Overlap:",overlap_region.area
                         t_to_add = t_to_add.difference(overlap_region)
+                        print "t_to_add:",t_to_add.area
+                        print "check: ",np.isclose(t_to_add_prev.area-overlap_region.area,t_to_add.area,rtol=1e-5)
+
+                        print "I with overlap:",intersection_area(t_to_add,overlap_region)
+                        print "I with vt:",intersection_area(t_to_add,vt)
+                        print "I with diff_region:",intersection_area(t_to_add,diff_region)
 
                         if PLOT:
                             print 'After adding diff region'
@@ -177,7 +188,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                 else:
                     overlap_area += intersection_area(vt, t)
                     
-                print "end geo operations"
+                #print "end geo operations"
             except(shapely.geos.TopologicalError):
                 print "Topological Error", tidx, vtidx
         # if not duplicated:
@@ -189,7 +200,13 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
             plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
             plt.show()
             plt.close()
-
+        #print t_to_add
+        #print len(t_to_add)
+        #print len(list(set(t_to_add)))
+        #print verified_tiles_new
+        # t_to_add
+        # for vtn in verified_tiles_new:
+        #     t_to_add=t_to_add.difference(vtn)
         add_object_to_tiles(verified_tiles_new,t_to_add)
 
         if PLOT:
@@ -238,7 +255,7 @@ def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_col
 if __name__=='__main__':
     #vtiles,BB = create_vtiles(45,10,121,PLOT=True)
     # vtiles,BB = create_vtiles(10,10,121,PLOT=True)
-    vtiles,BB = create_vtiles(43,10,121,PLOT=True)
+    vtiles,BB = create_vtiles(43,5,121,PLOT=True)
     plt.figure()
     visualizeTilesSeparate(vtiles,colorful=False)
     plt.savefig("vtiles.png")

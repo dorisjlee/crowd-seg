@@ -363,9 +363,10 @@ def intersection_area(poly1, poly2):
                 intersection_poly = poly1.buffer(0).intersection(poly2)
             except:
                 intersection_poly = poly1.buffer(1e-10).intersection(poly2)
+        return intersection_poly.area
     except:
         print 'intersection failed'
-    return intersection_poly.area
+        return 0
 
 if __name__ =="__main__":
     import sys

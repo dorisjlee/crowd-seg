@@ -249,17 +249,17 @@ def mask_log_probabilities(worker_masks, worker_qualities):
     return log_probability_in_mask, log_probability_not_in_mask
 
 
-def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask):
+def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=0):
     gt_est_mask = np.zeros((len(log_probability_in_mask), len(log_probability_in_mask[0])))
 
-    passing_xs, passing_ys = np.where(log_probability_in_mask > log_probability_not_in_mask)
+    passing_xs, passing_ys = np.where(log_probability_in_mask >= thresh + log_probability_not_in_mask)
     for i in range(len(passing_xs)):
         gt_est_mask[passing_xs[i]][passing_ys[i]] = 1
 
     return gt_est_mask
 
 
-def do_EM_for(sample_name, objid, num_iterations=5):
+def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
@@ -270,23 +270,32 @@ def do_EM_for(sample_name, objid, num_iterations=5):
         worker_qualities = dict()
         for wid in worker_masks.keys():
             worker_qualities[wid] = worker_prob_correct(worker_masks[wid], gt_est_mask)
-
-        log_probability_in_mask, log_probability_not_in_mask = mask_log_probabilities(worker_masks, worker_qualities)
-        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask)
-        with open('{}p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-            fp.write(pickle.dumps(log_probability_in_mask))
-        with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-            fp.write(pickle.dumps(log_probability_not_in_mask))
-        with open('{}gt_est_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+	if load_p_in_mask:
+	    #print "loaded pInT" 
+	    log_probability_in_mask=pkl.load(open('{}p_in_mask_{}.pkl'.format(outdir, it)))
+	    log_probability_not_in_mask =pkl.load(open('{}p_not_in_mask_{}.pkl'.format(outdir, it)))	
+	else: 
+	    #Compute pInMask and pNotInMask 
+            log_probability_in_mask, log_probability_not_in_mask = mask_log_probabilities(worker_masks, worker_qualities)
+	    with open('{}p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_in_mask))
+            with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_not_in_mask))
+        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+        #with open('{}p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+        #    fp.write(pickle.dumps(log_probability_in_mask))
+        #with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+        #    fp.write(pickle.dumps(log_probability_not_in_mask))
+        with open('{}gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
             fp.write(pickle.dumps(gt_est_mask))
 
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
-    plt.savefig('{}EM_mask.png'.format(outdir))
+    plt.savefig('{}EM_mask_thresh{}.png'.format(outdir,thresh))
 
     [p, r] = get_precision_and_recall(gt_est_mask, get_gt_mask(objid))
-    with open('{}EM_pr.json'.format(outdir), 'w') as fp:
+    with open('{}EM_pr_thresh{}.json'.format(outdir,thresh), 'w') as fp:
         fp.write(json.dumps([p, r]))
 
 
@@ -294,7 +303,7 @@ def compile_PR():
     import glob
     import csv
     with open('{}full_PR_table.csv'.format(PIXEL_EM_DIR), 'w') as csvfile:
-        fieldnames = ['num_workers', 'sample_num', 'objid', 'MV_precision', 'MV_recall', 'EM_precision', 'EM_recall']
+        fieldnames = ['num_workers', 'sample_num', 'objid', 'thresh', 'MV_precision', 'MV_recall', 'EM_precision', 'EM_recall']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for sample_path in glob.glob('{}*_rand*/'.format(PIXEL_EM_DIR)):
@@ -308,23 +317,27 @@ def compile_PR():
                 em_p = None
                 em_r = None
                 mv_pr_file = '{}MV_pr.json'.format(obj_path)
-                em_pr_file = '{}EM_pr.json'.format(obj_path)
-                if os.path.isfile(mv_pr_file):
+		if os.path.isfile(mv_pr_file):
                     [mv_p, mv_r] = json.load(open(mv_pr_file))
-                if os.path.isfile(em_pr_file):
-                    [em_p, em_r] = json.load(open(em_pr_file))
-                if any([pr is not None for pr in [mv_p, mv_r, em_p, em_r]]):
-                    writer.writerow(
-                        {
+		for thresh_path in glob.glob('{}EM_pr_thresh*.json'.format(obj_path)):
+		    thresh= int(thresh_path.split('/')[-1].split('thresh')[1].split('.')[0])
+                    em_pr_file = '{}EM_pr_thresh{}.json'.format(obj_path,thresh)
+                    if os.path.isfile(em_pr_file):
+                        [em_p, em_r] = json.load(open(em_pr_file))
+                    if any([pr is not None for pr in [mv_p, mv_r, em_p, em_r]]):
+                        writer.writerow(
+                          {
                             'num_workers': num_workers,
                             'sample_num': sample_num,
                             'objid': objid,
+			    'thresh':thresh,
                             'MV_precision': mv_p,
                             'MV_recall': mv_r,
                             'EM_precision': em_p,
                             'EM_recall': em_r
-                        }
-                    )
+                          }
+                        )
+    print 'Compiled PR to :'+'{}full_PR_table.csv'.format(PIXEL_EM_DIR) 
 
 
 if __name__ == '__main__':
@@ -332,26 +345,30 @@ if __name__ == '__main__':
     #    create_all_gt_and_worker_masks(objid)
     #print sample_specs.keys()
     #['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1', '20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
-    #sample_lst = sample_specs.keys()
+    sample_lst = sample_specs.keys()
     #sample_lst = ['20worker_rand2', '20worker_rand3']
     #sample_lst = ['15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
     #sample_lst = ['15workers_rand2', '15workers_rand3', '15workers_rand0','15workers_rand3']
     #sample_lst = ['10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2']
     #sample_lst = ['10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4']
+    #compile_PR()
     #sample_lst = ['20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0']
-    #for sample in sample_lst:
-    #    print '-----------------------------------------------'
-    #    print 'Starting ', sample
-    #    sample_start_time = time.time()
-    #    for objid in range(1, 48):
-    #    #for objid in [1,11,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
-    #        obj_start_time = time.time()
-    #        create_mega_mask(objid, PLOT=True, sample_name=sample)
-    #        create_MV_mask(sample, objid)
-    #        do_EM_for(sample, objid)
-    #        obj_end_time = time.time()
-    #        print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
-    #    sample_end_time = time.time()
-    #    print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
+    for sample in sample_lst:
+        print '-----------------------------------------------'
+        print 'Starting ', sample
+        sample_start_time = time.time()
+        for objid in range(1, 48):
+        #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
+            obj_start_time = time.time()
+            #create_mega_mask(objid, PLOT=True, sample_name=sample)
+            #create_MV_mask(sample, objid)
+            #do_EM_for(sample, objid)
+	    for thresh in [-4,-2,0,2,4]:
+		print "Working on threshold: ",thresh
+    	        do_EM_for(sample, objid,load_p_in_mask=True,thresh=thresh)
+            obj_end_time = time.time()
+            print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
+        sample_end_time = time.time()
+        print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
     compile_PR()

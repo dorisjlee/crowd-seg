@@ -175,27 +175,30 @@ def get_all_worker_mega_masks_for_sample(sample_name, objid):
     return worker_masks
 
 
-def create_MV_mask(sample_name, objid, plot=True):
+def create_MV_mask(sample_name, objid, plot=True,mode=""):
     # worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
-    num_workers = len(workers_in_sample(sample_name, objid))
-    mega_mask = get_mega_mask(sample_name, objid)
-    MV_mask = np.zeros((len(mega_mask), len(mega_mask[0])))
-    [xs, ys] = np.where(mega_mask > (num_workers / 2))
-    for i in range(len(xs)):
-        MV_mask[xs[i]][ys[i]] = 1
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    with open('{}MV_mask.pkl'.format(outdir), 'w') as fp:
-        fp.write(pickle.dumps(MV_mask))
-
-    if plot:
-        plt.figure()
-        plt.imshow(MV_mask, interpolation="none")  # ,cmap="rainbow")
-        plt.colorbar()
-        plt.savefig('{}MV_mask.png'.format(outdir))
-
-    [p, r] = get_precision_and_recall(MV_mask, get_gt_mask(objid))
-    with open('{}MV_pr.json'.format(outdir), 'w') as fp:
-        fp.write(json.dumps([p, r]))
+    if mode=="":
+    	num_workers = len(workers_in_sample(sample_name, objid))
+    	mega_mask = get_mega_mask(sample_name, objid)
+    	MV_mask = np.zeros((len(mega_mask), len(mega_mask[0])))
+    	[xs, ys] = np.where(mega_mask > (num_workers / 2))
+    	for i in range(len(xs)):
+            MV_mask[xs[i]][ys[i]] = 1
+    	#outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    	with open('{}MV_mask.pkl'.format(outdir), 'w') as fp:
+            fp.write(pickle.dumps(MV_mask))
+   
+    	if plot:
+            plt.figure()
+            plt.imshow(MV_mask, interpolation="none")  # ,cmap="rainbow")
+            plt.colorbar()
+            plt.savefig('{}MV_mask.png'.format(outdir))
+    elif mode=="compute_pr_only":
+	MV_mask = pickle.load(open('{}MV_mask.pkl'.format(outdir)))
+    [p, r, j ] = get_precision_recall_jaccard(MV_mask, get_gt_mask(objid))
+    with open('{}MV_prj.json'.format(outdir), 'w') as fp:
+        fp.write(json.dumps([p, r,j]))
 
 
 def get_MV_mask(sample_name, objid):
@@ -203,7 +206,7 @@ def get_MV_mask(sample_name, objid):
     return pickle.load(open('{}MV_mask.pkl'.format(indir)))
 
 
-def get_precision_and_recall(test_mask, gt_mask):
+def get_precision_recall_jaccard(test_mask, gt_mask):
     num_intersection = 0.0  # float(len(np.where(test_mask == gt_mask)[0]))
     num_test = 0.0  # float(len(np.where(test_mask == 1)[0]))
     num_gt = 0.0  # float(len(np.where(gt_mask == 1)[0]))
@@ -217,7 +220,16 @@ def get_precision_and_recall(test_mask, gt_mask):
                 num_test += 1
             elif gt_mask[i][j] == 1:
                 num_gt += 1
-    return (num_intersection / num_test), (num_intersection / num_gt)
+    #try:
+    #	return (num_intersection / num_test), (num_intersection / num_gt),(num_intersection/(num_gt+num_test-num_intersection))
+    #except(ZeroDivisionError):
+    #	print num_intersection
+    #	print num_test
+    #	print num_gt
+    if num_test!=0:
+ 	return (num_intersection / num_test), (num_intersection / num_gt),(num_intersection/(num_gt+num_test-num_intersection))
+    else:
+	return 0.,0.,0. 
 
 
 def worker_prob_correct(w_mask, gt_mask):
@@ -268,7 +280,7 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     #worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
 
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    if os.path.isfile('{}EM_pr_thresh{}.json'.format(outdir,thresh)):
+    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
         print "Already ran, Skipped"
         return
     # initialize MV mask
@@ -302,38 +314,41 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     plt.colorbar()
     plt.savefig('{}EM_mask_thresh{}.png'.format(outdir,thresh))
     # Compute PR mask based on the EM estimate mask from the last iteration
-    [p, r] = get_precision_and_recall(gt_est_mask, get_gt_mask(objid))
-    with open('{}EM_pr_thresh{}.json'.format(outdir,thresh), 'w') as fp:
-        fp.write(json.dumps([p, r]))
+    [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+    with open('{}EM_prj_thresh{}.json'.format(outdir,thresh), 'w') as fp:
+        fp.write(json.dumps([p, r, j]))
 
 
 def compile_PR():
     import glob
     import csv
-    with open('{}full_PR_table.csv'.format(PIXEL_EM_DIR), 'w') as csvfile:
-        fieldnames = ['num_workers', 'sample_num', 'objid', 'thresh', 'MV_precision', 'MV_recall', 'EM_precision', 'EM_recall']
+    with open('{}full_PRJ_table.csv'.format(PIXEL_EM_DIR), 'w') as csvfile:
+        fieldnames = ['num_workers', 'sample_num', 'objid', 'thresh', 'MV_precision', 'MV_recall','MV_jaccard', 'EM_precision', 'EM_recall','EM_jaccard']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for sample_path in glob.glob('{}*_rand*/'.format(PIXEL_EM_DIR)):
             sample_name = sample_path.split('/')[-2]
+	    print "Working on ", sample_path
             num_workers = int(sample_name.split('w')[0])
             sample_num = int(sample_name.split('d')[-1])
             for obj_path in glob.glob('{}obj*/'.format(sample_path)):
                 objid = int(obj_path.split('/')[-2].split('j')[1])
                 mv_p = None
                 mv_r = None
+		mv_j = None
                 em_p = None
                 em_r = None
-                mv_pr_file = '{}MV_pr.json'.format(obj_path)
+		em_j = None
+                mv_pr_file = '{}MV_prj.json'.format(obj_path)
 		if os.path.isfile(mv_pr_file):
-                    [mv_p, mv_r] = json.load(open(mv_pr_file))
-		for thresh_path in glob.glob('{}EM_pr_thresh*.json'.format(obj_path)):
+                    [mv_p, mv_r,mv_j] = json.load(open(mv_pr_file))
+		for thresh_path in glob.glob('{}EM_prj_thresh*.json'.format(obj_path)):
 		    thresh= int(thresh_path.split('/')[-1].split('thresh')[1].split('.')[0])
 		    #print thresh
-                    em_pr_file = '{}EM_pr_thresh{}.json'.format(obj_path,thresh)
+                    em_pr_file = '{}EM_prj_thresh{}.json'.format(obj_path,thresh)
                     if os.path.isfile(em_pr_file):
-                        [em_p, em_r] = json.load(open(em_pr_file))
-                    if any([pr is not None for pr in [mv_p, mv_r, em_p, em_r]]):
+                        [em_p, em_r,em_j] = json.load(open(em_pr_file))
+                    if any([prj is not None for prj in [mv_p, mv_r, mv_j, em_p, em_r,em_j]]):
                         writer.writerow(
                           {
                             'num_workers': num_workers,
@@ -342,11 +357,13 @@ def compile_PR():
 			    'thresh':thresh,
                             'MV_precision': mv_p,
                             'MV_recall': mv_r,
+			    'MV_jaccard':mv_j,
                             'EM_precision': em_p,
-                            'EM_recall': em_r
+                            'EM_recall': em_r,
+			    'EM_jaccard':em_j
                           }
                         )
-    print 'Compiled PR to :'+'{}full_PR_table.csv'.format(PIXEL_EM_DIR) 
+    print 'Compiled PR to :'+'{}full_PRJ_table.csv'.format(PIXEL_EM_DIR) 
 
 
 if __name__ == '__main__':
@@ -355,6 +372,8 @@ if __name__ == '__main__':
     #print sample_specs.keys()
     #['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1', '20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
     sample_lst = sample_specs.keys()
+    #sample_lst = ['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2']
+    #sample_lst = ['5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1']
     #sample_lst = ['20worker_rand2', '20worker_rand3']
     #sample_lst = ['15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
     #sample_lst = ['15workers_rand2', '15workers_rand3', '15workers_rand0','15workers_rand3']
@@ -362,22 +381,24 @@ if __name__ == '__main__':
     #sample_lst = ['10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4']
     #compile_PR()
     #sample_lst = ['20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0']
-    for sample in sample_lst:
-        print '-----------------------------------------------'
-        print 'Starting ', sample
-        sample_start_time = time.time()
-        for objid in range(1, 48):
-       #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
-            obj_start_time = time.time()
-            #create_mega_mask(objid, PLOT=True, sample_name=sample)
-            #create_MV_mask(sample, objid)
-            do_EM_for(sample, objid)
-   	    for thresh in [-4,-2,0,2,4]:
-     		print "Working on threshold: ",thresh
-    	        do_EM_for(sample, objid,load_p_in_mask=True,thresh=thresh)
-            obj_end_time = time.time()
-            print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
-        sample_end_time = time.time()
-        print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
+    #sample_lst = ['5workers_rand4', '5workers_rand5', '5workers_rand2','20worker_rand1']
+    if False:#True:
+        for sample in sample_lst:
+            print '-----------------------------------------------'
+            print 'Starting ', sample
+            sample_start_time = time.time()
+            for objid in range(1, 48):
+       	    #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
+                obj_start_time = time.time()
+                #create_mega_mask(objid, PLOT=True, sample_name=sample)
+                create_MV_mask(sample, objid,mode="compute_pr_only")
+                #do_EM_for(sample, objid)
+   	        for thresh in [10,-10]:#[-4,-2,0,2,4]: #10,-10
+     		    print "Working on threshold: ",thresh
+    	            do_EM_for(sample, objid,load_p_in_mask=True,thresh=thresh)
+                obj_end_time = time.time()
+                print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
+            sample_end_time = time.time()
+            print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
     compile_PR()

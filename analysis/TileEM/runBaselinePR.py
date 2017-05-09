@@ -78,7 +78,7 @@ if mode =="recompute_sample_batch_table":
                     workers=pkl.load(open("worker{}.pkl".format(objid)))
                     filtered_df = df[(df["worker_id"].isin(workers))&(df["object_id"]==objid)] #only look at summarization scores of sampled workers
                     best_worker_BB = filtered_df[filtered_df[attr]==filtered_df[attr].max()]
-                    if objid not in [35,41]:
+                    if objid not in [35,41,40]:
                         tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0]])
                     else:
                         tbl.append([objid,-1,-1])

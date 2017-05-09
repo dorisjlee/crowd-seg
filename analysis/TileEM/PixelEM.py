@@ -260,12 +260,20 @@ def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh
 
 
 def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
+#    if os.path.exist('{}EM_pr_thresh{}.json'.format(outdir,thresh)):
+#	print "Already ran, Skipped"
+#	return 
+    # initialize MV mask
+    #gt_est_mask = get_MV_mask(sample_name, objid)
+    #worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+
+    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if os.path.isfile('{}EM_pr_thresh{}.json'.format(outdir,thresh)):
+        print "Already ran, Skipped"
+        return
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
-
-    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-
     for it in range(num_iterations):
         worker_qualities = dict()
         for wid in worker_masks.keys():
@@ -293,7 +301,7 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
     plt.savefig('{}EM_mask_thresh{}.png'.format(outdir,thresh))
-
+    # Compute PR mask based on the EM estimate mask from the last iteration
     [p, r] = get_precision_and_recall(gt_est_mask, get_gt_mask(objid))
     with open('{}EM_pr_thresh{}.json'.format(outdir,thresh), 'w') as fp:
         fp.write(json.dumps([p, r]))
@@ -321,6 +329,7 @@ def compile_PR():
                     [mv_p, mv_r] = json.load(open(mv_pr_file))
 		for thresh_path in glob.glob('{}EM_pr_thresh*.json'.format(obj_path)):
 		    thresh= int(thresh_path.split('/')[-1].split('thresh')[1].split('.')[0])
+		    #print thresh
                     em_pr_file = '{}EM_pr_thresh{}.json'.format(obj_path,thresh)
                     if os.path.isfile(em_pr_file):
                         [em_p, em_r] = json.load(open(em_pr_file))
@@ -358,13 +367,13 @@ if __name__ == '__main__':
         print 'Starting ', sample
         sample_start_time = time.time()
         for objid in range(1, 48):
-        #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
+       #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)
-            #do_EM_for(sample, objid)
-	    for thresh in [-4,-2,0,2,4]:
-		print "Working on threshold: ",thresh
+            do_EM_for(sample, objid)
+   	    for thresh in [-4,-2,0,2,4]:
+     		print "Working on threshold: ",thresh
     	        do_EM_for(sample, objid,load_p_in_mask=True,thresh=thresh)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))

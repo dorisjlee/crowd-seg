@@ -29,8 +29,8 @@ def get_intersection_regions(obj1, obj2):
             if type(int_rs) != shapely.geometry.MultiPolygon:
                 int_rs = [int_rs]
             for int_r in int_rs:
-                if int_r.area>0:
-                    intersection_regions.append(int_r)
+                add_object_to_tiles(intersection_regions, int_r)
+                # intersection_regions.append(int_r)
 
     return intersection_regions
 
@@ -50,39 +50,23 @@ def get_diff_regions(obj1, obj2):
         if type(diff_1) != shapely.geometry.MultiPolygon:
             diff_1 = [diff_1]
         for diff in diff_1:
-            if diff.area>0:
-                diff_regions.append(diff)
+            add_object_to_tiles(diff_regions, diff)
+            # diff_regions.append(diff)
 
     return diff_regions
-def intersection_area(poly1, poly2):
-    intersection_poly = None
-    try:
-        try:
-            intersection_poly = poly1.intersection(poly2)
-        except:
-            try:
-                intersection_poly = poly1.buffer(0).intersection(poly2)
-            except:
-                intersection_poly = poly1.buffer(1e-10).intersection(poly2)
-        return intersection_poly.area
-    except:
-        print 'intersection failed'
-        return 0
+
 
 def overlap(poly1, poly2):
-    #print "poly1:",poly1
-    #print "poly2:",poly2
-
     if type(poly1) == shapely.geometry.polygon.Polygon:
         poly1 = [poly1]
     if type(poly2) == shapely.geometry.polygon.Polygon:
         poly2 = [poly2]
+
     inter_area = 0.0
     total_p1_area = sum([a.area for a in poly1])
     total_p2_area = sum([b.area for b in poly2])
     for a in poly1:
         for b in poly2:
-            # print "a,b:",a,b
             inter_area += intersection_area(a, b)
 
     # if a.area > b.area:
@@ -113,7 +97,7 @@ def visualizeTilesSeparate(tiles,colorful=True):
                     plot_coords(region,color=c,fill_color=c)
                     # plot_coords(region,color=c,lw=1)
     #xylocs of the largest tile for estimating the obj size
-    #xlocs,ylocs = tiles[np.argmax([t.area for t in tiles])].exterior.coords.xy
+    xlocs,ylocs = tiles[np.argmax([t.area for t in tiles])].exterior.coords.xy
     # plt.ylim(np.min(ylocs)-50,np.max(ylocs)+50)
     # plt.gca().invert_yaxis()
 
@@ -145,7 +129,12 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
     print "start"
     verified_tiles = []
     overlap_area = 0.0  # rough number
+
+    step = 0
+
     for tidx in range(len(tiles)):
+        print '==================================================================='
+        print 'Starting new t'
         t = tiles[tidx]
         t_to_add = t
         # duplicated = False
@@ -161,97 +150,116 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
             plt.savefig("{}_before.png".format(tidx))
             plt.close()
         for vtidx in range(len(verified_tiles)):
+            print '------------------------------------------------------------------'
+            print 'Starting new vt_list'
             vt = verified_tiles[vtidx]
-            print 'Starting vt_list'
             if type(vt) == shapely.geometry.polygon.Polygon:
                 vt_list = [vt]
             for vt in vt_list:
-                print 'Starting new vt'
+                print 'Next vt in vt_list'
                 try:
                     # print "begin geo operations"
                     overlap_score = overlap(vt, t_to_add)
-                    if overlap_score > overlap_threshold:
-                    # if True:
+                    if overlap_score >= overlap_threshold:
+                    #if True:
                         # print "Duplicate tiles: ", tidx, vtidx, overlap_score, vt.area, t.area
                         # duplicated = True
                         # if overlap_score < 0.99:
-                        
-                        if PLOT and len(verified_tiles_new):
-                            print 'Before removing vt'
-                            plt.figure()
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            plot_coords(vt, linestyle='--', color='black', lw=1)
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
-                        try:
+                        if True:
+                            if PLOT and len(verified_tiles_new):
+                                print 'Before removing vt'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                plot_coords(vt, linestyle='--', color='red', lw=2)
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
+
+                            print 'Step: ', step
+                            step += 1
                             verified_tiles_new.remove(vt)
-                        except(ValueError):
-                            print "Pass, did not remove vt since vt not in verfified_tiles_new"
-                            pass
-                        if PLOT and len(verified_tiles_new):
-                            print 'After removing vt'
-                            plt.figure()
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
 
-                        # overlap_region = vt.intersection(t_to_add)
-                        overlap_regions = get_intersection_regions(vt, t_to_add)
-                        # diff_region = vt.difference(overlap_region)
-                        diff_regions = get_diff_regions(vt, overlap_regions)
+                            if PLOT and len(verified_tiles_new):
+                                print 'After removing vt'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
 
-                        if PLOT and len(verified_tiles_new):
-                            print 'Before adding overlap region'
-                            plt.figure()
-                            print "visualize tile separate"
-                            print verified_tiles_new
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            # plot_coords(overlap_region, linestyle='--', fill_color='black', hatch='-')
-                            print" overlap_regions"
-                            print overlap_regions
-                            plot_coords(overlap_regions, linestyle='--', fill_color='black', hatch='-')
-                            print "t_to_add"
-                            print t_to_add
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
+                            print 'Step: ', step
+                            step += 1
+                            # overlap_region = vt.intersection(t_to_add)
+                            overlap_regions = get_intersection_regions(vt, t_to_add)
+                            # diff_region = vt.difference(overlap_region)
+                            diff_regions = get_diff_regions(vt, overlap_regions)
+                            # t_to_add = t_to_add.difference(overlap_region)
+                            t_to_add = get_diff_regions(t_to_add, overlap_regions)
 
-                        # add_object_to_tiles(verified_tiles_new, overlap_region)
-                        add_object_to_tiles(verified_tiles_new, overlap_regions)
+                            if PLOT:
+                                print 'Checking overlap, diff, vt, and t_to_add'
+                                plt.figure()
+                                plot_coords(overlap_regions, linestyle='--', fill_color='black', hatch='-')
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plot_coords(diff_regions, linestyle='--', fill_color='green', hatch='o')
+                                plot_coords(vt, linestyle='--', color='red', lw=2)
+                                plt.show()
+                                plt.close()
 
-                        if PLOT:
-                            print 'After adding overlap region'
-                            plt.figure()
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
+                            if PLOT and len(verified_tiles_new):
+                                print 'Before adding overlap region'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                # plot_coords(overlap_region, linestyle='--', fill_color='black', hatch='-')
+                                plot_coords(overlap_regions, linestyle='--', fill_color='black', hatch='-')
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
 
-                        # t_to_add = t_to_add.difference(overlap_region)
-                        t_to_add = get_diff_regions(t_to_add, overlap_regions)
+                            print 'Step: ', step
+                            step += 1
+                            # add_object_to_tiles(verified_tiles_new, overlap_region)
+                            for ov_r in overlap_regions:
+                                add_object_to_tiles(verified_tiles_new, ov_r)
 
-                        if PLOT:
-                            print 'Before adding diff region'
-                            plt.figure()
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            # plot_coords(diff_region, linestyle='--', fill_color='green', hatch='-')
-                            plot_coords(diff_regions, linestyle='--', fill_color='green', hatch='-')
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
+                            if PLOT:
+                                print 'After adding overlap region'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
 
-                        # add_object_to_tiles(verified_tiles_new, diff_region)
-                        add_object_to_tiles(verified_tiles_new, diff_regions)
+                            if PLOT:
+                                print 'Before adding diff region'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                # plot_coords(diff_region, linestyle='--', fill_color='green', hatch='-')
+                                plot_coords(diff_regions, linestyle='--', fill_color='green', hatch='o')
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
 
-                        if PLOT:
-                            print 'After adding diff region'
-                            plt.figure()
-                            visualizeTilesSeparate(verified_tiles_new, colorful=False)
-                            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
-                            plt.show()
-                            plt.close()
+                            print 'Step: ', step
+                            step += 1
+                            # add_object_to_tiles(verified_tiles_new, diff_region)
+                            for df_r in diff_regions:
+                                add_object_to_tiles(verified_tiles_new, df_r)
+
+                            if PLOT:
+                                print 'After adding diff region'
+                                plt.figure()
+                                visualizeTilesSeparate(verified_tiles_new, colorful=False)
+                                # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+                                plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
+                                plt.show()
+                                plt.close()
 
                         if False:
                             plt.figure()
@@ -276,13 +284,18 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                     # print "end geo operations"
                 except(shapely.geos.TopologicalError):
                     print "Topological Error", tidx, vtidx
+
         # if not duplicated:
         #     verified_tiles_new.append(t)
+
+        print 'Step: ', step
+        step += 1
         if PLOT and len(verified_tiles_new):
             print 'Before adding t_to_add'
             plt.figure()
             visualizeTilesSeparate(verified_tiles_new, colorful=False)
-            plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='-')
+            # plot_coords(t_to_add, linestyle='--', fill_color='orange', hatch='x')
+            plot_coords(t_to_add, linestyle='--', color='orange', lw=2)
             plt.show()
             plt.close()
 
@@ -315,18 +328,10 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
 
 def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_color="", hatch='', show=False, invert_y=False):
     #Plot shapely polygon coord
-    #print "t1:",type(obj)
-    #print "tchecl:",type(obj)== shapely.geometry.collection.GeometryCollection
-      
     if type(obj) != shapely.geometry.MultiPolygon and type(obj) != list:
         obj = [obj]
-    #print type(obj)
+
     for ob in obj:
-        if type(ob)== shapely.geometry.collection.GeometryCollection: 
-            print "Cannot plot Geometry collection"
-            print ob.area
-            pkl.dump(ob,open("geo_collection.pkl",'w')) #these are zero-area objects, throw them away.
-            continue
         if ob.exterior is None:
             print 'Plotting bug: exterior is None (potentially a 0 area tile). Ignoring and continuing...'
             continue
@@ -340,29 +345,10 @@ def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_col
     if invert_y:
         plt.gca().invert_yaxis()
 
-# def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_color="", show=False, invert_y=False):
-#     #Plot shapely polygon coord
-#     if type(obj) != shapely.geometry.MultiPolygon:
-#         obj = [obj]
-
-#     for ob in obj:
-#         if ob.exterior is None:
-#             print 'Plotting bug: exterior is None (potentially a 0 area tile). Ignoring and continuing...'
-#             continue
-#         if reverse_xy:
-#             x, y = ob.exterior.xy
-#         else:
-#             y, x = ob.exterior.xy
-#         plt.plot(x, y, linestyle, linewidth=lw, color=color, zorder=1)
-#         if fill_color != "":
-#             plt.fill_between(x, y, facecolor=fill_color,  linewidth=lw, alpha=0.5)
-#     if invert_y:
-#         plt.gca().invert_yaxis()
-
 if __name__=='__main__':
-    #vtiles,BB = create_vtiles(45,10,121,PLOT=True)
-    # vtiles,BB = create_vtiles(10,10,121,PLOT=True)
-    vtiles,BB = create_vtiles(43,10,121, overlap_threshold=0,PLOT=False)
+    # vtiles,BB = create_vtiles(45,10,121,PLOT=True, overlap_threshold=0)
+    # vtiles,BB = create_vtiles(10,10,121,PLOT=False, overlap_threshold=0)
+    vtiles,BB = create_vtiles(43,10,121,PLOT=False, overlap_threshold=0.0)
     plt.figure()
     visualizeTilesSeparate(vtiles,colorful=False)
     plt.savefig("vtiles.png")

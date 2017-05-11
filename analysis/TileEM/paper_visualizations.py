@@ -1,5 +1,8 @@
 from TileEM_plot_toolbox import *
 from qualityBaseline import *
+worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
+sampleN_lst=worker_Nbatches.keys()
+Nsample_lst = worker_Nbatches.keys()
 
 def data_clean(df):
     df = df.rename(index=str,columns={'P [Jaccard [Self]]':'P [GT Jaccard]','R [Jaccard [Self]]':'R [GT Jaccard]',\
@@ -7,7 +10,13 @@ def data_clean(df):
                              'P [Recall [Self]]':'P [GT Recall]','R [Recall [Self]]':'R [GT Recall]',\
                             })
     return df
-
+def selected_attr2col_lst(selected_attr_lst, attr_only=['P','R','J']):
+    selected_col_lst =[]
+    for attr in selected_attr_lst:
+        if 'P' in attr_only: selected_col_lst.append("P [{}]".format(attr))
+        if 'R' in attr_only: selected_col_lst.append("R [{}]".format(attr))
+        if 'J' in attr_only: selected_col_lst.append("J [{}]".format(attr))
+    return selected_col_lst
 def plot_PR(Nsample,selected_attr_lst):
     df = pd.read_csv("sample{}_PR.csv".format(Nsample))
     df=data_clean(df)
@@ -19,12 +28,8 @@ def plot_PR(Nsample,selected_attr_lst):
     plt.ylabel("Precision",fontsize=14)
     plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 
-def plot_sample_worker_PR(selected_attr_lst,y_axis='Precision'):
+def plot_sample_worker_PR(selected_col_lst,y_axis='Precision'):
     plt.figure()
-    selected_col_lst =[]
-    for attr in selected_attr_lst:
-        if y_axis=="Precision":selected_col_lst.append("P [{}]".format(attr))
-        if y_axis=="Recall":selected_col_lst.append("R [{}]".format(attr))
     df_all = pd.DataFrame() #mean 
     df_all_std = pd.DataFrame() # std
     cols  = []

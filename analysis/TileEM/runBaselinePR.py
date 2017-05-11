@@ -236,7 +236,7 @@ elif mode=="concatenate_sample_table":
             #except(ZeroDivisionError):
             #    print "No data for worker=",Nworker
     batch_all_sample_data = pd.concat(batch_all_sample_data, axis=0, join='outer', join_axes=None, ignore_index=False, keys=None, levels=None, names=None, verify_integrity=False, copy=True)
-    ordered_keys = list(batch_all_sample_data.keys()[:1])+list(batch_all_sample_data.keys()[-2:])+list(batch_all_sample_data.keys()[1:-2]) 
-    print ordered_keys
-    batch_all_sample_data= batch_all_sample_data.reindex_axis(ordered_keys,axis=1)
+    #ordered_keys = list(batch_all_sample_data.keys()[:1])+list(batch_all_sample_data.keys()[-2:])+list(batch_all_sample_data.keys()[1:-2]) 
+    #print ordered_keys
+    #batch_all_sample_data= batch_all_sample_data.reindex_axis(ordered_keys,axis=1)
     batch_all_sample_data.to_csv("Tile_PR_all.csv")

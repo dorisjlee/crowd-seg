@@ -56,7 +56,7 @@ for Nworker in sampleN_lst:
             tiles = pkl.load(open("vtiles{}.pkl".format(objid)))
             for thresh in [-40,-20,0,20,40]:
                 try:
-                    Tstar_idx_lst = list(set(pkl.load(open("obj{0}/thresh{1}/iter_5/tid_list.pkl".format(objid,thresh)))))
+                    Tstar_idx_lst = list(set(pkl.load(open("obj{0}/thresh{1}/iter_4/tid_list.pkl".format(objid,thresh)))))
                     print "Working on obj{0}/thresh{1}/".format(objid,thresh)
                     #TileEMP,TileEMR = compute_PR(objid,np.array(Tstar_lst),tiles)
                     # Tile EM with adjacency

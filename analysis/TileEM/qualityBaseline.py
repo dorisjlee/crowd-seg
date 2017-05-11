@@ -353,6 +353,18 @@ def recall_from_list(test_list, base_poly):
     for test_poly in test_list:
         int_area += intersection_area(test_poly, base_poly)
     return (int_area / base_poly.area) if (base_poly.area != 0) else 0
+def prj_from_list(test_list, base_poly):
+    int_area = 0.0
+    test_poly_area = 0.0
+    for test_poly in test_list:
+        #print test_poly
+        #print base_poly
+        int_area += intersection_area(test_poly, base_poly)
+        test_poly_area += test_poly.area
+    precision = (int_area / test_poly_area) if (test_poly_area != 0) else 0
+    recall = (int_area / base_poly.area) if (base_poly.area != 0) else 0
+    jaccard = (int_area / (base_poly.area+test_poly_area-int_area)) if (test_poly.area != 0) else 0
+    return precision,recall,jaccard
 def intersection_area(poly1, poly2):
     intersection_poly = None
     try:

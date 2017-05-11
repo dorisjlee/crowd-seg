@@ -1,5 +1,6 @@
 from analysis_toolbox import *
 from qualityBaseline import *
+from shapely.validation import explain_validity
 import shapely
 img_info,object_tbl,bb_info,hit_info = load_info()
 
@@ -29,6 +30,9 @@ def get_intersection_regions(obj1, obj2):
             if type(int_rs) != shapely.geometry.MultiPolygon:
                 int_rs = [int_rs]
             for int_r in int_rs:
+                int_r = int_r.buffer(0)
+                if explain_validity(int_r).split("[")[0] == 'Self-intersection':
+                    int_r = int_r.buffer(-1e-10)
                 add_object_to_tiles(intersection_regions, int_r)
                 # intersection_regions.append(int_r)
 
@@ -50,6 +54,9 @@ def get_diff_regions(obj1, obj2):
         if type(diff_1) != shapely.geometry.MultiPolygon:
             diff_1 = [diff_1]
         for diff in diff_1:
+            diff = diff.buffer(0)
+            if explain_validity(diff).split("[")[0] == 'Self-intersection':
+                diff = diff.buffer(-1e-10)
             add_object_to_tiles(diff_regions, diff)
             # diff_regions.append(diff)
 
@@ -102,7 +109,7 @@ def visualizeTilesSeparate(tiles,colorful=True):
     # plt.gca().invert_yaxis()
 
 def create_vtiles(objid,sampleNworkers,random_state,tiles="",PRINT=False,SAVE=False,\
-                  tqdm_on=False,EXCLUDE_BBG=True,PLOT=True,load_existing_tiles_from_file=False, overlap_threshold=0.2):
+                  tqdm_on=False,EXCLUDE_BBG=True,PLOT=True,load_existing_tiles_from_file=False, overlap_threshold=0.0):
     # Ji_tbl (bb_info) is the set of all workers that annotated object i
     bb_objects = bb_info[bb_info["object_id"]==objid]
     if EXCLUDE_BBG: bb_objects =  bb_objects[bb_objects.worker_id!=3]
@@ -124,7 +131,16 @@ def create_vtiles(objid,sampleNworkers,random_state,tiles="",PRINT=False,SAVE=Fa
     print "Overlap ratio:",overlap_area/float(total_area)
     #pkl.dump(vtiles,open("{0}/vtiles{1}.pkl".format(DATA_DIR,objid),'w'))
     return vtiles, BB
-def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False):
+
+
+def PLOT_fn(step):
+    if step > 13 and step < 19:
+        return True
+    else:
+        return False
+
+
+def uniqify(tiles, overlap_threshold=0.0, SAVE=False, SAVEPATH=None, PLOT=False):
     # TODO: implement
     print "start"
     verified_tiles = []
@@ -161,12 +177,12 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                     # print "begin geo operations"
                     overlap_score = overlap(vt, t_to_add)
                     if overlap_score >= overlap_threshold:
-                    #if True:
+                    # if True:
                         # print "Duplicate tiles: ", tidx, vtidx, overlap_score, vt.area, t.area
                         # duplicated = True
                         # if overlap_score < 0.99:
                         if True:
-                            if PLOT and len(verified_tiles_new):
+                            if PLOT and PLOT_fn(step) and len(verified_tiles_new):
                                 print 'Before removing vt'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -180,7 +196,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             step += 1
                             verified_tiles_new.remove(vt)
 
-                            if PLOT and len(verified_tiles_new):
+                            if PLOT and PLOT_fn(step) and len(verified_tiles_new):
                                 print 'After removing vt'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -198,7 +214,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             # t_to_add = t_to_add.difference(overlap_region)
                             t_to_add = get_diff_regions(t_to_add, overlap_regions)
 
-                            if PLOT:
+                            if PLOT and PLOT_fn(step):
                                 print 'Checking overlap, diff, vt, and t_to_add'
                                 plt.figure()
                                 plot_coords(overlap_regions, linestyle='--', fill_color='black', hatch='-')
@@ -209,7 +225,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                                 plt.show()
                                 plt.close()
 
-                            if PLOT and len(verified_tiles_new):
+                            if PLOT and PLOT_fn(step) and len(verified_tiles_new):
                                 print 'Before adding overlap region'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -226,7 +242,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             for ov_r in overlap_regions:
                                 add_object_to_tiles(verified_tiles_new, ov_r)
 
-                            if PLOT:
+                            if PLOT and PLOT_fn(step):
                                 print 'After adding overlap region'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -235,7 +251,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                                 plt.show()
                                 plt.close()
 
-                            if PLOT:
+                            if PLOT and PLOT_fn(step):
                                 print 'Before adding diff region'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -252,7 +268,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
                             for df_r in diff_regions:
                                 add_object_to_tiles(verified_tiles_new, df_r)
 
-                            if PLOT:
+                            if PLOT and PLOT_fn(step):
                                 print 'After adding diff region'
                                 plt.figure()
                                 visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -290,7 +306,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
 
         print 'Step: ', step
         step += 1
-        if PLOT and len(verified_tiles_new):
+        if PLOT and PLOT_fn(step) and len(verified_tiles_new):
             print 'Before adding t_to_add'
             plt.figure()
             visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -301,7 +317,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
 
         add_object_to_tiles(verified_tiles_new, t_to_add)
 
-        if PLOT:
+        if PLOT and PLOT_fn(step):
             print 'After adding t_to_add'
             plt.figure()
             visualizeTilesSeparate(verified_tiles_new, colorful=False)
@@ -310,7 +326,7 @@ def uniqify(tiles, overlap_threshold=0.2, SAVE=False, SAVEPATH=None, PLOT=False)
             plt.close()
 
         verified_tiles = verified_tiles_new[:]
-        if PLOT:
+        if PLOT and PLOT_fn(step):
             plt.figure()
             plt.title("After {}".format(tidx))
             if True:
@@ -346,9 +362,9 @@ def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_col
         plt.gca().invert_yaxis()
 
 if __name__=='__main__':
-    # vtiles,BB = create_vtiles(45,10,121,PLOT=True, overlap_threshold=0)
-    # vtiles,BB = create_vtiles(10,10,121,PLOT=False, overlap_threshold=0)
-    vtiles,BB = create_vtiles(43,10,121,PLOT=False, overlap_threshold=0.0)
+    #vtiles,BB = create_vtiles(45,10,121,PLOT=False, overlap_threshold=0)
+    vtiles,BB = create_vtiles(10,10,121,PLOT=False, overlap_threshold=0)
+    # vtiles,BB = create_vtiles(43,10,121,PLOT=False, overlap_threshold=0.0)
     plt.figure()
     visualizeTilesSeparate(vtiles,colorful=False)
     plt.savefig("vtiles.png")

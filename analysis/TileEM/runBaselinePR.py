@@ -13,7 +13,7 @@ sampleN_lst=worker_Nbatches.keys()
 #mode="aggregate_sample_table"
 #mode="recompute_sample_batch_table"
 mode="concatenate_sample_table"
-base_dir= "stored_ptk_run"
+base_dir= "uniqueTiles"
 discard_obj_lst = [35,40,41]
 def majority_vote(objid,heuristic="50%"):
     #Compute PR for majority voted region
@@ -78,7 +78,7 @@ if mode =="recompute_sample_batch_table":
                     workers=pkl.load(open("worker{}.pkl".format(objid)))
                     filtered_df = df[(df["worker_id"].isin(workers))&(df["object_id"]==objid)] #only look at summarization scores of sampled workers
                     best_worker_BB = filtered_df[filtered_df[attr]==filtered_df[attr].max()]
-                    if objid not in [35,41]:
+                    if objid not in [35,41,40]:
                         tbl.append([objid,best_worker_BB["Precision [Self]"].values[0],best_worker_BB["Recall [Self]"].values[0]])
                     else:
                         tbl.append([objid,-1,-1])
@@ -209,23 +209,34 @@ elif mode =="aggregate_sample_table" :
             print "No data for worker=",Nworker 
 elif mode=="concatenate_sample_table":
     print "Concatenating Tables" 
+    batch_all_sample_data=[]
     for Nworker in sampleN_lst:
         print "Working on worker = ",Nworker
-        batch_all_data=[]
+        #batch_all_data=[]
         for batch_num in range(worker_Nbatches[Nworker]):
-            dir_name = "{0}/{1}worker_rand{2}".format(base_dir,Nworker,batch_num)
-            batch_i_data=pd.read_csv(dir_name+"/PR_tbl_all.csv",index_col=0)
+            dir_name = "{0}/{1}workers_rand{2}".format(base_dir,Nworker,batch_num)
+            batch_i_data=pd.read_csv(dir_name+"/Tile_PR.csv",index_col=0)
+	    #print dir_name
+	    #print batch_i_data.head()
             #Drop the object rows where the objects have bad vtiles to begin with
             bad_vtile_objs = list(problematic[(problematic["Nworker"]==Nworker)&(problematic["batch_num"]==batch_num)].objid)
             bad_vtile_objs.extend(discard_obj_lst) # Discard ambiguous objects
             batch_i_data=batch_i_data.drop(bad_vtile_objs,errors='ignore')
-
-            batch_all_data.append(batch_i_data)
-        try:
-            batch_all_data = pd.concat(batch_all_data, axis=0, join='outer', join_axes=None, ignore_index=False,
-              keys=None, levels=None, names=None, verify_integrity=False,
-              copy=True)
-            batch_all_data.to_csv("concat_sample{}_PR.csv".format(Nworker))
-        except(ZeroDivisionError):
-            print "No data for worker=",Nworker
- 
+	    if len(batch_i_data)!=0:
+		print "Added :",dir_name
+		batch_i_data["Nworker"]=Nworker
+		batch_i_data["batch_num"]=batch_num
+                #batch_all_data.append(batch_i_data)
+     	        batch_all_sample_data.append(batch_i_data)
+            #try:
+            #    batch_all_data = pd.concat(batch_all_data, axis=0, join='outer', join_axes=None, ignore_index=False,
+            #  keys=None, levels=None, names=None, verify_integrity=False,
+            #  copy=True)
+            #    batch_all_data.to_csv("concat_sample{}_PR.csv".format(Nworker))
+            #except(ZeroDivisionError):
+            #    print "No data for worker=",Nworker
+    batch_all_sample_data = pd.concat(batch_all_sample_data, axis=0, join='outer', join_axes=None, ignore_index=False, keys=None, levels=None, names=None, verify_integrity=False, copy=True)
+    #ordered_keys = list(batch_all_sample_data.keys()[:1])+list(batch_all_sample_data.keys()[-2:])+list(batch_all_sample_data.keys()[1:-2]) 
+    #print ordered_keys
+    #batch_all_sample_data= batch_all_sample_data.reindex_axis(ordered_keys,axis=1)
+    batch_all_sample_data.to_csv("Tile_PR_all.csv")

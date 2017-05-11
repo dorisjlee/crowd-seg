@@ -1,7 +1,12 @@
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
 from analysis_toolbox import *
 from qualityBaseline import *
 from shapely.validation import explain_validity
 import shapely
+from sample_worker_seeds import sample_specs
+
 img_info,object_tbl,bb_info,hit_info = load_info()
 
 def add_object_to_tiles(tiles, obj):
@@ -116,6 +121,7 @@ def create_vtiles(objid,sampleNworkers,random_state,tiles="",PRINT=False,SAVE=Fa
     # Sampling Data from Ji table
     if sampleNworkers>0 and sampleNworkers<len(bb_objects):
         bb_objects = bb_objects.sample(n=sampleNworkers,random_state=random_state)
+    worker_lst = list(bb_objects.worker_id)
     # Create a list of polygons based on worker BBs
     xylocs = [list(zip(*process_raw_locs([x,y]))) for x,y in zip(bb_objects["x_locs"],bb_objects["y_locs"])]
     BB = []
@@ -128,8 +134,9 @@ def create_vtiles(objid,sampleNworkers,random_state,tiles="",PRINT=False,SAVE=Fa
     #     #worker_lst= pkl.load(open("{0}/worker{1}.pkl".format(DATA_DIR,objid),'r'))
     # elif tiles=="":
     vtiles,overlap_area,total_area=uniqify(BB, overlap_threshold=overlap_threshold, SAVE=False, SAVEPATH=None, PLOT=PLOT)
-    print "Overlap ratio:",overlap_area/float(total_area)
+    if PRINT: print "Overlap ratio:",overlap_area/float(total_area)
     #pkl.dump(vtiles,open("{0}/vtiles{1}.pkl".format(DATA_DIR,objid),'w'))
+<<<<<<< HEAD
     return vtiles, BB
 
 
@@ -335,7 +342,7 @@ def uniqify(tiles, overlap_threshold=0.0, SAVE=False, SAVEPATH=None, PLOT=False)
             plt.close()
             # plt.show()
             # plt.close()
-        
+
     if SAVE:
         pickle.dump(verified_tiles, open(SAVEPATH, 'w'))
 
@@ -360,12 +367,112 @@ def plot_coords(obj, color='red', reverse_xy=False, linestyle='-',lw=0, fill_col
             plt.fill_between(x, y, facecolor=fill_color, hatch=hatch, linewidth=lw, alpha=0.5)
     if invert_y:
         plt.gca().invert_yaxis()
+def createObjIndicatorMatrix(objid,tiles,worker_lst, PLOT=False,PRINT=False,SAVE=False,EXCLUDE_BBG=True,overlap_threshold=0.8,tile_only=False,tqdm_on=False):
 
+    # Convert set of tiles to indicator matrix for all workers and tiles
+    # by checking if the worker's BB contains the tile pieces
+    # The indicator matrix is a (N + 1) X M matrix,
+    # with first N rows indicator vectors for each annotator and
+    # the last row being region sizes
+    M = len(tiles)
+    N = len(worker_lst)
+    if PRINT:
+        print "Number of non-overlapping tile regions (M) : ",M
+        print "Number of workers (N) : ",N
+    indicator_matrix = np.zeros((N+1,M))
+    bb_objects = bb_info[bb_info["object_id"]==objid]
+    for  wi in range(N):
+        worker_id = worker_lst[wi]
+        worker_bb_info = bb_objects[bb_objects["worker_id"]==worker_id]
+        worker_BB_polygon = Polygon(zip(*process_raw_locs([worker_bb_info["x_locs"].values[0],worker_bb_info["y_locs"].values[0]]))).buffer(0)
+
+        # Check if worker's polygon contains this tile
+        for tile_i in range(M):
+            tile = tiles[tile_i]
+            if worker_BB_polygon.contains(tile.centroid):
+                indicator_matrix[wi][tile_i]=1
+            else:
+                try:
+                        tileBB_overlap = tile.intersection(worker_BB_polygon).area/float(tile.area)
+                        if tileBB_overlap>=overlap_threshold:
+                                indicator_matrix[wi][tile_i]=1
+                except(shapely.geos.TopologicalError):
+                        pass
+
+    # The last row of the indicator matrix is the tile area
+    for tile_i in range(M):
+        tile=tiles[tile_i]
+        indicator_matrix[-1][tile_i]=tile.area
+    # Debug plotting all tiles that have not been voted by workers
+    all_unvoted_tiles=np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0]
+    if PRINT:
+        print "all unvoted tiles:",all_unvoted_tiles
+        print "all unvoted workers:",np.where(np.sum(indicator_matrix,axis=1)==0)[0]
+    if PLOT or PRINT:
+        print "Object ",objid
+        sanity_check(indicator_matrix,PLOT)
+    if SAVE:
+        pkl.dump(worker_lst,open('{0}/worker{1}.pkl'.format(DATA_DIR,objid),'w'))
+        pkl.dump(indicator_matrix,open('{0}/indMat{1}.pkl'.format(DATA_DIR,objid),'w'))
+    return worker_lst,tiles,indicator_matrix
+def sanity_check(indicator_matrix,PLOT=False):
+    print "Check that there are no all-zero rows in indicator matrix:" , len(np.where(np.sum(indicator_matrix,axis=1)==0)[0])==0
+    print "Check that there are no all-zero columns in indicator matrix:" , len(np.where(np.sum(indicator_matrix[:-1],axis=0)==0)[0])==0
+    if PLOT:
+        plt.figure()
+        plt.title("Tile Area")
+        sorted_indicator_matrix = indicator_matrix[:,indicator_matrix[-1].argsort()]
+        plt.semilogy(sorted_indicator_matrix[-1])
+        plt.plot(sorted_indicator_matrix[-1])
+        plt.figure()
+        plt.title("Indicator Matrix")
+        #Plot all excluding last row (area)
+        #plt.imshow(sorted_indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
+        plt.ylabel("Worker #")
+        plt.xlabel("Tile #")
+        plt.imshow(indicator_matrix[:-1],cmap="cool",interpolation='none', aspect='auto')
+        plt.colorbar()
 if __name__=='__main__':
-    #vtiles,BB = create_vtiles(45,10,121,PLOT=False, overlap_threshold=0)
-    vtiles,BB = create_vtiles(10,10,121,PLOT=False, overlap_threshold=0)
-    # vtiles,BB = create_vtiles(43,10,121,PLOT=False, overlap_threshold=0.0)
-    plt.figure()
-    visualizeTilesSeparate(vtiles,colorful=False)
-    plt.savefig("vtiles.png")
-    plt.close()
+    worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
+    sampleN_lst=worker_Nbatches.keys()
+    #sample_lst = sample_specs.keys()[6:]
+    #['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1', '20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
+    #sample_lst = ['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4']
+    #sample_lst = ['5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1']
+    #sample_lst = ['20worker_rand2', '20worker_rand3', '5workers_rand5', '5workers_rand2']
+    #sample_lst = ['15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
+    #sample_lst = ['15workers_rand2', '15workers_rand3', '15workers_rand0','15workers_rand3']
+    #sample_lst = ['10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2']
+    #sample_lst = ['10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4']
+    #sample_lst = ['20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0']
+    sample_lst = ['5workers_rand4', '5workers_rand5', '5workers_rand2','20worker_rand1']
+    # vtiles,BB = create_vtiles(45,10,121,PLOT=True, overlap_threshold=0)
+    # vtiles,BB = create_vtiles(10,10,121,PLOT=False, overlap_threshold=0)
+
+    sample = '25worker_rand1'#/vtiles34.pkl
+    #sample = '10workers_rand7'
+    if True:
+    #for sample in sample_lst :
+	sampleNworkers=int(sample.split("w")[0])
+	print "sampleNworkers:",sampleNworkers
+        DATA_DIR='uniqueTiles/'+sample
+	if not os.path.isdir(DATA_DIR):
+	    print "created: ",sampleNworkers
+       	    os.mkdir(DATA_DIR)
+	#os.chdir(sample)
+	DATA_DIR='uniqueTiles/'+sample
+	# Look up seeds
+	seed = sample_specs[sample][1]
+	print "Seed:",seed
+	for objid in range(36,48):#range(1,48):
+	    print "Creating unique tiles for ", objid
+	    vtiles,worker_lst = create_vtiles(objid,sampleNworkers,seed,PLOT=False, overlap_threshold=0.0)
+    	    pkl.dump(vtiles,open("{0}/vtiles{1}.pkl".format(DATA_DIR,objid),'w'))
+	    #pkl.dump(workers,open("{0}/workers{1}.pkl".format(DATA_DIR,objid),'w'))
+	    print "Creating indicator matrix"
+	    createObjIndicatorMatrix(objid,vtiles,worker_lst,PRINT=True,SAVE=True,tqdm_on= True)
+
+    #plt.figure()
+    #visualizeTilesSeparate(vtiles,colorful=False)
+    #plt.savefig("vtiles.png")
+    #plt.close()

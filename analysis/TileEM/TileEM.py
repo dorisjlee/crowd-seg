@@ -295,27 +295,34 @@ def runTileEM(objid,Tprimefunc,pTprimefunc,Qjfunc,A_percentile,Niter,NTprimes=10
 if __name__ =="__main__":
     #DATA_DIR="final_all_tiles"
     import time
+    base_dir = "uniqueTiles" 
     DEBUG=True
     #Experiments
     #mode='test'
     mode='all'
     if mode=="all":
-        
         worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
         sampleN_lst=worker_Nbatches.keys()
-        for Nworker in sampleN_lst[2:]:
+        for Nworker in sampleN_lst:
             for batch_id in range(worker_Nbatches[Nworker]):
-                DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
+                DATA_DIR=base_dir+"/{0}workers_rand{1}".format(Nworker,batch_id)
                 print "Working on Batch: ",DATA_DIR
                 for objid in object_lst:
-                    try:
-                        print "Working on Object #",objid
-                        #end = time.time()
-                        runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=DEBUG,PLOT_LIKELIHOOD=False)
-                        #end2 = time.time()
-                        #print "Time Elapsed: ",end2-end
-                    except(shapely.geos.PredicateError):
-                        print "Failed Object #",objid 
+		    if not os.path.isfile(DATA_DIR+"/pNotInT_lst_obj{}_iter9.pkl".format(objid)) :#and  objid!=35:
+                        try:
+                             print "Working on Object #",objid
+                             #end = time.time()
+			     try:
+                                 runTileAdjacentMLConstruction(objid,workerErrorfunc="GTLSA",Qjfunc=QjGTLSA,A_percentile=-1,Niter=10,DEBUG=DEBUG,PLOT_LIKELIHOOD=False)
+			     except(IOError):
+		 	         if objid==35:
+				     pass
+                             #end2 = time.time()
+                             #print "Time Elapsed: ",end2-end
+                        except(shapely.geos.PredicateError):
+                             print "Failed Object #",objid
+     		    else:
+		        print "Already ran: ",DATA_DIR+"/pNotInT_lst_obj{}_iter9.pkl".format(objid)
     else:
         Nworker = sys.argv[1]
         batch_id = sys.argv[2] 
@@ -324,7 +331,7 @@ if __name__ =="__main__":
         # Nworker=5
         # batch_id =0
         # objid=1
-        DATA_DIR="stored_ptk_run/{0}worker_rand{1}".format(Nworker,batch_id)
+        DATA_DIR=base_dir+"/{0}workers_rand{1}".format(Nworker,batch_id)
         print "Working on Batch: ",DATA_DIR
         #for objid in object_lst:
         

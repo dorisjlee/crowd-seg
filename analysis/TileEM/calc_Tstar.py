@@ -14,7 +14,7 @@ import glob
 import os
 import time
 BASE_DIR = '/home/jlee782/crowd-seg/analysis/TileEM/'
-ALL_SAMPLES_DIR = BASE_DIR + 'stored_ptk_run'
+ALL_SAMPLES_DIR = BASE_DIR + 'uniqueTiles'
 
 
 def get_obj_to_img_id():
@@ -188,8 +188,12 @@ def calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param):
 def calc_all_Tstars(indir,object_lst=range(1, 48),thres_lst=[1]):
     # objects = get_obj_to_img_id().keys()
     sample_batch_lst = glob.glob('{}/*/'.format(indir))
-    #print sample_batch_lst 
-    for sample_path in sample_batch_lst[1:]:#sample_batch_lst[10:]: 
+    #print sample_batch_lst
+    #sample_batch_lst = ['20workers_rand0','20workers_rand1','20workers_rand2','20workers_rand3']
+    #sample_batch_lst = ['5workers_rand8','10workers_rand7','25workers_rand1','30workers_rand0']
+    #thres_lst = [0,4,2,-4,-2]
+    for sample_path in sample_batch_lst:#sample_batch_lst[10:]:
+        #sample_path = '/home/jlee782/crowd-seg/analysis/TileEM/uniqueTiles/'+sample_path+'/' 
 	start = time.time() 
         print '======================================================'
         sample_name = sample_path.split('/')[-2]
@@ -209,7 +213,7 @@ def calc_all_Tstars(indir,object_lst=range(1, 48),thres_lst=[1]):
             for pInT_iter_path in glob.glob('{}pInT_lst_obj{}_iter*.pkl'.format(sample_path, objid)): 
                 # load all data
                 iter_num = int(pInT_iter_path.split('.')[-2][-1])
-		if iter_num > 5: continue
+		if iter_num != 4: continue
                 print 'Doing iter num ', iter_num
                 pInT = pickle.load(open(pInT_iter_path))
                 pNotInT = pickle.load(open('{}pNotInT_lst_obj{}_iter{}.pkl'.format(sample_path, objid, iter_num)))
@@ -217,25 +221,30 @@ def calc_all_Tstars(indir,object_lst=range(1, 48),thres_lst=[1]):
                 # continue
                 for thresh_param in thres_lst:
 		    print "Threshold: ",thresh_param
-                    output_tile_ids = calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param)
+                    #output_tile_ids = calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param)
                     # print 'output tile ids: ', output_tile_ids
                     outdir = sample_path + 'obj{}/'.format(objid) + 'thresh{}/'.format(int(thresh_param * 10)) + 'iter_{}/'.format(iter_num)
                     if not os.path.isdir(outdir):
                         os.makedirs(outdir)
-                    with open('{}/tid_list.pkl'.format(outdir), 'w') as fp:
-                        fp.write(pickle.dumps(output_tile_ids))
+ 			output_tile_ids = calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param)
+			with open('{}/tid_list.pkl'.format(outdir), 'w') as fp:
+                            fp.write(pickle.dumps(output_tile_ids))
+		    else:
+			print "Already ran: ",outdir
+                    #with open('{}/tid_list.pkl'.format(outdir), 'w') as fp:
+                    #    fp.write(pickle.dumps(output_tile_ids))
                     #with open('{}/Tstar.pkl'.format(outdir), 'w') as fp:
                     #    fp.write(pickle.dumps(Tstar))
 
                     # sanity check plots
-                    plt.figure()
-                    tids = pickle.load(open('{}/tid_list.pkl'.format(outdir)))
-                    final_tiles = [tiles[tid] for tid in tids]
-                    plot_coords(get_gt(objid), color='red', fill_color='red')
-                    visualizeTilesSeparate(final_tiles, colorful=False)
-                    plot_coords(tiles[seed_tile], color='blue', fill_color='blue')
-                    plt.savefig('{}/out.png'.format(outdir))
-                    plt.close()
+                    #plt.figure()
+                    #tids = pickle.load(open('{}/tid_list.pkl'.format(outdir)))
+                    #final_tiles = [tiles[tid] for tid in tids]
+                    #plot_coords(get_gt(objid), color='red', fill_color='red')
+                    #visualizeTilesSeparate(final_tiles, colorful=False)
+                    #plot_coords(tiles[seed_tile], color='blue', fill_color='blue')
+                    #plt.savefig('{}/out.png'.format(outdir))
+                    #plt.close()
 
             print '-----------------------------------------------------'
 	end=time.time()

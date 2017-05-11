@@ -6,8 +6,8 @@ from qualityBaseline import *
 from calc_Tstar import * 
 import os 
 import time 
-base_dir= "stored_ptk_run"
-PR_non_adjacency = pd.read_csv("COMPILED_PR_nadj.csv")
+base_dir= "uniqueTiles"
+#PR_non_adjacency = pd.read_csv("COMPILED_PR_nadj.csv")
 start = time.time()
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
@@ -28,16 +28,21 @@ def majority_vote(objid,heuristic="50%"):
     elif heuristic=="topPercentile":
         percentile=95
         tidx=np.where(votes>np.percentile(votes,percentile))[0]
-    P,R = compute_PR(objid,tidx,tiles)
-    if len(tidx)==0:
+    ground_truth_match = my_BBG[my_BBG.object_id==objid]
+    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    BBG = shapely.geometry.Polygon(zip(x_locs,y_locs))
+    tile_lst = [tiles[tidx] for tidx in Tstar_idx_lst]
+    P,R,J = prj_from_list(tile_lst,BBG)
+    #P,R = compute_PR(objid,tidx,tiles)
+    if len(tile_lst)==0:
         P=0
         R=0
-    return P,R
+    return P,R,J
 start = time.time()
 for Nworker in sampleN_lst:
     for batch_num in range(worker_Nbatches[Nworker]):
-        dir_name = "{0}worker_rand{1}".format(Nworker,batch_num)
-        print "Working on :", dir_name
+        dir_name = "{0}workers_rand{1}".format(Nworker,batch_num)
+        print "Working on sample :", dir_name
         os.chdir(base_dir+"/"+dir_name)
         #Tile
         tbl=[]
@@ -56,33 +61,26 @@ for Nworker in sampleN_lst:
                     #TileEMP,TileEMR = compute_PR(objid,np.array(Tstar_lst),tiles)
                     # Tile EM with adjacency
                     Tstar_lst = [tiles[tidx] for tidx in Tstar_idx_lst]
-                    TileEMP = precision_from_list(Tstar_lst,BBG)
-                    TileEMR = recall_from_list(Tstar_lst,BBG)
+                    TileEMP,TileEMR,TileEMJ = prj_from_list(Tstar_lst,BBG)
                     # Tile EM without adjacency
-                    selected_PR = PR_non_adjacency[(PR_non_adjacency["num_workers"]==Nworker)&(PR_non_adjacency["sample_num"]==batch_num)&\
-                                     (PR_non_adjacency["objid"]==objid)&(PR_non_adjacency["iter_num"]==5)&\
-                                     (PR_non_adjacency["thresh"]==thresh)]
-                    TileEMP_NA = float(selected_PR["precision"])
-                    TileEMR_NA = float(selected_PR["recall"])
-		    # Pixel EM 
-		    PR_pixelEM = pd.read_csv("pixel_em/full_PR_table.csv")
-		    PR_pixelEMi =PR_pixelEM[(PR_pixelEM["num_workers"]==Nworker)&(PR_pixelEM["sample_num"]==batch_num)&\
-					(PR_pixelEM["objid"]==objid)&(PR_pixelEM["thresh"]==thresh)]
-		    PixelEMP= float(PR_pixelEMi["EM_precision"]) 
-		    PixelEMR= float(PR_pixelEMi["EM_recall"])
-                    tmp_tbl.extend([TileEMP,TileEMR,TileEMP_NA,TileEMR_NA,PixelEMP,PixelEMR])
+                    #selected_PR = PR_non_adjacency[(PR_non_adjacency["num_workers"]==Nworker)&(PR_non_adjacency["sample_num"]==batch_num)&\
+                    #                 (PR_non_adjacency["objid"]==objid)&(PR_non_adjacency["iter_num"]==5)&\
+                    #                 (PR_non_adjacency["thresh"]==thresh)]
+                    #TileEMP_NA = float(selected_PR["precision"])
+                    #TileEMR_NA = float(selected_PR["recall"])
+                    tmp_tbl.extend([TileEMP,TileEMR,TileEMJ])#,TileEMP_NA,TileEMR_NA])
                     if i==0: 
-                        col_lst.extend(["P [TileEM thres={}]".format(thresh),"R [TileEM thres={}]".format(thresh),\
-                                    "P [TileEM NA thres={}]".format(thresh),"R [TileEM NA thres={}]".format(thresh)])
+                        col_lst.extend(["P [TileEM thres={}]".format(thresh),"R [TileEM thres={}]".format(thresh),"J [TileEM thres={}]".format(thresh)])
+					#,\ "P [TileEM NA thres={}]".format(thresh),"R [TileEM NA thres={}]".format(thresh)])
                 except(IOError):
                     print "No file exist: obj{0}/thresh{1}/iter_5/tid_list.pkl".format(objid,thresh)
                     pass
             # Majority Vote
-            PMVT,RMVT = majority_vote(objid,heuristic="50%")
-            PMVTtopk,RMVTtopk = majority_vote(objid,heuristic="topk")
-            PMVTtopP,RMVTtopP = majority_vote(objid,heuristic="topPercentile")
-            tmp_tbl.extend([PMVT,RMVT,PMVTtopk,RMVTtopk,PMVTtopP,RMVTtopP])
-            if i==0: col_lst.extend(["P [MVT]","R [MVT]","P [MVTtop10]","R [MVTtop10]","P [MVTtop95%]","R [MVTtop95%]"])
+            PMVT,RMVT,JMVT = majority_vote(objid,heuristic="50%")
+            #PMVTtopk,RMVTtopk = majority_vote(objid,heuristic="topk")
+            #PMVTtopP,RMVTtopP = majority_vote(objid,heuristic="topPercentile")
+            tmp_tbl.extend([PMVT,RMVT,JMVT])#,PMVTtopk,RMVTtopk,PMVTtopP,RMVTtopP])
+            if i==0: col_lst.extend(["P [MVT]","R [MVT]","J [MVT]"])#,"P [MVTtop10]","R [MVTtop10]","P [MVTtop95%]","R [MVTtop95%]"])
             tbl.append(tmp_tbl) #[objid,TileEMP,TileEMR,PMVT,RMVT,PMVTtopk,RMVTtopk,PMVTtopP,RMVTtopP]
         Tile_df = pd.DataFrame(tbl,columns=col_lst)
         Tile_df.to_csv("Tile_PR.csv")

@@ -14,7 +14,7 @@ import glob
 import os
 import time
 BASE_DIR = '/home/jlee782/crowd-seg/analysis/TileEM/'
-ALL_SAMPLES_DIR = BASE_DIR + 'stored_ptk_run'
+ALL_SAMPLES_DIR = BASE_DIR + 'uniqueTiles'
 
 
 def get_obj_to_img_id():
@@ -188,8 +188,11 @@ def calc_Tstar(tiles, pInT, pNotInT, seed_tile, thresh_param):
 def calc_all_Tstars(indir,object_lst=range(1, 48),thres_lst=[1]):
     # objects = get_obj_to_img_id().keys()
     sample_batch_lst = glob.glob('{}/*/'.format(indir))
-    #print sample_batch_lst 
-    for sample_path in sample_batch_lst[1:]:#sample_batch_lst[10:]: 
+    #print sample_batch_lst
+    sample_batch_lst = ['20workers_rand0','20workers_rand1','20workers_rand2','20workers_rand3']
+    #sample_batch_lst = ['5workers_rand8','10workers_rand7','25workers_rand1','30workers_rand0']
+    for sample_path in sample_batch_lst:#sample_batch_lst[10:]:
+        sample_path = '/home/jlee782/crowd-seg/analysis/TileEM/uniqueTiles/'+sample_path+'/' 
 	start = time.time() 
         print '======================================================'
         sample_name = sample_path.split('/')[-2]

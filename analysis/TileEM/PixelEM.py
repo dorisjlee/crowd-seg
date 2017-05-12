@@ -199,6 +199,32 @@ def worker_prob_correct(w_mask, gt_mask):
         len(np.where(w_mask == gt_mask)[0])
     ) / (len(gt_mask[0]) * len(gt_mask))
 
+def GTworker_prob_correct(w_mask, gt_mask):
+    gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1))[0])
+    gt_total = len(np.where(gt_mask==1)[0])
+    ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0))[0])
+    ngt_total = len(np.where(gt_mask==0)[0])
+    qp = float(gt_Ncorrect)/float(gt_total)
+    qn = float(ngt_Ncorrect)/float(ngt_total)
+    return qp,qn
+
+
+def GTLSAworker_prob_correct(w_mask, gt_mask,small_mask,large_mask):
+    large_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(large_mask==1))[0])
+    large_gt_total = len(np.where((gt_mask==1) &(large_mask==1)[0]))
+    large_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (large_mask==1))[0])
+    large_ngt_total = len(np.where((gt_mask==0) &(large_mask==1)) [0])
+
+    small_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(small_mask==1))[0])
+    small_gt_total = len(np.where((gt_mask==1) &(small_mask==1)[0]))
+    small_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (small_mask==1))[0])
+    small_ngt_total = len(np.where((gt_mask==0) &(small_mask==1)) [0])
+
+    qp1 = float(large_gt_Ncorrect)/float(large_gt_total)
+    qn1 = float(large_ngt_Ncorrect)/float(large_ngt_total)
+    qp2 = float(small_gt_Ncorrect)/float(small_gt_total)
+    qn2 = float(small_ngt_Ncorrect)/float(small_ngt_total)
+    return qp1,qn1,qp2,qn2
 
 def mask_log_probabilities(worker_masks, worker_qualities):
     worker_ids = worker_qualities.keys()
@@ -212,17 +238,63 @@ def mask_log_probabilities(worker_masks, worker_qualities):
     for i in range(len(worker_masks[worker_ids[0]])):
         for j in range(len(worker_masks[worker_ids[0]][0])):
             for wid in worker_ids:
-                log_probability_in_mask[i][j] += np.log10(
+                log_probability_in_mask[i][j] += np.log(
                     worker_qualities[wid] if worker_masks[wid][i][j] == 1
                     else (1.0 - worker_qualities[wid])
                 )
-                log_probability_not_in_mask[i][j] += np.log10(
+                log_probability_not_in_mask[i][j] += np.log(
                     (1.0 - worker_qualities[wid]) if worker_masks[wid][i][j] == 1
                     else worker_qualities[wid]
                 )
     return log_probability_in_mask, log_probability_not_in_mask
+def GTLSAmask_log_probabilities(worker_masks, qp,qn):
+    worker_ids = worker_qualities.keys()
+    log_probability_in_mask = np.zeros((
+        len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
+    ))
+    log_probability_not_in_mask = np.zeros((
+        len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
+    ))
 
+    for i in range(len(worker_masks[worker_ids[0]])):
+        for j in range(len(worker_masks[worker_ids[0]][0])):
+            for wid in worker_ids:
+                qp1i = qp1[wid]
+                qn1i = qn1[wid]
+                qp2i = qp2[wid]
+                qn2i = qn2[wid]
+                ljk = worker_masks[wid][i][j]
+                if ljk==1 :
+                    log_probability_in_mask[i][j] += np.log(qpi)
+                    log_probability_not_in_mask[i][j] += np.log(1-qni)
+                else:
+                    log_probability_not_in_mask[i][j] += np.log(qni)
+                    log_probability_in_mask[i][j] += np.log(1-qpi)
+    return log_probability_in_mask, log_probability_not_in_mask
 
+def GTmask_log_probabilities(worker_masks, qp,qn):
+    worker_ids = worker_qualities.keys()
+    log_probability_in_mask = np.zeros((
+        len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
+    ))
+    log_probability_not_in_mask = np.zeros((
+        len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
+    ))
+
+    for i in range(len(worker_masks[worker_ids[0]])):
+        for j in range(len(worker_masks[worker_ids[0]][0])):
+            for wid in worker_ids:
+                qpi = qp[wid]
+                qni = qn[wid]
+                ljk = worker_masks[wid][i][j]
+                # tjkInT = gt_mask[i][j]
+                if ljk==1 :
+                    log_probability_in_mask[i][j] += np.log(qpi)
+                    log_probability_not_in_mask[i][j] += np.log(1-qni)
+                else:
+                    log_probability_not_in_mask[i][j] += np.log(qni)
+                    log_probability_in_mask[i][j] += np.log(1-qpi)
+    return log_probability_in_mask, log_probability_not_in_mask
 def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=0):
     gt_est_mask = np.zeros((len(log_probability_in_mask), len(log_probability_in_mask[0])))
 
@@ -231,7 +303,95 @@ def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh
         gt_est_mask[passing_xs[i]][passing_ys[i]] = 1
 
     return gt_est_mask
+def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
+    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
+        print "Already ran, Skipped"
+        return
+    # initialize MV mask
+    gt_est_mask = get_MV_mask(sample_name, objid)
+    worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+    for it in range(num_iterations):
+        qp1 = dict()
+        qn1 = dict()
+        qp2 = dict()
+        qn2 = dict()
+        for wid in worker_masks.keys():
+            qp1[wid],qn1[wid],qp2[wid],qn2[wid] = GTLSAworker_prob_correct(worker_masks[wid], gt_est_mask)
+    if load_p_in_mask:
+        #print "loaded pInT" 
+        log_probability_in_mask=pkl.load(open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it)))
+        log_probability_not_in_mask =pkl.load(open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it)))    
+    else: 
+        #Compute pInMask and pNotInMask 
+        log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2)
+        with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_in_mask))
+            with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_not_in_mask))
+        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+        with open('{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
+            fp.write(pickle.dumps(gt_est_mask))
+    with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_in_mask))
+    with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_not_in_mask))
+    pickle.dump(open('{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    pickle.dump(open('{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    pickle.dump(open('{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    pickle.dump(open('{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    
+    plt.figure()
+    plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
+    plt.colorbar()
+    plt.savefig('{}GTLSA_EM_mask_thresh{}.png'.format(outdir,thresh))
+    # Compute PR mask based on the EM estimate mask from the last iteration
+    [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+    with open('{}GTLSA_EM_prj_thresh{}.json'.format(outdir,thresh), 'w') as fp:
+        fp.write(json.dumps([p, r, j]))
 
+def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
+    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
+        print "Already ran, Skipped"
+        return
+    # initialize MV mask
+    gt_est_mask = get_MV_mask(sample_name, objid)
+    worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+    for it in range(num_iterations):
+        qp = dict()
+        qn = dict()
+        for wid in worker_masks.keys():
+            qp[wid],qn[wid] = GTworker_prob_correct(worker_masks[wid], gt_est_mask)
+    if load_p_in_mask:
+        #print "loaded pInT" 
+        log_probability_in_mask=pkl.load(open('{}GT_p_in_mask_{}.pkl'.format(outdir, it)))
+        log_probability_not_in_mask =pkl.load(open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it)))    
+    else: 
+        #Compute pInMask and pNotInMask 
+        log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
+        with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_in_mask))
+            with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_not_in_mask))
+        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+        with open('{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
+            fp.write(pickle.dumps(gt_est_mask))
+    with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_in_mask))
+    with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_not_in_mask))
+    pickle.dump(open('{}GT_qp_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    pickle.dump(open('{}GT_qn_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+
+    plt.figure()
+    plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
+    plt.colorbar()
+    plt.savefig('{}GT_EM_mask_thresh{}.png'.format(outdir,thresh))
+    # Compute PR mask based on the EM estimate mask from the last iteration
+    [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+    with open('{}GT_EM_prj_thresh{}.json'.format(outdir,thresh), 'w') as fp:
+        fp.write(json.dumps([p, r, j]))
 
 def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
 #    if os.path.exist('{}EM_pr_thresh{}.json'.format(outdir,thresh)):
@@ -240,7 +400,14 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     # initialize MV mask
     #gt_est_mask = get_MV_mask(sample_name, objid)
     #worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
-
+    # if model=="basic":
+    #     worker_error_model = worker_prob_correct
+    #     worker_prob_model = mask_log_probabilities
+    # elif model =="GT":
+    #     worker_error_model = GTworker_prob_correct
+    #     worker_prob_model = GTmask_log_probabilities
+    # elif model =="GTLSA":
+    #     pass
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
     if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
         print "Already ran, Skipped"
@@ -264,13 +431,14 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
             with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
                 fp.write(pickle.dumps(log_probability_not_in_mask))
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
-        #with open('{}p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-        #    fp.write(pickle.dumps(log_probability_in_mask))
-        #with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-        #    fp.write(pickle.dumps(log_probability_not_in_mask))
+        with open('{}p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_in_mask))
+        with open('{}p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+           fp.write(pickle.dumps(log_probability_not_in_mask))
         with open('{}gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
             fp.write(pickle.dumps(gt_est_mask))
 
+    pickle.dump(open('{}Qj_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()

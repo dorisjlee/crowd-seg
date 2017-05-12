@@ -3,6 +3,23 @@ from qualityBaseline import *
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
 Nsample_lst = worker_Nbatches.keys()
+Tile_tbl = pd.read_csv("Tile_PR_all.csv",index_col=0)
+
+Tile_tbl = Tile_tbl.rename(index=str,columns={'P [TileEM thres=-40]':'P [TileEM thres=-4]',\
+                                               'P [TileEM thres=-20]':'P [TileEM thres=-2]',\
+                                               'R [TileEM thres=-40]':'R [TileEM thres=-4]',\
+                                              'R [TileEM thres=-20]':'R [TileEM thres=-2]',\
+                                              'J [TileEM thres=-40]':'J [TileEM thres=-4]',\
+                                              'J [TileEM thres=-20]':'J [TileEM thres=-2]',\
+                                              'P [TileEM thres=40]':'P [TileEM thres=4]',\
+                                               'P [TileEM thres=20]':'P [TileEM thres=2]',\
+                                               'R [TileEM thres=40]':'R [TileEM thres=4]',\
+                                              'R [TileEM thres=20]':'R [TileEM thres=2]',\
+                                              'J [TileEM thres=40]':'J [TileEM thres=4]',\
+                                              'J [TileEM thres=20]':'J [TileEM thres=2]'})
+Pixel_tbl = pd.read_csv("Pixel_PR.csv",index_col=0)
+#PR_tbl = PR_tbl.rename(index=str,columns={'GT Tile-based Precision':'P [GT Tile-based]','GT Tile-based Recall':'R [GT Tile-based]'})
+df_all = Pixel_tbl.merge(Tile_tbl)
 
 def data_clean(df):
     df = df.rename(index=str,columns={'P [Jaccard [Self]]':'P [GT Jaccard]','R [Jaccard [Self]]':'R [GT Jaccard]',\

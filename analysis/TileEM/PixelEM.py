@@ -211,12 +211,12 @@ def GTworker_prob_correct(w_mask, gt_mask):
 
 def GTLSAworker_prob_correct(w_mask, gt_mask,small_mask,large_mask):
     large_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(large_mask==1))[0])
-    large_gt_total = len(np.where((gt_mask==1) &(large_mask==1)[0]))
+    large_gt_total = len(np.where((gt_mask==1) &(large_mask==1))[0])
     large_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (large_mask==1))[0])
     large_ngt_total = len(np.where((gt_mask==0) &(large_mask==1)) [0])
 
     small_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(small_mask==1))[0])
-    small_gt_total = len(np.where((gt_mask==1) &(small_mask==1)[0]))
+    small_gt_total = len(np.where((gt_mask==1) &(small_mask==1))[0])
     small_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (small_mask==1))[0])
     small_ngt_total = len(np.where((gt_mask==0) &(small_mask==1)) [0])
 
@@ -247,8 +247,8 @@ def mask_log_probabilities(worker_masks, worker_qualities):
                     else worker_qualities[wid]
                 )
     return log_probability_in_mask, log_probability_not_in_mask
-def GTLSAmask_log_probabilities(worker_masks, qp,qn):
-    worker_ids = worker_qualities.keys()
+def GTLSAmask_log_probabilities(worker_masks, qp1,qn1,qp2,qn2):
+    worker_ids = qp1.keys()
     log_probability_in_mask = np.zeros((
         len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
     ))
@@ -264,16 +264,19 @@ def GTLSAmask_log_probabilities(worker_masks, qp,qn):
                 qp2i = qp2[wid]
                 qn2i = qn2[wid]
                 ljk = worker_masks[wid][i][j]
-                if ljk==1 :
-                    log_probability_in_mask[i][j] += np.log(qpi)
-                    log_probability_not_in_mask[i][j] += np.log(1-qni)
-                else:
-                    log_probability_not_in_mask[i][j] += np.log(qni)
-                    log_probability_in_mask[i][j] += np.log(1-qpi)
+		if large: 
+                    if ljk==1:
+                        log_probability_in_mask[i][j] += np.log(qpi)
+                        log_probability_not_in_mask[i][j] += np.log(1-qni)
+                    else:
+                        log_probability_not_in_mask[i][j] += np.log(qni)
+                        log_probability_in_mask[i][j] += np.log(1-qpi)
+   		if small:
+		    pass
     return log_probability_in_mask, log_probability_not_in_mask
 
 def GTmask_log_probabilities(worker_masks, qp,qn):
-    worker_ids = worker_qualities.keys()
+    worker_ids = qp.keys()
     log_probability_in_mask = np.zeros((
         len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
     ))
@@ -305,41 +308,45 @@ def estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh
     return gt_est_mask
 def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
+    if os.path.isfile('{}GTLSA_EM_prj_thresh{}.json'.format(outdir,thresh)):
         print "Already ran, Skipped"
         return
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+    small_mask = pickle.load(open("small_mask_{}.pkl"))
+    large_mask = pickle.load(open("large_mask_{}.pkl"))
     for it in range(num_iterations):
         qp1 = dict()
         qn1 = dict()
         qp2 = dict()
         qn2 = dict()
+	if it ==0:
+	    A_th
         for wid in worker_masks.keys():
-            qp1[wid],qn1[wid],qp2[wid],qn2[wid] = GTLSAworker_prob_correct(worker_masks[wid], gt_est_mask)
-    if load_p_in_mask:
-        #print "loaded pInT" 
-        log_probability_in_mask=pkl.load(open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it)))
-        log_probability_not_in_mask =pkl.load(open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it)))    
-    else: 
-        #Compute pInMask and pNotInMask 
-        log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2)
+            qp1[wid],qn1[wid],qp2[wid],qn2[wid] = GTLSAworker_prob_correct(worker_masks[wid], gt_est_mask,small_mask,large_mask)
+        if load_p_in_mask:
+            #print "loaded pInT" 
+            log_probability_in_mask=pkl.load(open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it)))
+            log_probability_not_in_mask =pkl.load(open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it)))    
+        else: 
+            #Compute pInMask and pNotInMask 
+            log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2)
         with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-                fp.write(pickle.dumps(log_probability_in_mask))
-            with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-                fp.write(pickle.dumps(log_probability_not_in_mask))
+            fp.write(pickle.dumps(log_probability_in_mask))
+        with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+            fp.write(pickle.dumps(log_probability_not_in_mask))
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
         with open('{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
             fp.write(pickle.dumps(gt_est_mask))
-    with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-           fp.write(pickle.dumps(log_probability_in_mask))
-    with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-           fp.write(pickle.dumps(log_probability_not_in_mask))
-    pickle.dump(open('{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    pickle.dump(open('{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    pickle.dump(open('{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    pickle.dump(open('{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+            fp.write(pickle.dumps(log_probability_in_mask))
+        with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+            fp.write(pickle.dumps(log_probability_not_in_mask))
+        pickle.dump(qp1,open('{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(qn1,open('{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(qp2,open('{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(qn2,open('{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
     
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
@@ -352,7 +359,7 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
 
 def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
+    if os.path.isfile('{}GT_EM_prj_thresh{}.json'.format(outdir,thresh)):
         print "Already ran, Skipped"
         return
     # initialize MV mask
@@ -363,26 +370,26 @@ def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
         qn = dict()
         for wid in worker_masks.keys():
             qp[wid],qn[wid] = GTworker_prob_correct(worker_masks[wid], gt_est_mask)
-    if load_p_in_mask:
-        #print "loaded pInT" 
-        log_probability_in_mask=pkl.load(open('{}GT_p_in_mask_{}.pkl'.format(outdir, it)))
-        log_probability_not_in_mask =pkl.load(open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it)))    
-    else: 
-        #Compute pInMask and pNotInMask 
-        log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
+        if load_p_in_mask:
+            #print "loaded pInT" 
+            log_probability_in_mask=pkl.load(open('{}GT_p_in_mask_{}.pkl'.format(outdir, it)))
+            log_probability_not_in_mask =pkl.load(open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it)))    
+        else: 
+            #Compute pInMask and pNotInMask 
+            log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
         with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-                fp.write(pickle.dumps(log_probability_in_mask))
-            with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-                fp.write(pickle.dumps(log_probability_not_in_mask))
+            fp.write(pickle.dumps(log_probability_in_mask))
+        with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+            fp.write(pickle.dumps(log_probability_not_in_mask))
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
         with open('{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
             fp.write(pickle.dumps(gt_est_mask))
-    with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+        with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
            fp.write(pickle.dumps(log_probability_in_mask))
-    with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
+        with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
            fp.write(pickle.dumps(log_probability_not_in_mask))
-    pickle.dump(open('{}GT_qp_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    pickle.dump(open('{}GT_qn_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(qp,open('{}GT_qp_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(qn,open('{}GT_qn_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
 
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
@@ -500,37 +507,34 @@ if __name__ == '__main__':
     #for objid in range(1, 48):
     #    create_all_gt_and_worker_masks(objid)
     #print sample_specs.keys()
-    #['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1', '20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
-    #sample_lst = sample_specs.keys()
-    #sample_lst = ['5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2']
-    #sample_lst = ['5workers_rand3', '5workers_rand0', '5workers_rand1', '20worker_rand0', '20worker_rand1']
-    #sample_lst = ['20worker_rand2', '20worker_rand3']
-    #sample_lst = ['15workers_rand1', '15workers_rand4', '15workers_rand5', '30worker_rand0']
-    #sample_lst = ['15workers_rand2', '15workers_rand3', '15workers_rand0']
-    #sample_lst = ['10workers_rand6', '25worker_rand1', '25worker_rand0', '15workers_rand2']
-    #sample_lst = ['10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4']
-    #compile_PR()
-    #sample_lst = ['20worker_rand2', '20worker_rand3', '10workers_rand1', '10workers_rand0']
-    #sample_lst = ['5workers_rand4', '5workers_rand5', '5workers_rand2','20worker_rand1']
-    if False: 
-    #if True:
-	sample_lst = ['10workers_rand7']
-        for sample in sample_lst:
+    # ['25workers_rand0', '5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20workers_rand1', '20workers_rand2', '20workers_rand3', '20workers_rand0', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand7', '10workers_rand6', '30workers_rand0', '25workers_rand1', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5']
+    sample_lst = sample_specs.keys()
+    #print sample_lst 
+    
+    #if False: 
+    if True:
+	#sample_lst = ['10workers_rand7']
+	#sample_lst = ['5workers_rand0']
+        #for sample in sample_lst:
+	sample = sample_lst[31]
+	if True:
             print '-----------------------------------------------'
             print 'Starting ', sample
             sample_start_time = time.time()
-            for objid in range(45,48):#range(1, 48):
+            for objid in range(1,48):#range(1, 48):
        	    #for objid in [1,11]:#,13,14,3,7,8]:#[3, 7, 8, 11, 13, 14]:
                 obj_start_time = time.time()
                 create_mega_mask(objid, PLOT=True, sample_name=sample)
                 create_MV_mask(sample, objid)#,mode="compute_pr_only")
                 #do_EM_for(sample, objid)
-   	        for thresh in [10,-10,-4,-2,0,2,4]: #10,-10
+   	        for thresh in [10,-10,-4,-2,0,2,4]: 
      		    print "Working on threshold: ",thresh
-    	            do_EM_for(sample, objid,thresh=thresh)#,load_p_in_mask=True,thresh=thresh)
+    	            #do_EM_for(sample, objid,thresh=thresh)#,load_p_in_mask=True,thresh=thresh)
+		    #do_GTLSA_EM_for(sample, objid,thresh=thresh)
+		    do_GT_EM_for(sample, objid,thresh=thresh)
                 obj_end_time = time.time()
                 print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()
             print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
-    compile_PR()
+    #compile_PR()

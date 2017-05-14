@@ -17,7 +17,7 @@ Tile_tbl = Tile_tbl.rename(index=str,columns={'P [TileEM thres=-40]':'P [TileEM 
                                               'R [TileEM thres=20]':'R [TileEM thres=2]',\
                                               'J [TileEM thres=40]':'J [TileEM thres=4]',\
                                               'J [TileEM thres=20]':'J [TileEM thres=2]'})
-Pixel_tbl = pd.read_csv("Pixel_PR.csv",index_col=0)
+Pixel_tbl = pd.read_csv("updated_Pixel_PR.csv",index_col=0)
 #PR_tbl = PR_tbl.rename(index=str,columns={'GT Tile-based Precision':'P [GT Tile-based]','GT Tile-based Recall':'R [GT Tile-based]'})
 df_all = Pixel_tbl.merge(Tile_tbl)
 
@@ -45,8 +45,8 @@ def plot_PR(Nsample,selected_attr_lst):
     plt.ylabel("Precision",fontsize=14)
     plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 
-def plot_sample_worker_PR(selected_col_lst,y_axis='Precision'):
-    plt.figure()
+def plot_sample_worker_PR(selected_col_lst,y_axis='Precision',init_fig=True,color='blue'):
+    if init_fig: plt.figure()
     df_all = pd.DataFrame() #mean 
     df_all_std = pd.DataFrame() # std
     cols  = []

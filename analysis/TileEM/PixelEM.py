@@ -212,7 +212,7 @@ def GTworker_prob_correct(w_mask, gt_mask):
 def GTLSAworker_prob_correct(w_mask, gt_mask,area_mask, A_thres,step_size=5):
     non_zero_total=True
     update_iter = 0
-    step_size = A_thres/100. #adaptive step_size
+    #step_size = A_thres/100. #adaptive step_size
     print non_zero_total and A_thres>0 and  update_iter<5000
     print A_thres
     print area_mask.min()
@@ -236,6 +236,7 @@ def GTLSAworker_prob_correct(w_mask, gt_mask,area_mask, A_thres,step_size=5):
 	    print "Increased A_thres:", A_thres
 	elif large_ngt_total ==0 or large_gt_total==0:
 	    A_thres -=step_size
+ 	    step_size = A_thres/100. #adaptive step_size
 	    print "Decreased A_thres:", A_thres
 	elif  large_ngt_total!=0 or large_gt_total!=0 or  small_ngt_total!=0 or small_gt_total!=0:
 	    #Everything is non-zero

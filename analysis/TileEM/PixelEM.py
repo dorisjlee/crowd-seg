@@ -453,7 +453,7 @@ def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
     plt.colorbar()
     plt.savefig('{}GT_EM_mask_thresh{}.png'.format(outdir,thresh))
 
-def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0):
+def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False):
 #    if os.path.exist('{}EM_pr_thresh{}.json'.format(outdir,thresh)):
 #	print "Already ran, Skipped"
 #	return 
@@ -469,9 +469,10 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     # elif model =="GTLSA":
     #     pass
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
-        print "Already ran, Skipped"
-        return
+    if rerun_existing:
+        if os.path.isfile('{}EM_prj_thresh{}.json'.format(outdir,thresh)):
+            print "Already ran, Skipped"
+            return
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
@@ -497,8 +498,7 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
            fp.write(pickle.dumps(log_probability_not_in_mask))
         with open('{}gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
             fp.write(pickle.dumps(gt_est_mask))
-
-    pickle.dump(open('{}Qj_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+        pickle.dump(worker_qualities,open('{}Qj_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
@@ -579,24 +579,25 @@ if __name__ == '__main__':
     #print sample_specs.keys()
     # ['25workers_rand0', '5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20workers_rand1', '20workers_rand2', '20workers_rand3', '20workers_rand0', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand7', '10workers_rand6', '30workers_rand0', '25workers_rand1', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5']
     sample_lst = sample_specs.keys()
-    sample = sys.argv[1]
+    #sample = sys.argv[1]
     #print sample
-    #sample = '5workers_rand7'
+    sample = '5workers_rand0'
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
     if True: 
     #for sample in sample_lst[:]:
         print '-----------------------------------------------'
         print 'Starting ', sample
         sample_start_time = time.time()
-        for objid in [2]:#object_lst:
+        for objid in [1]:#object_lst:
 	    print "Obj: " ,objid 
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)#,mode="compute_pr_only")
-            for thresh in [-4,-2,0,2,4]:
+            #for thresh in [-4,-2,0,2,4]:
+	    for thresh in [0]:
      		print "Working on threshold: ",thresh
-    	        #do_EM_for(sample, objid,thresh=thresh)#,load_p_in_mask=True,thresh=thresh)
-		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False)
+    	        do_EM_for(sample, objid,thresh=thresh)#,load_p_in_mask=True,thresh=thresh)
+		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False)
 		#do_GT_EM_for(sample, objid,thresh=thresh)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))

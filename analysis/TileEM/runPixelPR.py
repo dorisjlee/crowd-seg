@@ -14,6 +14,8 @@ sampleN_lst=worker_Nbatches.keys()
 from TileEM_plot_toolbox import *
 start = time.time()
 PR_pixelEM = pd.read_csv("pixel_em/full_PRJ_table.csv")
+PR_pixelEM_GT = pd.read_csv("pixel_em/GTfull_PRJ_table.csv")
+#PR_pixelEM_GTLSA = pd.read_csv("pixel_em/GTLSAfull_PRJ_table.csv")
 df = pd.read_csv("../computed_my_COCO_BBvals.csv",index_col=0)
 tbl=[]
 col_lst=[]
@@ -27,7 +29,8 @@ for Nworker in sampleN_lst:
         tmp_tbl=[]
         #for i,fname in enumerate(glob("obj*")):
         #    objid=int(fname[3:])
-	for objid in tqdm(range(1,48)):
+	object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+	for objid in tqdm(object_lst):
             tmp_tbl=[objid,Nworker,batch_num]
             if i==0: col_lst = ["object_id","Nworker","batch_num"]
 	    #Summarization Based metrics
@@ -40,16 +43,14 @@ for Nworker in sampleN_lst:
 		        col_lst.extend(["P [{}]".format(attr),"R [{}]".format(attr),"J [{}]".format(attr)])
                     best_worker_BB = filtered_df[filtered_df[attr]==filtered_df[attr].max()]
                     best_worker_id = int(best_worker_BB["worker_id"].sample(1).values)
-                    if objid not in [35,41,40]:
-                        best_worker_mask = pkl.load(open("pixel_em/obj{}/mask{}.pkl".format(objid,best_worker_id)))
-                        gt_mask = pkl.load(open("pixel_em/obj{}/gt.pkl".format(objid)))
-                        p,r,j = get_precision_recall_jaccard(best_worker_mask, gt_mask)
-                        tmp_tbl.extend([p,r,j])
-                    else:
-                        tmp_tbl.extend([-1,-1,-1])
+                    best_worker_mask = pkl.load(open("pixel_em/obj{}/mask{}.pkl".format(objid,best_worker_id)))
+                    gt_mask = pkl.load(open("pixel_em/obj{}/gt.pkl".format(objid)))
+                    p,r,j = get_precision_recall_jaccard(best_worker_mask, gt_mask)
+                    tmp_tbl.extend([p,r,j])
 	        # Pixel EM
-                for thresh in [-4,-2,0,2,4,10,-10]:
-                    try:
+                for thresh in [-4,-2,0,2,4]:#,10,-10]:
+                    #try:
+		    if True:
                         #print "Working on obj{0}/thresh{1}/".format(objid,thresh)
 		        PR_pixelEMi =PR_pixelEM[(PR_pixelEM["num_workers"]==Nworker)&(PR_pixelEM["sample_num"]==batch_num)&\
 					(PR_pixelEM["objid"]==objid)&(PR_pixelEM["thresh"]==thresh)]
@@ -60,9 +61,9 @@ for Nworker in sampleN_lst:
                             tmp_tbl.extend([PixelEMP,PixelEMR,PixelEMJ])
                             if i==0: 
                                  col_lst.extend(["P [PixelEM thres={}]".format(thresh),"R [PixelEM thres={}]".format(thresh),"J [PixelEM thres={}]".format(thresh)])
-                    except(IOError):
-                        print "No file exist: obj{0}/thresh{1}/iter_5/tid_list.pkl".format(objid,thresh)
-                        pass
+                    #except(IOError):
+                    #    print "No file exist: obj{0}/thresh{1}/iter_5/tid_list.pkl".format(objid,thresh)
+                    #    pass
                 # Majority Vote
 	        if len(PR_pixelEMi)!=0:
                     PMV = float(PR_pixelEMi["MV_precision"])

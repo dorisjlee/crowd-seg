@@ -218,8 +218,8 @@ def GTworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=Fal
     gt_total = len(np.where(gt_mask==1& not_agreement)[0])
     ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& not_agreement)[0])
     ngt_total = len(np.where(gt_mask==0& not_agreement)[0])
-    qp = float(gt_Ncorrect)/float(gt_total)
-    qn = float(ngt_Ncorrect)/float(ngt_total)
+    qp = float(gt_Ncorrect)/float(gt_total) if gt_total!=0 else 0.6
+    qn = float(ngt_Ncorrect)/float(ngt_total) if ngt_total!=0 else 0.6
     return qp,qn
 
 
@@ -418,7 +418,50 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
     plt.savefig('{}GTLSA_EM_mask_thresh{}.png'.format(outdir,thresh))
-
+def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=False):
+    print "Doing GT EM (Qj=0.6 initialization)"
+    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if exclude_isovote:
+        mode ='isoQjinit'
+    else:
+        mode =''
+    # initialize MV mask
+    gt_est_mask = get_MV_mask(sample_name, objid)
+    worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+    Nworkers=len(worker_masks)
+    mega_mask = get_mega_mask(sample_name, objid)
+    for it in range(num_iterations):
+        print "Iteration #",it
+        qp = dict()
+        qn = dict()
+        for wid in worker_masks.keys():
+	    if it ==0:
+                qp[wid],qn[wid] = 0.6,0.6
+	    else:
+		qp[wid],qn[wid] = GTworker_prob_correct(mega_mask,worker_masks[wid], gt_est_mask,Nworkers,exclude_isovote=exclude_isovote)
+        #Compute pInMask and pNotInMask
+        log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
+        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+        if compute_PR_every_iter:
+            # Compute PR mask based on the EM estimate mask from every iteration
+            [ p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+            with open('{}{}GT_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
+                fp.write(json.dumps([p, r, j]))
+        with open('{}{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w') as fp:
+            fp.write(pickle.dumps(gt_est_mask))
+        pickle.dump(log_probability_in_mask,open('{}{}GT_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
+        pickle.dump(log_probability_not_in_mask,open('{}{}GT_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
+        pickle.dump(qp,open('{}{}GT_qp_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
+        pickle.dump(qn,open('{}{}GT_qn_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
+    if not compute_PR_every_iter:
+        # Compute PR mask based on the EM estimate mask from the last iteration
+        [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+        with open('{}{}GT_EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
+	    fp.write(json.dumps([p, r, j]))
+    plt.figure()
+    plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
+    plt.colorbar()
+    plt.savefig('{}{}GT_EM_mask_thresh{}.png'.format(outdir,mode,thresh))
 def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=False):
     print "Doing GT EM"
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
@@ -493,6 +536,8 @@ def GroundTruth_doM_once(sample_name, objid, num_iterations=5,load_p_in_mask=Fal
     pickle.dump(log_probability_not_in_mask,open('{}p_not_in_ground_truth_thresh{}.pkl'.format(outdir,thresh),'w'))
     pickle.dump(qp,open('{}qp_ground_truth_thresh{}.pkl'.format(outdir,thresh), 'w'))
     pickle.dump(qn,open('{}qn_ground_truth_thresh{}.pkl'.format(outdir,thresh), 'w'))
+   
+    pickle.dump(gt_est_mask,open('{}gt_est_ground_truth_mask_thresh{}.pkl'.format(outdir, thresh), 'w'))
 
 def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True):
     print "Doing EM"
@@ -645,7 +690,8 @@ if __name__ == '__main__':
     	        #do_EM_for(sample, objid,thresh=thresh,compute_PR_every_iter=False,exclude_isovote=True)#,load_p_in_mask=True,thresh=thresh)
 		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False)
 		#do_GT_EM_for(sample, objid,thresh=thresh,exclude_isovote=True,compute_PR_every_iter=True)
-		GroundTruth_doM_once(sample, objid,thresh=thresh)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh)
+		GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()

@@ -204,65 +204,119 @@ def worker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False
     return qj 
 
 def GTworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False):
-    if exclude_isovote:
-	not_agreement= ~((mega_mask==0) |  (mega_mask==Nworkers))
+    #if exclude_isovote:
+	#not_agreement= ~((mega_mask==0) |  (mega_mask==Nworkers))
+	#not_agreement = ((mega_mask!=0) & (mega_mask!=Nworkers))
  	#print "disagreement tiles:", len(np.where(not_agreement)[0])
 	#print "total tiles:", np.shape(mega_mask),"=",np.shape(mega_mask)[0]*np.shape(mega_mask)[1]
 	#plt.figure()
 	#plt.imshow(not_agreement)
 	#plt.savefig("not_agreement.png")
 	#print os.getcwd()
-    else:
-	not_agreement=True
-    gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1)& not_agreement)[0])
-    gt_total = len(np.where(gt_mask==1& not_agreement)[0])
-    ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& not_agreement)[0])
-    ngt_total = len(np.where(gt_mask==0& not_agreement)[0])
+    #else:
+    #	not_agreement=True
+    #print np.shape(mega_mask)
+    #print np.shape(w_mask)
+    #print np.shape(gt_mask)
+    #print (mega_mask!=0)==1
+    #print w_mask
+    #print gt_mask
+    #not_agreement = not_agreement.astype(bool)
+    #gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1)& not_agreement)[0])
+    #gt_total = len(np.where(gt_mask==1 & not_agreement)[0])
+    #gt_total = len(np.where(gt_mask==1 & mega_mask!=0.all()==1 & mega_mask!=Nworkers.all()==1)[0])
+    #ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& not_agreement)[0])
+    #ngt_total = len(np.where(gt_mask==0 & not_agreement)[0])
+    
+    #print "test 1:", gt_Ncorrect,gt_total,ngt_Ncorrect,ngt_total
+    # Testing 
+    gt_Ncorrect = 0
+    gt_total = 0
+    ngt_Ncorrect = 0 
+    ngt_total = 0 
+    for i in range(np.shape(gt_mask)[0]):
+	for j in range(np.shape(w_mask)[1]):
+	    gt = gt_mask[i][j]
+	    w =w_mask[i][j]
+	    m = mega_mask[i][j]
+	    if exclude_isovote:
+	    	not_agreement=False
+	    else:
+		not_agreement=True
+	    if m!=0 and  m!=Nworkers:
+		not_agreement=True
+	    if (gt==1) and (w==1) and  not_agreement: 
+		gt_Ncorrect +=1
+	    if gt==1 and  not_agreement:
+		gt_total+=1
+	    if gt==0 and w==0 and not_agreement:
+		ngt_Ncorrect+=1
+	    if gt==0 and not_agreement:
+		ngt_total +=1
+    #print "test 2:", gt_Ncorrect,gt_total,ngt_Ncorrect,ngt_total
     qp = float(gt_Ncorrect)/float(gt_total) if gt_total!=0 else 0.6
     qn = float(ngt_Ncorrect)/float(ngt_total) if ngt_total!=0 else 0.6
     return qp,qn
 
+def GTLSAworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,area_mask,exclude_isovote=False):
+    
+    gt_areas = area_mask[np.where(gt_mask == True)]
+    ngt_areas = area_mask[np.where(gt_mask == False)]
+    area_thresh_gt = np.median(list(set(gt_areas)))
+    area_thresh_ngt = np.median(list(set(ngt_areas)))
 
-def GTLSAworker_prob_correct(w_mask, gt_mask,area_mask, A_thres,step_size=5):
-    non_zero_total=True
-    update_iter = 0
-    #step_size = A_thres/100. #adaptive step_size
-    print non_zero_total and A_thres>0 and  update_iter<5000
-    print A_thres
-    print area_mask.min()
-    print area_mask.max()
-    while (non_zero_total and A_thres>=0 and A_thres<= area_mask.max() and  update_iter<5000):
-        large_mask = area_mask>=A_thres
-        small_mask = area_mask<A_thres
-        large_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(large_mask==1))[0])
-        large_gt_total = len(np.where((gt_mask==1) &(large_mask==1))[0])
-        large_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (large_mask==1))[0])
-        large_ngt_total = len(np.where((gt_mask==0) &(large_mask==1))[0])
+    #large_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(area_mask>=area_thresh_gt))[0])
+    #large_gt_total = len(np.where((gt_mask==1) &(area_mask>=area_thresh_gt))[0])
+    #large_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (area_mask>=area_thresh_ngt))[0])
+    #large_ngt_total = len(np.where((gt_mask==0) &(area_mask>=area_thresh_ngt))[0])
 
-        small_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(small_mask==1))[0])
-        small_gt_total = len(np.where((gt_mask==1) &(small_mask==1))[0])
-        small_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (small_mask==1))[0])
-        small_ngt_total = len(np.where((gt_mask==0) &(small_mask==1))[0])
-        
-	print small_ngt_total,small_gt_total,large_ngt_total,large_gt_total 
-	if small_ngt_total ==0 or small_gt_total==0: 
-	    A_thres +=step_size
-	    print "Increased A_thres:", A_thres
-	elif large_ngt_total ==0 or large_gt_total==0:
-	    A_thres -=step_size
- 	    step_size = A_thres/100. #adaptive step_size
-	    print "Decreased A_thres:", A_thres
-	elif  large_ngt_total!=0 or large_gt_total!=0 or  small_ngt_total!=0 or small_gt_total!=0:
-	    #Everything is non-zero
-	    non_zero_total=False
-        update_iter+=1
-    print small_ngt_total,small_gt_total,large_ngt_total,large_gt_total
+    #small_gt_Ncorrect = len(np.where((gt_mask==1) & (w_mask==1) &(area_mask<area_thresh_gt))[0])
+    #small_gt_total = len(np.where((gt_mask==1) &(area_mask<area_thresh_gt))[0])
+    #small_ngt_Ncorrect = len(np.where((gt_mask==0) & (w_mask==0)& (area_mask<area_thresh_ngt))[0])
+    #small_ngt_total = len(np.where((gt_mask==0) &(area_mask<area_thresh_ngt))[0])
+    #print "test 1:",small_ngt_Ncorrect,small_ngt_total,small_gt_Ncorrect, small_gt_total,large_ngt_Ncorrect, large_ngt_total, large_gt_Ncorrect, large_gt_total
+    # Testing 
+    large_gt_Ncorrect,large_gt_total,large_ngt_Ncorrect,large_ngt_total = 0,0,0,0
+    small_gt_Ncorrect,small_gt_total,small_ngt_Ncorrect,small_ngt_total=0,0,0,0 
+    #print np.shape(gt_mask)
+    #print gt_mask
+    for i in range(np.shape(gt_mask)[0]):
+        for j in range(np.shape(gt_mask)[1]):
+            gt = gt_mask[i][j]
+            w =w_mask[i][j]
+            m = mega_mask[i][j]
+	    a = area_mask[i][j]
+            if exclude_isovote:
+                not_agreement=False
+            else:
+                not_agreement=True
+            if m!=0 and  m!=Nworkers:
+                not_agreement=True
+	    if not_agreement:
+  	        if (gt==1) and  (a>=area_thresh_gt) :
+		    large_gt_total +=1
+		    if w==1:
+		        large_gt_Ncorrect+=1
+	        if (gt==0) and (a>=area_thresh_ngt) :
+		    large_ngt_total+=1
+		    if w==0:
+		        large_ngt_Ncorrect+=1
+	        if (gt==1) and (a<area_thresh_gt) :
+		    small_gt_total += 1
+		    if w==1:
+			small_gt_Ncorrect+=1
+		if (gt==0) and (a<area_thresh_ngt):
+		     small_ngt_total+=1
+		     if w==0:
+			small_ngt_Ncorrect+=1 
+    #print "test 2:",small_ngt_Ncorrect,small_ngt_total,small_gt_Ncorrect, small_gt_total,large_ngt_Ncorrect, large_ngt_total, large_gt_Ncorrect, large_gt_total
     qp1 = float(large_gt_Ncorrect)/float(large_gt_total) if large_gt_total!=0 else 0.6
     qn1 = float(large_ngt_Ncorrect)/float(large_ngt_total) if large_ngt_total!=0 else 0.6
     qp2 = float(small_gt_Ncorrect)/float(small_gt_total) if small_gt_total!=0 else 0.6
     qn2 = float(small_ngt_Ncorrect)/float(small_ngt_total) if small_ngt_total!=0 else 0.6
     #print "qp1,qn1,qp2,qn2:",qp1,qn1,qp2,qn2
-    return qp1,qn1,qp2,qn2
+    return qp1, qn1, qp2, qn2, area_thresh_gt, area_thresh_ngt
+
 
 def mask_log_probabilities(worker_masks, worker_qualities):
     worker_ids = worker_qualities.keys()
@@ -285,7 +339,7 @@ def mask_log_probabilities(worker_masks, worker_qualities):
                     else worker_qualities[wid]
                 )
     return log_probability_in_mask, log_probability_not_in_mask
-def GTLSAmask_log_probabilities(worker_masks, qp1,qn1,qp2,qn2,area_mask,A_thres):
+def GTLSAmask_log_probabilities(worker_masks, qp1, qn1, qp2, qn2, area_mask, area_thresh_gt, area_thresh_ngt):
     worker_ids = qp1.keys()
     log_probability_in_mask = np.zeros((
         len(worker_masks[worker_ids[0]]), len(worker_masks[worker_ids[0]][0])
@@ -302,23 +356,31 @@ def GTLSAmask_log_probabilities(worker_masks, qp1,qn1,qp2,qn2,area_mask,A_thres)
                 qp2i = qp2[wid]
                 qn2i = qn2[wid]
                 ljk = worker_masks[wid][i][j]
-		large = area_mask[i][j]>=A_thres
-		if large: 
-                    if ljk==1:
+                large_gt = (area_mask[i][j] >= area_thresh_gt)  # would the tile qualify as large if in GT
+                large_ngt = (area_mask[i][j] >= area_thresh_ngt)  # would the tile qualify as large if not in GT
+                if ljk == 1:
+                    if large_gt:
+                        # update pInT masks
                         log_probability_in_mask[i][j] += np.log(qp1i)
-                        log_probability_not_in_mask[i][j] += np.log(1-qn1i)
                     else:
-                        log_probability_not_in_mask[i][j] += np.log(qn1i)
-                        log_probability_in_mask[i][j] += np.log(1-qp1i)
-		else:
-		    if ljk==1:
                         log_probability_in_mask[i][j] += np.log(qp2i)
-                        log_probability_not_in_mask[i][j] += np.log(1-qn2i)
+                    if large_ngt:
+                        # update pNotInT masks
+                        log_probability_not_in_mask[i][j] += np.log(1.0 - qn1i)
+                    else:
+                        log_probability_not_in_mask[i][j] += np.log(1.0 - qn2i)
+                else:
+                    if large_gt:
+                        # update pInT masks
+                        log_probability_in_mask[i][j] += np.log(1.0 - qp1i)
+                    else:
+                        log_probability_in_mask[i][j] += np.log(1.0 - qp2i)
+                    if large_ngt:
+                        # update pNotInT masks
+                        log_probability_not_in_mask[i][j] += np.log(qn1i)
                     else:
                         log_probability_not_in_mask[i][j] += np.log(qn2i)
-                        log_probability_in_mask[i][j] += np.log(1-qp2i) 
     return log_probability_in_mask, log_probability_not_in_mask
-
 def GTmask_log_probabilities(worker_masks, qp,qn):
     worker_ids = qp.keys()
     log_probability_in_mask = np.zeros((
@@ -360,11 +422,15 @@ def compute_A_thres(condition,area_mask):
        high_confidence_pixel_area.append(area_mask[passing_xs[i]][passing_ys[i]])
     A_thres = np.median(high_confidence_pixel_area)
     return A_thres	
-def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0, rerun_existing=False):
+def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0, rerun_existing=False,exclude_isovote=False):
     print "Doing GTLSA EM" 
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if exclude_isovote:
+        mode ='isoQjGTLSA'
+    else:
+        mode =''
     if not rerun_existing: 
-        if os.path.isfile('{}GTLSA_EM_prj_thresh{}.json'.format(outdir,thresh)) :
+        if os.path.isfile('{}{}GTLSA_EM_prj_thresh{}.json'.format(outdir,mode,thresh)) :
             print "Already ran GTLSA, Skipped"
             return
 
@@ -373,51 +439,42 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
     # In the first step we use 50% MV for initializing T*, A thres is therefore the median area pixel based on votes and noVotes
     mega_mask = get_mega_mask(sample_name, objid)
     area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir)))
-    A_thres = compute_A_thres(gt_est_mask==1,area_mask)
-    #print "Initial A_thres:", A_thres
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
-    #area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir))) 
+    Nworkers=len(worker_masks)
+    mega_mask = get_mega_mask(sample_name, objid) 
     for it in range(num_iterations):
         qp1 = dict()
         qn1 = dict()
         qp2 = dict()
         qn2 = dict()
         for wid in worker_masks.keys():
-            qp1[wid],qn1[wid],qp2[wid],qn2[wid] = GTLSAworker_prob_correct(worker_masks[wid], gt_est_mask,area_mask,A_thres)
+            qp1[wid],qn1[wid],qp2[wid],qn2[wid], area_thresh_gt, area_thresh_ngt = GTLSAworker_prob_correct(mega_mask, worker_masks[wid],gt_est_mask,Nworkers,area_mask,exclude_isovote=exclude_isovote)
         if load_p_in_mask:
             #print "loaded pInT" 
-            log_probability_in_mask=pkl.load(open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it)))
-            log_probability_not_in_mask =pkl.load(open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it)))    
+            log_probability_in_mask=pkl.load(open('{}{}GTLSA_p_in_mask_{}.pkl'.format(outdir,mode, it)))
+            log_probability_not_in_mask =pkl.load(open('{}{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir,mode, it)))    
         else: 
             #Compute pInMask and pNotInMask 
-            log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2,area_mask,A_thres)
+            log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2,area_mask,area_thresh_gt,area_thresh_ngt)
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
-	# Compute the new area threshold based on the meidan area of high confidence  pixels 
-        A_thres = compute_A_thres(log_probability_in_mask>=log_probability_not_in_mask,area_mask) 
         # Compute PR mask based on the EM estimate mask from every iteration
     	[p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
-    	with open('{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,it,thresh), 'w') as fp:
+    	with open('{}{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
 	
-    #with open('{}GTLSA_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-    #    fp.write(pickle.dumps(log_probability_in_mask))
-    #with open('{}GTLSA_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-    #    fp.write(pickle.dumps(log_probability_not_in_mask))
-    with open('{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w') as fp:
+    with open('{}{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w') as fp:
         fp.write(pickle.dumps(gt_est_mask))
-    #with open('{}GT_p_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-    #    fp.write(pickle.dumps(log_probability_in_mask))
-    #with open('{}GT_p_not_in_mask_{}.pkl'.format(outdir, it), 'w') as fp:
-    #    fp.write(pickle.dumps(log_probability_not_in_mask))
-    #pickle.dump(qp1,open('{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    #pickle.dump(qn1,open('{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    #pickle.dump(qp2,open('{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
-    #pickle.dump(qn2,open('{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir, it,thresh), 'w'))
+    pickle.dump(log_probability_in_mask,open('{}{}GTLSA_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+    pickle.dump(log_probability_not_in_mask,open('{}{}GTLSA_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    pickle.dump(qp1,open('{}{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    pickle.dump(qn1,open('{}{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    pickle.dump(qp2,open('{}{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    pickle.dump(qn2,open('{}{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
     
     plt.figure()
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
-    plt.savefig('{}GTLSA_EM_mask_thresh{}.png'.format(outdir,thresh))
+    plt.savefig('{}{}GTLSA_EM_mask_thresh{}.png'.format(outdir,mode,thresh))
 def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=False):
     print "Doing GT EM (Qj=0.6 initialization)"
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
@@ -497,13 +554,13 @@ def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
             [ p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
             with open('{}{}GT_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
                 fp.write(json.dumps([p, r, j]))
-	    # Save only during the last iteration 
-	    with open('{}{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w') as fp:
-		fp.write(pickle.dumps(gt_est_mask))
-	    pickle.dump(log_probability_in_mask,open('{}{}GT_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
- 	    pickle.dump(log_probability_not_in_mask,open('{}{}GT_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
-	    pickle.dump(qp,open('{}{}GT_qp_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
-	    pickle.dump(qn,open('{}{}GT_qn_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
+    # Save only during the last iteration
+    with open('{}{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w') as fp:
+	fp.write(pickle.dumps(gt_est_mask))
+    pickle.dump(log_probability_in_mask,open('{}{}GT_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
+    pickle.dump(log_probability_not_in_mask,open('{}{}GT_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh),'w'))
+    pickle.dump(qp,open('{}{}GT_qp_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
+    pickle.dump(qn,open('{}{}GT_qn_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
     if not compute_PR_every_iter:
         # Compute PR mask based on the EM estimate mask from the last iteration
         [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
@@ -666,13 +723,19 @@ if __name__ == '__main__':
     #sample = sys.argv[1]
     #print sample
     #sample = '5workers_rand0'
+    from test_sample import test_sample_obj
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
     #if True: 
     #for sample in sample_lst[:]:
     # First 7 objects are bad objects, last 3 are good objects
-    test_sample_obj = [('10workers_rand5',8),('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
- 			('25workers_rand1',37),('20workers_rand2',11),('25workers_rand0',27),('5workers_rand0',1),('20workers_rand3',32)]
-    for test_sample in [('10workers_rand5',8),('5workers_rand0',1)] :# test_sample_obj[-2:]: 
+    #test_sample_obj = [('10workers_rand5',8),('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
+    #('25workers_rand1',37),('20workers_rand2',11),('25workers_rand0',27),('5workers_rand0',1),('20workers_rand3',32)]
+    #for test_sample in [('25workers_rand0',27),('20workers_rand3',32)]:
+    #for test_sample in [('10workers_rand5',8),('5workers_rand0',1)] :# test_sample_obj[-2:]: 
+    #for test_sample in [('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
+    #                    ('25workers_rand1',37),('20workers_rand2',11),('25workers_rand0',27),('20workers_rand3',32)]:
+    print test_sample_obj
+    for test_sample in test_sample_obj:
 	sample = test_sample[0]
         print '-----------------------------------------------'
         print 'Starting ', sample
@@ -684,14 +747,17 @@ if __name__ == '__main__':
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)#,mode="compute_pr_only")
-            for thresh in [-4,-2,0,2,4]:
+	    for thresh in [-2,-1,0,1,2]:
+            #for thresh in [-4,-2,0,2,4]:
 	    #for thresh in [0]:
      		print "Working on threshold: ",thresh
     	        #do_EM_for(sample, objid,thresh=thresh,compute_PR_every_iter=False,exclude_isovote=True)#,load_p_in_mask=True,thresh=thresh)
-		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False)
-		#do_GT_EM_for(sample, objid,thresh=thresh,exclude_isovote=True,compute_PR_every_iter=True)
+		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True)
+		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True)
+		do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True)
+		do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh)
-		GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
+		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()

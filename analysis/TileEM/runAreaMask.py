@@ -19,10 +19,11 @@ def tarea_mask(sample, objid):
         mask = np.array(img)*tarea
         mega_mask+=mask
     pkl.dump(mega_mask,open("pixel_em/{}/obj{}/tarea_mask.pkl".format(sample,objid),'w'))
+tarea_mask('25workers_rand0',16)
 
-for sample in tqdm(sample_specs.keys()[23:]):
-    for objid in range(1,48):
-	try:
-            tarea_mask(sample,objid)
-	except(IOError):
-	    pass
+#for sample in tqdm(sample_specs.keys()[23:]):
+#    for objid in range(1,48):
+#	try:
+#            tarea_mask(sample,objid)
+#	except(IOError):
+#	    pass

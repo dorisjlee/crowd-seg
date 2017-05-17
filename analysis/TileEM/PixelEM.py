@@ -422,15 +422,15 @@ def compute_A_thres(condition,area_mask):
        high_confidence_pixel_area.append(area_mask[passing_xs[i]][passing_ys[i]])
     A_thres = np.median(high_confidence_pixel_area)
     return A_thres	
-def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0, rerun_existing=False,exclude_isovote=False):
-    print "Doing GTLSA EM" 
+def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0, rerun_existing=False,exclude_isovote=False,dump_output_at_every_iter=False):
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
     if exclude_isovote:
-        mode ='isoQjGTLSA'
+        mode ='iso'
     else:
         mode =''
+    print "Doing GTLSA mode=",mode
     if not rerun_existing: 
-        if os.path.isfile('{}{}GTLSA_EM_prj_thresh{}.json'.format(outdir,mode,thresh)) :
+        if os.path.isfile('{}{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,num_iterations-1,thresh)) :
             print "Already ran GTLSA, Skipped"
             return
 
@@ -461,9 +461,16 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
     	[p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
     	with open('{}{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
-	
-    with open('{}{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w') as fp:
-        fp.write(pickle.dumps(gt_est_mask))
+        if dump_output_at_every_iter:
+	    pickle.dump(gt_est_mask,open('{}{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+    	    pickle.dump(log_probability_in_mask,open('{}{}GTLSA_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+    	    pickle.dump(log_probability_not_in_mask,open('{}{}GTLSA_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    	    pickle.dump(qp1,open('{}{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+      	    pickle.dump(qn1,open('{}{}GTLSA_qn1_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    	    pickle.dump(qp2,open('{}{}GTLSA_qp2_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    	    pickle.dump(qn2,open('{}{}GTLSA_qn2_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))            
+    
+    pickle.dump(gt_est_mask,open('{}{}GTLSA_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
     pickle.dump(log_probability_in_mask,open('{}{}GTLSA_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
     pickle.dump(log_probability_not_in_mask,open('{}{}GTLSA_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
     pickle.dump(qp1,open('{}{}GTLSA_qp1_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
@@ -520,16 +527,16 @@ def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
     plt.colorbar()
     plt.savefig('{}{}GT_EM_mask_thresh{}.png'.format(outdir,mode,thresh))
 def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=False):
-    print "Doing GT EM"
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
-    if rerun_existing:
-        if os.path.isfile('{}GT_EM_prj_iter4_thresh{}.json'.format(outdir,thresh)):
+    if not rerun_existing:
+        if os.path.isfile('{}GT_EM_prj_iter{}_thresh{}.json'.format(outdir,num_iterations-1,thresh)):
             print "Already ran GT, Skipped"
             return
     if exclude_isovote: 
         mode ='iso'
     else:
         mode =''
+    print "Doing GT mode=",mode
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
@@ -719,14 +726,15 @@ if __name__ == '__main__':
     #    create_all_gt_and_worker_masks(objid)
     #print sample_specs.keys()
     # ['25workers_rand0', '5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20workers_rand1', '20workers_rand2', '20workers_rand3', '20workers_rand0', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand7', '10workers_rand6', '30workers_rand0', '25workers_rand1', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5']
-    #sample_lst = sample_specs.keys()
-    #sample = sys.argv[1]
-    #print sample
+    sample_lst = sample_specs.keys()
+    sample = sys.argv[1]
+    print sample_lst
     #sample = '5workers_rand0'
     from test_sample import test_sample_obj
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
-    #if True: 
-    #for sample in sample_lst[:]:
+    if True:
+    #print sample_lst  
+    #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects
     #test_sample_obj = [('10workers_rand5',8),('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
     #('25workers_rand1',37),('20workers_rand2',11),('25workers_rand0',27),('5workers_rand0',1),('20workers_rand3',32)]
@@ -734,15 +742,16 @@ if __name__ == '__main__':
     #for test_sample in [('10workers_rand5',8),('5workers_rand0',1)] :# test_sample_obj[-2:]: 
     #for test_sample in [('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
     #                    ('25workers_rand1',37),('20workers_rand2',11),('25workers_rand0',27),('20workers_rand3',32)]:
-    print test_sample_obj
-    for test_sample in test_sample_obj:
-	sample = test_sample[0]
+    #print test_sample_obj[22:-8]
+    #for test_sample in [('25workers_rand0', 16), ('20workers_rand2', 38), ('15workers_rand4', 32)]:# test_sample_obj[22:-8]:
+	#sample = test_sample[0]
         print '-----------------------------------------------'
         print 'Starting ', sample
         sample_start_time = time.time()
         #for objid in [1]:#object_lst:
-	obj = test_sample[1]
- 	for objid in [obj]:
+	#obj = test_sample[1]
+ 	#for objid in [obj]:
+        for objid in object_lst:
 	    print "Obj: " ,objid 
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
@@ -752,10 +761,10 @@ if __name__ == '__main__':
 	    #for thresh in [0]:
      		print "Working on threshold: ",thresh
     	        #do_EM_for(sample, objid,thresh=thresh,compute_PR_every_iter=False,exclude_isovote=True)#,load_p_in_mask=True,thresh=thresh)
-		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True)
-		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True)
-		do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True)
-		do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True)
+		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True, num_iterations=3)
+		do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False, num_iterations=3)
+		#do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True, num_iterations=3)
+		#do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True, num_iterations=3)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh)
 		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
             obj_end_time = time.time()
@@ -764,3 +773,4 @@ if __name__ == '__main__':
             print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
     #compile_PR(mode="GT")
+    #do_GTLSA_EM_for('5workers_rand0', 1,thresh=-2,rerun_existing=True,exclude_isovote=True, num_iterations=5,dump_output_at_every_iter=True)

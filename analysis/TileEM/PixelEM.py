@@ -655,8 +655,36 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
         [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
         with open('{}{}EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
-
-
+def compile_PRJ_MV():
+    import glob
+    import csv
+    fname  = '{}MV_PRJ_table.csv'.format(PIXEL_EM_DIR)
+    with open(fname, 'w') as csvfile:
+        fieldnames = ['num_workers', 'sample_num', 'objid', 'MV_precision', 'MV_recall','MV_jaccard']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for sample_path in glob.glob('{}*_rand*/'.format(PIXEL_EM_DIR)):
+            sample_name = sample_path.split('/')[-2]
+            #print "Working on ", sample_path
+            num_workers = int(sample_name.split('w')[0])
+            sample_num = int(sample_name.split('d')[-1])
+            for obj_path in glob.glob('{}obj*/'.format(sample_path)):
+                objid = int(obj_path.split('/')[-2].split('j')[1])
+                mv_p = None
+                mv_r = None
+                mv_j = None
+                mv_pr_file = '{}MV_prj.json'.format(obj_path)
+                if os.path.isfile(mv_pr_file):
+                    [mv_p, mv_r,mv_j] = json.load(open(mv_pr_file))
+                writer.writerow({
+                                    'num_workers': num_workers,
+                                    'sample_num': sample_num,
+                                    'objid': objid,
+                                    'MV_precision': mv_p,
+                                    'MV_recall': mv_r,
+                                    'MV_jaccard':mv_j
+                                  })
+    print 'Compiled PR to :'+ fname
 def compile_PR(mode="",ground_truth=False):
     import glob
     import csv

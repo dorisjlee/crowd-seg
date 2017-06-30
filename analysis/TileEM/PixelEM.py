@@ -158,7 +158,7 @@ def create_MV_mask(sample_name, objid, plot=True,mode=""):
             plt.savefig('{}MV_mask.png'.format(outdir))
     elif mode=="compute_pr_only":
 	MV_mask = pickle.load(open('{}MV_mask.pkl'.format(outdir)))
-    [p, r, j ] = get_precision_recall_jaccard(MV_mask, get_gt_mask(objid))
+    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
     with open('{}MV_prj.json'.format(outdir), 'w') as fp:
         fp.write(json.dumps([p, r,j]))
 
@@ -169,6 +169,9 @@ def get_MV_mask(sample_name, objid):
 
 
 def get_precision_recall_jaccard(test_mask, gt_mask):
+    ##############################################
+    # DEPRECATED REPLACED BY faster_compute_prj ##
+    ##############################################
     num_intersection = 0.0  # float(len(np.where(test_mask == gt_mask)[0]))
     num_test = 0.0  # float(len(np.where(test_mask == 1)[0]))
     num_gt = 0.0  # float(len(np.where(gt_mask == 1)[0]))
@@ -182,17 +185,19 @@ def get_precision_recall_jaccard(test_mask, gt_mask):
                 num_test += 1
             elif gt_mask[i][j] == 1:
                 num_gt += 1
-    #try:
-    #	return (num_intersection / num_test), (num_intersection / num_gt),(num_intersection/(num_gt+num_test-num_intersection))
-    #except(ZeroDivisionError):
-    #	print num_intersection
-    #	print num_test
-    #	print num_gt
     if num_test!=0:
  	return (num_intersection / num_test), (num_intersection / num_gt),(num_intersection/(num_gt+num_test-num_intersection))
     else:
 	return 0.,0.,0. 
 
+def faster_compute_prj(result,gt):
+    intersection = len(np.where(((result==1)|(gt==1))&(result==gt))[0])
+    gt_area = float(len(np.where(gt==1)[0]))
+    result_area = float(len(np.where(result==1)[0]))
+    precision = intersection/result_area
+    recall = intersection/gt_area
+    jaccard = intersection/(gt_area+result_area-intersection)
+    return precision,recall,jaccard
 
 def worker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False):
     if exclude_isovote:
@@ -421,7 +426,7 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
             log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2,area_mask,area_thresh_gt,area_thresh_ngt)
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
         # Compute PR mask based on the EM estimate mask from every iteration
-    	[p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+    	[p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
     	with open('{}{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
         if dump_output_at_every_iter:
@@ -471,7 +476,7 @@ def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
         if compute_PR_every_iter:
             # Compute PR mask based on the EM estimate mask from every iteration
-            [ p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
             with open('{}{}GT_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
                 fp.write(json.dumps([p, r, j]))
         with open('{}{}GT_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w') as fp:
@@ -482,7 +487,7 @@ def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
         pickle.dump(qn,open('{}{}GT_qn_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
     if not compute_PR_every_iter:
         # Compute PR mask based on the EM estimate mask from the last iteration
-        [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	[p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
         with open('{}{}GT_EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
 	    fp.write(json.dumps([p, r, j]))
     plt.figure()
@@ -521,7 +526,7 @@ def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
         if compute_PR_every_iter:
             # Compute PR mask based on the EM estimate mask from every iteration
-            [ p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
             with open('{}{}GT_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
                 fp.write(json.dumps([p, r, j]))
     # Save only during the last iteration
@@ -533,7 +538,7 @@ def do_GT_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
     pickle.dump(qn,open('{}{}GT_qn_{}_thresh{}.pkl'.format(outdir, mode,it,thresh), 'w'))
     if not compute_PR_every_iter:
         # Compute PR mask based on the EM estimate mask from the last iteration
-        [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	[p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
         with open('{}{}GT_EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
     plt.figure()
@@ -599,8 +604,8 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
     pickle.dump(log_probability_in_mask,open('{}{}{}_p_in_mask_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh),'w'))
     pickle.dump(log_probability_not_in_mask,open('{}{}{}_p_not_in_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh),'w'))
     pickle.dump(gt_est_mask,open('{}{}{}_gt_est_ground_truth_mask_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
-     
-    [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+    
+    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid)) 
     with open('{}{}{}_EM_prj_thresh{}.json'.format(outdir,mode,algo,thresh), 'w') as fp:
     	fp.write(json.dumps([p, r, j]))
 def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True):
@@ -643,7 +648,7 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
 
 	# Compute PR mask based on the EM estimate mask from the last iteration
 	if compute_PR_every_iter:
-            [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
             with open('{}{}EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
                 fp.write(json.dumps([p, r, j]))
     plt.figure()
@@ -652,7 +657,7 @@ def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0
     plt.savefig('{}{}EM_mask_thresh{}.png'.format(outdir,mode,thresh))
     if not compute_PR_every_iter:
         # Compute PR mask based on the EM estimate mask from the last iteration
-        [p, r, j] = get_precision_recall_jaccard(gt_est_mask, get_gt_mask(objid))
+	[p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
         with open('{}{}EM_prj_thresh{}.json'.format(outdir,mode,thresh), 'w') as fp:
             fp.write(json.dumps([p, r, j]))
 def compile_PRJ_MV():
@@ -721,9 +726,12 @@ def compile_PR(mode="",ground_truth=False):
 		    if os.path.isfile(mv_pr_file):
                         [mv_p, mv_r,mv_j] = json.load(open(mv_pr_file))
 		for thresh_path in glob_path: 
-		    #print thresh_path
-		    thresh= int(thresh_path.split('/')[-1].split('thresh')[1].split('.')[0])
+		    print thresh_path
+		    thresh= float(thresh_path.split('/')[-1].split('thresh')[1].split('.json')[0])
+		    #thresh= int(thresh_path.split('/')[-1].split('thresh')[1].split('.')[0])
 		    #thresh= int(thresh_path.split('thresh')[1].split('.')[0])
+		    if thresh.is_integer():
+			thresh = int(thresh)
 		    print thresh
 		    if ground_truth :
                         em_pr_file = '{}{}_EM_prj_thresh{}.json'.format(obj_path,mode,thresh)
@@ -798,7 +806,8 @@ if __name__ == '__main__':
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)#,mode="compute_pr_only")
-	    for thresh in [-2,-1,0,1,2]:
+	    for thresh in [-1.8,-1.6,-1.4,-1.2,-0.8, -0.6, -0.4, -0.2,  0. ,  0.2,  0.4,  0.6,  0.8, 1.2,1.4,1.6,1.8]:
+	    #for thresh in [-2,-1,0,1,2]:
             #for thresh in [-4,-2,0,2,4]:
 	    #for thresh in [0]:
      		print "Working on threshold: ",thresh
@@ -811,7 +820,6 @@ if __name__ == '__main__':
 		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=False,rerun_existing=False)
 		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=False)
 
-                GroundTruth_doM_once(sample, objid,thresh=thresh,algo="basic",exclude_isovote=True,rerun_existing=False)
                 GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=True,rerun_existing=False)
                 GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=True,rerun_existing=False)
 		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)

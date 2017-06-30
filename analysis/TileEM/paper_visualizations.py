@@ -1,3 +1,4 @@
+# Visualization for paper and debugging 
 from TileEM_plot_toolbox import *
 from qualityBaseline import *
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
@@ -149,3 +150,47 @@ def plot_vary_threshold(Nworker):
     plt.title("N worker={}".format(Nworker),fontsize=14)
     plt.xlabel("Threshold",fontsize=13)
     plt.legend()
+
+# viz for debugging 
+
+def plot_masks(batch,objid,thresh,algo,include=['pNInT',"mega","gtResult"],returnMatrix=False):    
+    if thresh ==0:
+        thresh=float(thresh)
+    if returnMatrix : 
+	returnMatLst=[]
+    if 'mega' in include:
+        mega_mask = pkl.load(open("pixel_em/{}/obj{}/mega_mask.pkl".format(batch,objid)))
+        plt.figure()
+        plt.imshow(mega_mask)
+        plt.title("Mega mask")
+        plt.colorbar()
+	if returnMatrix: returnMatLst.append(mega_mask)
+    if ('gtResult' in include) or ('ResultOnly' in include):
+	result = pkl.load(open("pixel_em/{}/obj{}/{}_gt_est_ground_truth_mask_thresh{}.pkl".format(batch,objid,algo,thresh)))
+	if returnMatrix: returnMatLst.append(result)
+        plt.figure()
+	if 'ResultOnly' in include:
+	    plt.title("EM Result")
+        else:
+	    gt = pkl.load(open("pixel_em/obj{}/gt.pkl".format(objid)))
+	    plt.title("GT [darker yellow] & EM Result[brighter yellow]")
+	    plt.imshow(gt,alpha=0.4)
+	    if returnMatrix: returnMatLst.append(gt)
+        plt.imshow(result)
+        plt.colorbar()
+    if 'pNInT' in include:
+        pInT =  pkl.load(open("pixel_em/{}/obj{}/{}_p_in_mask_ground_truth_thresh{}.pkl".format(batch,objid,algo,thresh)))
+        pNotInT =  pkl.load(open("pixel_em/{}/obj{}/{}_p_not_in_ground_truth_thresh{}.pkl".format(batch,objid,algo,thresh)))
+        plt.figure()
+        plt.title("pInT")
+        plt.imshow(pInT)
+        plt.colorbar()
+	
+        plt.figure()
+        plt.title("pNotInT")
+        plt.imshow(pNotInT)
+        plt.colorbar()
+	if returnMatrix: 
+	    returnMatLst.append(pInT)
+	    returnMatLst.append(pNotInT)
+    if returnMatrix: return returnMatLst

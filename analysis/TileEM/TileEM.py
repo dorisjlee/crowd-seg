@@ -45,10 +45,13 @@ def initT(tiles,indMat):
 	topk=1 
         tidx = np.argsort(votes)[::-1][:topk]
     return join_tiles(tidx,tiles)[0],list(tidx)
-def ground_truth_T(object_id):
+def ground_truth_T(object_id,reverse_xy = False):
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     ground_truth_match = my_BBG[my_BBG.object_id==object_id]
-    x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
+    if reverse_xy:
+	x_locs,y_locs =  process_raw_locs([ground_truth_match["y_locs"].iloc[0],ground_truth_match["x_locs"].iloc[0]])
+    else:
+	x_locs,y_locs =  process_raw_locs([ground_truth_match["x_locs"].iloc[0],ground_truth_match["y_locs"].iloc[0]])
     T = Polygon(zip(x_locs,y_locs))
     return T
 ###################################################################################################################################################

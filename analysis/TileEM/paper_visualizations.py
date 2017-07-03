@@ -1,5 +1,6 @@
 # Visualization for paper and debugging 
 from TileEM_plot_toolbox import *
+from TileEM import * 
 from qualityBaseline import *
 worker_Nbatches={5:10,10:8,15:6,20:4,25:2,30:1}
 sampleN_lst=worker_Nbatches.keys()
@@ -173,8 +174,9 @@ def plot_masks(batch,objid,thresh,algo,include=['pNInT',"mega","gtResult"],retur
 	    plt.title("EM Result")
         else:
 	    gt = pkl.load(open("pixel_em/obj{}/gt.pkl".format(objid)))
-	    plt.title("GT [darker yellow] & EM Result[brighter yellow]")
+	    plt.title("GT [cyan] & EM Result[brighter yellow]")
 	    plt.imshow(gt,alpha=0.4)
+	    plot_coords(ground_truth_T(objid,reverse_xy=True),'cyan')
 	    if returnMatrix: returnMatLst.append(gt)
         plt.imshow(result)
         plt.colorbar()

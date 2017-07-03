@@ -434,6 +434,12 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
             #Compute pInMask and pNotInMask 
             log_probability_in_mask, log_probability_not_in_mask = GTLSAmask_log_probabilities(worker_masks,qp1,qn1,qp2,qn2,area_mask,area_thresh_gt,area_thresh_ngt)
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+	if exclude_isovote:
+            invariant_mask = np.zeros_like(mega_mask,dtype=bool)
+            invariant_mask_yes = np.ma.masked_where((mega_mask==Nworkers),invariant_mask).mask
+	    invariant_mask_no = np.ma.masked_where((mega_mask ==0),invariant_mask).mask
+            gt_est_mask = gt_est_mask+invariant_mask_yes-invariant_mask_no
+	    gt_est_mask[gt_est_mask==-1]=0
         # Compute PR mask based on the EM estimate mask from every iteration
     	[p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
     	with open('{}{}GTLSA_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
@@ -469,7 +475,7 @@ def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
     # initialize MV mask
     gt_est_mask = get_MV_mask(sample_name, objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
-    Nworkers=len(worker_masks)
+    Nworkers = len(worker_masks)
     mega_mask = get_mega_mask(sample_name, objid)
     for it in range(num_iterations):
         print "Iteration #",it
@@ -483,6 +489,12 @@ def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thres
         #Compute pInMask and pNotInMask
         log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
         gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+	if exclude_isovote:
+	    invariant_mask = np.zeros_like(mega_mask,dtype=bool)
+	    invariant_mask_yes = np.ma.masked_where((mega_mask==Nworkers),invariant_mask).mask
+	    invariant_mask_no = np.ma.masked_where((mega_mask ==0),invariant_mask).mask
+	    gt_est_mask = gt_est_mask+invariant_mask_yes-invariant_mask_no
+            gt_est_mask[gt_est_mask==-1]=0
         if compute_PR_every_iter:
             # Compute PR mask based on the EM estimate mask from every iteration
 	    [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
@@ -610,11 +622,20 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
 	pickle.dump(qp2,open('{}{}{}_qp2_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
 	pickle.dump(qn2,open('{}{}{}_qn2_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
     gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+    if exclude_isovote:
+    	invariant_mask = np.zeros_like(mega_mask,dtype=bool)
+        invariant_mask_yes = np.ma.masked_where((mega_mask==Nworkers),invariant_mask).mask
+	invariant_mask_no = np.ma.masked_where((mega_mask ==0),invariant_mask).mask
+	gt_est_mask = gt_est_mask+invariant_mask_yes-invariant_mask_no
+        gt_est_mask[gt_est_mask<0]=False
+	gt_est_mask[gt_est_mask>1]=True
+        #gt_est_mask = gt_est_mask+invariant_mask_yes
     pickle.dump(log_probability_in_mask,open('{}{}{}_p_in_mask_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh),'w'))
     pickle.dump(log_probability_not_in_mask,open('{}{}{}_p_not_in_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh),'w'))
     pickle.dump(gt_est_mask,open('{}{}{}_gt_est_ground_truth_mask_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
     
     [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid)) 
+    print "p,r,j:",p,r,j
     with open('{}{}{}_EM_prj_thresh{}.json'.format(outdir,mode,algo,thresh), 'w') as fp:
     	fp.write(json.dumps([p, r, j]))
 def do_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True):
@@ -790,8 +811,11 @@ if __name__ == '__main__':
     #sample = '5workers_rand0'
     from test_sample import test_sample_obj
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
-    if False:
-    #if True: 
+
+    # Debugging Examples
+    #GroundTruth_doM_once(sample, 23 ,thresh=1,algo="GT",exclude_isovote=True,rerun_existing=True)
+    #if False:
+    if True: 
     #print sample_lst  
     #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects
@@ -815,8 +839,8 @@ if __name__ == '__main__':
             obj_start_time = time.time()
             #create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)#,mode="compute_pr_only")
-	    for thresh in [-1.8,-1.6,-1.4,-1.2,-0.8, -0.6, -0.4, -0.2,  0. ,  0.2,  0.4,  0.6,  0.8, 1.2,1.4,1.6,1.8]:
-	    #for thresh in [-2,-1,0,1,2]:
+	    #for thresh in [-1.8,-1.6,-1.4,-1.2,-0.8, -0.6, -0.4, -0.2,  0. ,  0.2,  0.4,  0.6,  0.8, 1.2,1.4,1.6,1.8]:
+	    for thresh in [-2,-1,0,1,2]:
             #for thresh in [-4,-2,0,2,4]:
 	    #for thresh in [0]:
      		print "Working on threshold: ",thresh
@@ -825,21 +849,21 @@ if __name__ == '__main__':
 		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False, num_iterations=3)
 		#do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True,compute_PR_every_iter=True, num_iterations=3)
 		#do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True, num_iterations=3)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="basic",exclude_isovote=False,rerun_existing=False)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=False,rerun_existing=False)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=False)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="basic",exclude_isovote=False,rerun_existing=False)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=False,rerun_existing=False)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=False)
 
-                GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=True,rerun_existing=False)
-                GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=True,rerun_existing=False)
+                GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=True,rerun_existing=True)
+                GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=True,rerun_existing=True)
 		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()
             print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
 
-    compile_PR(mode="GTLSA",ground_truth=True)
-    compile_PR(mode="isoGTLSA",ground_truth=True)
-    compile_PR(mode="GT",ground_truth=True)
-    compile_PR(mode="isoGT",ground_truth=True)
-    compile_PR(mode="basic",ground_truth=True)
+    #compile_PR(mode="GTLSA",ground_truth=True)
+    #compile_PR(mode="isoGTLSA",ground_truth=True)
+    #compile_PR(mode="GT",ground_truth=True)
+    #compile_PR(mode="isoGT",ground_truth=True)
+    #compile_PR(mode="basic",ground_truth=True)
     #do_GTLSA_EM_for('5workers_rand0', 1,thresh=-2,rerun_existing=True,exclude_isovote=True, num_iterations=5,dump_output_at_every_iter=True)

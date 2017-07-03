@@ -194,3 +194,38 @@ def plot_masks(batch,objid,thresh,algo,include=['pNInT',"mega","gtResult"],retur
 	    returnMatLst.append(pInT)
 	    returnMatLst.append(pNotInT)
     if returnMatrix: return returnMatLst
+
+def plot_comparison(df,x_attr,y1_attr,y2_attr):
+    if x_attr=="index":
+        a = plt.plot(df.index,df[y1_attr],'.',label=y1_attr)
+        a = plt.plot(df.index,df[y2_attr],'x',label=y2_attr )
+    else:
+        a = plt.plot(df[x_attr],df[y1_attr],'.',label=y1_attr)
+        a = plt.plot(df[x_attr],df[y2_attr],'x',label=y2_attr )
+    plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+    plt.xlabel(x_attr)
+
+def compare_PRJ_fixed_attr(df,attr,y1,y2,plot_metric='PRJ'):
+    attr_lst = list(set(df[attr]))
+    if 'P' in plot_metric:
+        plt.figure()
+        plt.title('Precision')
+        plot_comparison(df,attr,"P [{}]".format(y1),"P [{}]".format(y2))
+        plt.xticks(attr_lst,rotation='vertical')
+    if 'R' in plot_metric: 
+        plt.figure()
+        plt.title('Recall')
+        plot_comparison(df,attr,"R [{}]".format(y1),"R [{}]".format(y2))
+        plt.xticks(attr_lst,rotation='vertical')
+    if 'J' in plot_metric:
+        plt.figure()
+        plt.title('Jaccard')
+        plot_comparison(df,attr,"J [{}]".format(y1),"J [{}]".format(y2))
+        plt.xticks(attr_lst,rotation='vertical')
+def compare_PRJ_fixed_sample_object(df,y1,y2):
+    plt.figure()
+    plot_comparison(df,"index","P [{}]".format(y1),"P [{}]".format(y2))
+    plt.figure()
+    plot_comparison(df,"index","R [{}]".format(y1),"R [{}]".format(y2))
+    plt.figure()
+    plot_comparison(df,"index","J [{}]".format(y1),"J [{}]".format(y2))

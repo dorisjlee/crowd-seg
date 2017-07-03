@@ -194,9 +194,18 @@ def faster_compute_prj(result,gt):
     intersection = len(np.where(((result==1)|(gt==1))&(result==gt))[0])
     gt_area = float(len(np.where(gt==1)[0]))
     result_area = float(len(np.where(result==1)[0]))
-    precision = intersection/result_area
-    recall = intersection/gt_area
-    jaccard = intersection/(gt_area+result_area-intersection)
+    try: 
+        precision = intersection/result_area
+    except(ZeroDivisionError):
+	precision = -1
+    try: 
+    	recall = intersection/gt_area
+    except(ZeroDivisionError):
+	recall =-1 
+    try:
+        jaccard = intersection/(gt_area+result_area-intersection)
+    except(ZeroDivisionError):
+	jaccard =-1
     return precision,recall,jaccard
 
 def worker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False):

@@ -11,19 +11,30 @@ def tarea_mask(sample, objid):
     # sorted by largest to smallest area
     #so that small area assignments for a pixel overrides the large area assignments
     ordered_tiles = np.array(tiles)[np.argsort(t_area)[::-1]]
-    for tile in ordered_tiles:
+    tarea_lst = []
+    # mask_lst = []
+    overlap_count=0
+    for tidx,tile in enumerate(ordered_tiles):
         x,y = tile.exterior.xy
         tarea = tile.area
         img = Image.new('L', ( np.shape(MV)[1], np.shape(MV)[0]), 0)
         ImageDraw.Draw(img).polygon(zip(x,y), outline=1, fill=1)
-        mask = np.array(img)*tarea
+        mask = np.array(img)*(tidx+1) #tarea
+        replace_overlap = np.where((mega_mask!=0)&(mask!=0))
+        if len(replace_overlap[0])>0:
+            overlap_count+=1
+            mega_mask[replace_overlap]=0
         mega_mask+=mask
-    pkl.dump(mega_mask,open("pixel_em/{}/obj{}/tarea_mask.pkl".format(sample,objid),'w'))
-tarea_mask('25workers_rand0',16)
+        tarea_lst.append(tarea)
+    mega_mask[mega_mask==0]=0#mega_mask.size-sum(tarea_lst)
+    tidx_mask = mega_mask.astype('int')
+    pkl.dump(tarea_lst,open("pixel_em/{}/obj{}/tarea.pkl".format(sample,objid),'w'))
+    pkl.dump(tidx_mask,open("pixel_em/{}/obj{}/tidx_mask.pkl".format(sample,objid),'w'))
 
-#for sample in tqdm(sample_specs.keys()[23:]):
-#    for objid in range(1,48):
-#	try:
-#            tarea_mask(sample,objid)
-#	except(IOError):
-#	    pass
+object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+for sample in tqdm(sample_specs.keys()):
+    for objid in tqdm(object_lst):
+	try:
+            tarea_mask(sample,objid)
+	except(IOError):
+	    pass

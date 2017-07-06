@@ -833,11 +833,11 @@ if __name__ == '__main__':
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
 
     # Debugging Examples
-    #GroundTruth_doM_once('5workers_rand0', 7 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    #GroundTruth_doM_once('5workers_rand0', 42 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    #GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-   # if False:
-    if True: 
+    GroundTruth_doM_once('5workers_rand0', 7 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    GroundTruth_doM_once('5workers_rand0', 42 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    if False:
+    #if True: 
     #print sample_lst  
     #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects

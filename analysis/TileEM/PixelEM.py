@@ -247,7 +247,7 @@ def GTworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=Fal
     return qp,qn
 
 def GTLSAworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,area_mask,tidx_mask,tarea_lst,exclude_isovote=False): 
-    
+    #print "GTLSAworker_prob_correct" 
     gt_tiles = []
     ngt_tiles = []
     for t in range(len(tarea_lst)):
@@ -259,9 +259,14 @@ def GTLSAworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,area_mask,tidx_m
             else:
                 ngt_tiles.append(t)
     tarea_lst = np.array(tarea_lst)
-    area_thresh_gt =  np.median(tarea_lst[gt_tiles])
-    area_thresh_ngt = np.median(tarea_lst[ngt_tiles])
- 
+    #area_thresh_gt =  np.median(tarea_lst[gt_tiles])
+    #area_thresh_ngt = np.median(tarea_lst[ngt_tiles])
+    gt_areas = tarea_lst[gt_tiles]
+    ngt_areas = tarea_lst[ngt_tiles]
+    area_thresh_gt = (min(gt_areas)+max(gt_areas))/2.
+    area_thresh_ngt = (min(ngt_areas)+max(ngt_areas))/2.
+    #print min(gt_areas),max(gt_areas), area_thresh_gt,len(gt_areas)
+    #print min(ngt_areas),max(ngt_areas),area_thresh_ngt,len(ngt_areas)
     large_gt_Ncorrect,large_gt_total,large_ngt_Ncorrect,large_ngt_total = 0,0,0,0
     small_gt_Ncorrect,small_gt_total,small_ngt_Ncorrect,small_ngt_total=0,0,0,0 
     #print np.shape(gt_mask)
@@ -598,9 +603,9 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
 	Qj_model = worker_prob_correct
         likelihood_model = mask_log_probabilities	 
     # initialize MV mask
-    area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir)))
-    tidx_mask = pkl.load(open("{}/tidx_mask.pkl".format(outdir)))
-    t_area_lst = pkl.load(open("{}/tarea.pkl".format(outdir)))
+    area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir),'r'))
+    tidx_mask = pkl.load(open("{}/tidx_mask.pkl".format(outdir),'r'))
+    t_area_lst = pkl.load(open("{}/tarea.pkl".format(outdir),'r'))
     gt_est_mask = get_gt_mask(objid)
     worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
     Nworkers= len(worker_masks)
@@ -637,10 +642,13 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
     gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
     if algo =='GTLSA':
     # Testing:
+	area_thres = open("area_thres.txt",'a')
         gt_areas= area_mask[gt_est_mask==True]
         print "gt split: ", len(np.where(gt_areas<area_thresh_gt)[0]), len(np.where(gt_areas>=area_thresh_gt)[0])
         ngt_areas= area_mask[gt_est_mask==False]
-        print "ngt split: ",len(np.where(ngt_areas<area_thresh_gt)[0]),len(np.where(ngt_areas>=area_thresh_gt)[0])
+        print "ngt split: ",len(np.where(ngt_areas<area_thresh_ngt)[0]),len(np.where(ngt_areas>=area_thresh_ngt)[0])
+	area_thres.write("{},{},{},{},{}\n".format(sample_name, objid, algo,area_thresh_gt,area_thresh_ngt))
+	area_thres.close()
 
     if exclude_isovote:
     	invariant_mask = np.zeros_like(mega_mask,dtype=bool)
@@ -827,17 +835,17 @@ if __name__ == '__main__':
     # ['25workers_rand0', '5workers_rand8', '5workers_rand9', '5workers_rand6', '5workers_rand7', '5workers_rand4', '5workers_rand5', '5workers_rand2', '5workers_rand3', '5workers_rand0', '5workers_rand1', '20workers_rand1', '20workers_rand2', '20workers_rand3', '20workers_rand0', '10workers_rand1', '10workers_rand0', '10workers_rand3', '10workers_rand2', '10workers_rand5', '10workers_rand4', '10workers_rand7', '10workers_rand6', '30workers_rand0', '25workers_rand1', '15workers_rand2', '15workers_rand3', '15workers_rand0', '15workers_rand1', '15workers_rand4', '15workers_rand5']
     sample_lst = sample_specs.keys()
     sample = sys.argv[1]
-    print sample_lst
+    #print sample_lst
     #sample = '5workers_rand0'
     from test_sample import test_sample_obj
     object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
 
     # Debugging Examples
-    GroundTruth_doM_once('5workers_rand0', 7 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    GroundTruth_doM_once('5workers_rand0', 42 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    if False:
-    #if True: 
+    #GroundTruth_doM_once('5workers_rand0', 7 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    #GroundTruth_doM_once('5workers_rand0', 42 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    #GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+    #if False:
+    if True: 
     #print sample_lst  
     #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects

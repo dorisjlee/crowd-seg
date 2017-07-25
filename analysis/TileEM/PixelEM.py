@@ -210,12 +210,38 @@ def faster_compute_prj(result,gt):
 
 def worker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False):
     if exclude_isovote:
-	num_agreement= len(np.where((mega_mask==0) | (mega_mask==Nworkers))) # no votes
+	num_agreement= len(np.where((mega_mask==0) | (mega_mask==Nworkers))[0]) # no votes
     else:
 	num_agreement = 0
     #print "Num agreement:", num_agreement
     qj = float( len(np.where(w_mask == gt_mask)[0])-num_agreement ) / (len(gt_mask[0]) * len(gt_mask)-num_agreement)
     return qj 
+
+def aw_worker_prob_correct(mega_mask,w_mask, gt_mask,area_lst,Nworkers,exclude_isovote=False):
+    # area weighted model for worker probability. 
+    if exclude_isovote:
+        num_agreement= len(np.where((mega_mask==0) | (mega_mask==Nworkers))[0]) # no votes
+    else:
+        num_agreement = 0
+    numerator = 0
+    denominator = sum(area_lst)
+    for i in range(np.shape(gt_mask)[0]):
+        for j in range(np.shape(gt_mask)[1]):
+            gt = gt_mask[i][j]
+            w  = w_mask[i][j]
+            m = mega_mask[i][j]
+            if exclude_isovote:
+                not_agreement=False
+            else:
+                not_agreement=True
+            if m!=0 and  m!=Nworkers:
+                not_agreement=True
+                
+            if not_agreement:
+                if ((gt==1) and (w==1)) or  (gt==0 and w==0): #correct
+                    numerator+= 1
+    qj = float(numerator)/(denominator-num_agreement)
+    return qj
 
 def GTworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=False):
     # Testing 
@@ -224,7 +250,7 @@ def GTworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,exclude_isovote=Fal
     ngt_Ncorrect = 0 
     ngt_total = 0 
     for i in range(np.shape(gt_mask)[0]):
-	for j in range(np.shape(w_mask)[1]):
+	for j in range(np.shape(gt_mask)[1]):
 	    gt = gt_mask[i][j]
 	    w =w_mask[i][j]
 	    m = mega_mask[i][j]
@@ -593,16 +619,8 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
             #'{}{}{}_EM_prj_iter{}_thresh{}.json'.format(outdir,num_iterations-1,thresh)):
             print "Already ran GT, Skipped"
             return
-    if algo == 'GT':
-	Qj_model = GTworker_prob_correct
-	likelihood_model =  GTmask_log_probabilities
-    elif algo == 'GTLSA':
-	Qj_model = GTLSAworker_prob_correct
-	likelihood_model = GTLSAmask_log_probabilities
-    elif algo == 'basic':
-	Qj_model = worker_prob_correct
-        likelihood_model = mask_log_probabilities	 
     # initialize MV mask
+    area_lst = pkl.load(open("{}/tarea.pkl".format(outdir),'r'))
     area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir),'r'))
     tidx_mask = pkl.load(open("{}/tidx_mask.pkl".format(outdir),'r'))
     t_area_lst = pkl.load(open("{}/tarea.pkl".format(outdir),'r'))
@@ -613,17 +631,17 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
     if algo=='basic':
 	q=dict()
 	for wid in worker_masks.keys():
-            q[wid]= Qj_model(mega_mask,worker_masks[wid], gt_est_mask,Nworkers,exclude_isovote=exclude_isovote)
+            q[wid]= worker_prob_correct(mega_mask,worker_masks[wid], gt_est_mask,Nworkers,exclude_isovote=exclude_isovote)
 	#Compute pInMask and pNotInMask
-        log_probability_in_mask, log_probability_not_in_mask = likelihood_model(worker_masks,q)
+        log_probability_in_mask, log_probability_not_in_mask = mask_log_probabilities(worker_masks,q)
     	pickle.dump(q,open('{}{}{}_q_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w')) 
     elif algo=='GT': 
         qp = dict()
     	qn = dict()
     	for wid in worker_masks.keys():
-	     qp[wid],qn[wid] = Qj_model(mega_mask,worker_masks[wid], gt_est_mask,Nworkers, exclude_isovote=exclude_isovote)
+	     qp[wid],qn[wid] = GTworker_prob_correct(mega_mask,worker_masks[wid], gt_est_mask,Nworkers, exclude_isovote=exclude_isovote)
     	#Compute pInMask and pNotInMask
-    	log_probability_in_mask, log_probability_not_in_mask = likelihood_model(worker_masks,qp,qn)
+    	log_probability_in_mask, log_probability_not_in_mask = GTmask_log_probabilities(worker_masks,qp,qn)
 	pickle.dump(qp,open('{}{}{}_qp_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
         pickle.dump(qn,open('{}{}{}_qn_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
     elif algo =='GTLSA':
@@ -638,6 +656,13 @@ def GroundTruth_doM_once(sample_name, objid, algo, num_iterations=5,load_p_in_ma
 	pickle.dump(qn1,open('{}{}{}_qn1_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
 	pickle.dump(qp2,open('{}{}{}_qp2_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
 	pickle.dump(qn2,open('{}{}{}_qn2_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
+    elif algo =="AW":
+	worker_qualities = dict()
+        for wid in worker_masks.keys():
+            worker_qualities[wid] = aw_worker_prob_correct(mega_mask,worker_masks[wid], gt_est_mask,area_lst,Nworkers,exclude_isovote=exclude_isovote)
+	#Compute pInMask and pNotInMask
+        log_probability_in_mask, log_probability_not_in_mask = mask_log_probabilities(worker_masks,worker_qualities)
+	pickle.dump(worker_qualities,open('{}{}{}_q_ground_truth_thresh{}.pkl'.format(outdir,mode,algo,thresh), 'w'))
 
     gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
     if algo =='GTLSA':
@@ -881,11 +906,12 @@ if __name__ == '__main__':
 		#do_GT_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=True, num_iterations=3)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="basic",exclude_isovote=False,rerun_existing=False)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=False,rerun_existing=False)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
+		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=False,rerun_existing=True)
                 #GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=True,rerun_existing=True)
                 #GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=True,rerun_existing=True)
 		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
+		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=True,rerun_existing=True)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()

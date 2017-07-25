@@ -45,6 +45,7 @@ def create_tarea_mask(sample,objid):
     tiles = [] # list of masks of all the tiles extracted
     tarea_mask = np.zeros_like(mega_mask)
     unique_tile_values = np.unique(mega_mask)
+    tarea_lst = []
     # print unique_tile_values
     for tile_value in unique_tile_values[1:]: #exclude 0
         blobs = mega_mask==tile_value
@@ -53,10 +54,14 @@ def create_tarea_mask(sample,objid):
             tile_mask = blobs_labels==i
             tile_pix = np.where(tile_mask==True)
             tiles.append(tile_mask)
-            tarea_mask[tile_pix]=mask_area(tile_mask)
+	    tarea = mask_area(tile_mask)
+            tarea_mask[tile_pix] = tarea
+	    tarea_lst.append(tarea)
     outside_area  = np.product(np.shape(tarea_mask))-np.unique(tarea_mask).sum()
     tarea_mask[np.where(tarea_mask==0)]=outside_area
-    pkl.dump(tarea_mask,open("pixel_em/{}/obj{}/tarea.pkl".format(sample,objid),'w'))
+    tarea_lst.append(outside_area)
+    pkl.dump(tarea_lst,open("pixel_em/{}/obj{}/tarea.pkl".format(sample,objid),'w'))
+    pkl.dump(tarea_mask,open("pixel_em/{}/obj{}/tarea_mask.pkl".format(sample,objid),'w'))
     return tarea_mask
 
 def plot_tarea_mask(tarea_mask):
@@ -69,6 +74,7 @@ def mask_area(mask):
 object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
 #for sample in tqdm(sample_specs.keys()):
 for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
+    print sample 
     for objid in object_lst:
 	print "objid:",objid
 	try:

@@ -506,6 +506,68 @@ def do_GTLSA_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,th
     plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
     plt.colorbar()
     plt.savefig('{}{}GTLSA_EM_mask_thresh{}.png'.format(outdir,mode,thresh))
+def do_Area_EM_for(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,dump_output_at_every_iter=False,debug=False):
+    print "Doing Area-Weighted EM"
+    outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
+    if exclude_isovote:
+        mode ='iso'
+    else:
+        mode =''
+    if rerun_existing:
+        if os.path.isfile('{}AW_EM_prj_thresh{}.json'.format(outdir,thresh)):
+            print "Already ran, Skipped"
+            return
+
+    # initialize MV mask
+    gt_est_mask = get_MV_mask(sample_name, objid)
+    worker_masks = get_all_worker_mega_masks_for_sample(sample_name, objid)
+    area_lst = pkl.load(open("{}/tarea.pkl".format(outdir)))
+    #area_mask = pkl.load(open("{}/tarea_mask.pkl".format(outdir)))
+    tidx_mask = pkl.load(open("{}/tidx_mask.pkl".format(outdir)))
+
+    Nworkers= len(worker_masks)
+    mega_mask = get_mega_mask(sample_name, objid)
+    for it in range(num_iterations):
+        if debug: print "iter #",it
+        worker_qualities = dict()
+        for wid in worker_masks.keys():
+            worker_qualities[wid] = aw_worker_prob_correct(mega_mask,worker_masks[wid], gt_est_mask,area_lst,Nworkers,exclude_isovote=exclude_isovote)
+        if load_p_in_mask:
+            #print "loaded pInT"
+            log_probability_in_mask=pkl.load(open('{}{}p_in_mask_{}.pkl'.format(outdir,mode, it)))
+            log_probability_not_in_mask =pkl.load(open('{}{}p_not_in_mask_{}.pkl'.format(outdir,mode, it)))
+        else:
+            #Compute pInMask and pNotInMask
+            log_probability_in_mask, log_probability_not_in_mask = mask_log_probabilities(worker_masks, worker_qualities)
+            with open('{}{}p_in_mask_{}.pkl'.format(outdir, mode,it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_in_mask))
+            with open('{}{}p_not_in_mask_{}.pkl'.format(outdir,mode, it), 'w') as fp:
+                fp.write(pickle.dumps(log_probability_not_in_mask))
+        gt_est_mask = estimate_gt_from(log_probability_in_mask, log_probability_not_in_mask,thresh=thresh)
+        if debug : 
+            plt.figure()
+            plt.imshow(gt_est_mask, interpolation="none")  # ,cmap="rainbow")
+            plt.colorbar()
+            # plt.savefig('{}{}AW_EM_mask_thresh{}.png'.format(outdir,mode,thresh))
+        
+        
+        # Compute PR mask based on the EM estimate mask from every iteration
+        [p, r, j] = faster_compute_prj(gt_est_mask, get_gt_mask(objid))
+        with open('{}{}AW_EM_prj_iter{}_thresh{}.json'.format(outdir,mode,it,thresh), 'w') as fp:
+            fp.write(json.dumps([p, r, j]))
+        if debug : print p,r,j
+        if dump_output_at_every_iter:
+            pickle.dump(gt_est_mask,open('{}{}AW_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+            pickle.dump(log_probability_in_mask,open('{}{}AW_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+            pickle.dump(log_probability_not_in_mask,open('{}{}AW_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+            pickle.dump(worker_qualities,open('{}{}AW_qj_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+
+    pickle.dump(gt_est_mask,open('{}{}AW_gt_est_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+    pickle.dump(log_probability_in_mask,open('{}{}AW_p_in_mask_{}_thresh{}.pkl'.format(outdir,mode,it,thresh), 'w'))
+    pickle.dump(log_probability_not_in_mask,open('{}{}AW_p_not_in_mask_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+    pickle.dump(worker_qualities,open('{}{}AW_qj_{}_thresh{}.pkl'.format(outdir,mode, it,thresh), 'w'))
+
+    
 def GT_EM_Qjinit(sample_name, objid, num_iterations=5,load_p_in_mask=False,thresh=0,rerun_existing=False,exclude_isovote=False,compute_PR_every_iter=False):
     print "Doing GT EM (Qj=0.6 initialization)"
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)

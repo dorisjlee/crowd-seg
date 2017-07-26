@@ -931,8 +931,8 @@ if __name__ == '__main__':
     #GroundTruth_doM_once('5workers_rand0', 7 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
     #GroundTruth_doM_once('5workers_rand0', 42 ,thresh=2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
     #GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-    #if False:
-    if True: 
+    if False:
+    #if True: 
     #print sample_lst  
     #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects
@@ -978,7 +978,8 @@ if __name__ == '__main__':
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()
             print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
-
+    compile_PR(mode="AW",ground_truth=True)
+    compile_PR(mode="isoAW",ground_truth=True)
     #compile_PR(mode="GTLSA",ground_truth=True)
     #compile_PR(mode="isoGTLSA",ground_truth=True)
     #compile_PR(mode="GT",ground_truth=True)

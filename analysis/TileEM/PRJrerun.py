@@ -19,14 +19,15 @@ for sample_name in ['5workers_rand0','10workers_rand0','15workers_rand0','20work
         objid = int(obj_path.split("/")[-2][3:])
         pkl_fname=obj_path.split("/")[-1].split('_')
         algo = pkl_fname[0]
-        thresh = float(pkl_fname[-1].split("thresh")[-1][:-4])
-        if thresh in [-2,-1,0,1,2]: 
-	    #include only these parameter (the finer parameter were not used in the rerun)  
-            result = pkl.load(open(obj_path))
-            [p, r, j] = faster_compute_prj(result, get_gt_mask(objid)) 
-            df.append([num_workers,sample_num,objid,algo,thresh,p,r,j])        
+	if 'AW' in algo: 
+            thresh = float(pkl_fname[-1].split("thresh")[-1][:-4])
+            if thresh in [-2,-1,0,1,2]: 
+	        #include only these parameter (the finer parameter were not used in the rerun)  
+                result = pkl.load(open(obj_path))
+                [p, r, j] = faster_compute_prj(result, get_gt_mask(objid)) 
+                df.append([num_workers,sample_num,objid,algo,thresh,p,r,j])        
 
 df_tbl = pd.DataFrame(df,columns=['num_workers', 'sample_num', 'objid', 'algorithm','thresh', 'precision', 'recall','jaccard'])
-fname = '{}ground_truth_rerun_full_PRJ_table_invariant_fixed.csv'.format(PIXEL_EM_DIR)
+fname = '{}ground_truth_rerun_full_PRJ_table_AW.csv'.format(PIXEL_EM_DIR)
 df_tbl.to_csv(fname)
 print "saved to: ", fname 

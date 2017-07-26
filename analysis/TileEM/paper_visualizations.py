@@ -231,3 +231,19 @@ def compare_PRJ_fixed_sample_object(df,y1,y2):
     plot_comparison(df,"index","R [{}]".format(y1),"R [{}]".format(y2))
     plt.figure()
     plot_comparison(df,"index","J [{}]".format(y1),"J [{}]".format(y2))
+
+def plot_PRcurve(df,objid,num_worker,sample_num=0):
+    objdf = df[(df["num_workers"]==num_worker)&(df["sample_num"]==sample_num)&(df["objid"]==objid)]
+    plt.figure()
+    for algo in ['basic','GT','isoGT','GTLSA','isoGTLSA','AW','isoAW']:
+        x= objdf["P [{}]".format(algo)]
+        y = objdf["R [{}]".format(algo)]
+        if len(x)<=0:
+            return
+        sortedx, sortedy = zip(*sorted(zip(x, y)))
+        plt.plot(sortedx,sortedy,'.-',label=algo)
+    plt.xlabel("Precision",fontsize=13)
+    plt.ylabel("Recall",fontsize=13)
+    plt.legend(loc="bottom left")
+    plt.title("{}worker_rand{} [obj {};N={}]".format(num_worker,sample_num,objid,len(objdf)))
+

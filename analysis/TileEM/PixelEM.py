@@ -93,7 +93,7 @@ def create_mega_mask(objid, PLOT=False, sample_name='5workers_rand0', PRINT=Fals
     fname = ORIGINAL_IMG_DIR + img_name + ".png"
     width, height = get_size(fname)
     mega_mask = np.zeros((height, width))
-
+    voted_workers_mask = np.zeros((height, width),dtype=object)
     outdir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
@@ -105,6 +105,13 @@ def create_mega_mask(objid, PLOT=False, sample_name='5workers_rand0', PRINT=Fals
     for wid in worker_ids:
         mask = get_worker_mask(objid, wid)
         mega_mask += mask
+        # Voted Mask 
+        voted_coord = np.where(mask==True)
+        for x,y in zip(voted_coord[0],voted_coord[1]):
+            if voted_workers_mask[x,y]==0: 
+                voted_workers_mask[x,y]=[wid]
+            else:
+                voted_workers_mask[x,y].append(wid)
 
     if PLOT:
         # Visualize mega_mask
@@ -113,11 +120,11 @@ def create_mega_mask(objid, PLOT=False, sample_name='5workers_rand0', PRINT=Fals
         # plt.imshow(mask, interpolation="none")  # ,cmap="rainbow")
         plt.colorbar()
         plt.savefig('{}mega_mask.png'.format(outdir))
-
     # TODO: materialize masks
     with open('{}mega_mask.pkl'.format(outdir), 'w') as fp:
         fp.write(pickle.dumps(mega_mask))
-
+    with open('{}voted_workers_mask.pkl'.format(outdir), 'w') as fp:
+        fp.write(pickle.dumps(voted_workers_mask))
 
 def get_mega_mask(sample_name, objid):
     indir = '{}{}/obj{}/'.format(PIXEL_EM_DIR, sample_name, objid)
@@ -289,6 +296,8 @@ def GTLSAworker_prob_correct(mega_mask,w_mask, gt_mask,Nworkers,area_mask,tidx_m
     #area_thresh_ngt = np.median(tarea_lst[ngt_tiles])
     gt_areas = tarea_lst[gt_tiles]
     ngt_areas = tarea_lst[ngt_tiles]
+    #print gt_areas
+    #print ngt_areas
     area_thresh_gt = (min(gt_areas)+max(gt_areas))/2.
     area_thresh_ngt = (min(ngt_areas)+max(ngt_areas))/2.
     #print min(gt_areas),max(gt_areas), area_thresh_gt,len(gt_areas)
@@ -841,7 +850,7 @@ def compile_PR(mode="",ground_truth=False):
     if ground_truth :
     	fname = '{}{}_ground_truth_full_PRJ_table.csv'.format(PIXEL_EM_DIR,mode)
     else:
-        fname  = '{}{}full_PRJ_table.csv'.format(PIXEL_EM_DIR,mode)
+        fname  = '{}{}_full_PRJ_table.csv'.format(PIXEL_EM_DIR,mode)
     with open(fname, 'w') as csvfile:
 	if mode=="":
             fieldnames = ['num_workers', 'sample_num', 'objid', 'thresh', 'MV_precision', 'MV_recall','MV_jaccard', 'EM_precision', 'EM_recall','EM_jaccard']
@@ -933,7 +942,8 @@ if __name__ == '__main__':
     #GroundTruth_doM_once('10workers_rand0', 29 ,thresh=-2,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
     if False:
     #if True: 
-    #print sample_lst  
+    #print sample_lst 
+    #for sample in ['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']: 
     #for sample in sample_lst:
     # First 7 objects are bad objects, last 3 are good objects
     #test_sample_obj = [('10workers_rand5',8),('10workers_rand3',20),('5workers_rand3',20),('5workers_rand3',28),('30workers_rand0',7),\
@@ -954,13 +964,13 @@ if __name__ == '__main__':
         for objid in object_lst:
 	    print "Obj: " ,objid 
             obj_start_time = time.time()
-            #create_mega_mask(objid, PLOT=True, sample_name=sample)
+            create_mega_mask(objid, PLOT=True, sample_name=sample)
             #create_MV_mask(sample, objid)#,mode="compute_pr_only")
 	    #for thresh in [-1.8,-1.6,-1.4,-1.2,-0.8, -0.6, -0.4, -0.2,  0. ,  0.2,  0.4,  0.6,  0.8, 1.2,1.4,1.6,1.8]:
-	    for thresh in [-2,-1,0,1,2]:
+	    #for thresh in [-2,-1,0,1,2]:
             #for thresh in [-4,-2,0,2,4]:
 	    #for thresh in [0]:
-     		print "Working on threshold: ",thresh
+     	    #   print "Working on threshold: ",thresh
     	        #do_EM_for(sample, objid,thresh=thresh,compute_PR_every_iter=False,exclude_isovote=True)#,load_p_in_mask=True,thresh=thresh)
 		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=True, num_iterations=3)
 		#do_GTLSA_EM_for(sample, objid,thresh=thresh,rerun_existing=False,exclude_isovote=False, num_iterations=3)
@@ -969,19 +979,19 @@ if __name__ == '__main__':
 		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="basic",exclude_isovote=False,rerun_existing=False)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=False,rerun_existing=False)
 		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=False,rerun_existing=True)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=False,rerun_existing=True)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=False,rerun_existing=True)
                 #GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GT",exclude_isovote=True,rerun_existing=True)
                 #GroundTruth_doM_once(sample, objid,thresh=thresh,algo="GTLSA",exclude_isovote=True,rerun_existing=True)
 		#GT_EM_Qjinit(sample, objid,exclude_isovote=True,thresh=thresh)
-		GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=True,rerun_existing=True)
+		#GroundTruth_doM_once(sample, objid,thresh=thresh,algo="AW",exclude_isovote=True,rerun_existing=True)
             obj_end_time = time.time()
             print '{}: {}s'.format(objid, round(obj_end_time - obj_start_time, 2))
             sample_end_time = time.time()
             print 'Total time for {}: {}s'.format(sample, round(sample_end_time - sample_start_time, 2))
-    compile_PR(mode="AW",ground_truth=True)
-    compile_PR(mode="isoAW",ground_truth=True)
-    #compile_PR(mode="GTLSA",ground_truth=True)
-    #compile_PR(mode="isoGTLSA",ground_truth=True)
+    #compile_PR(mode="AW",ground_truth=True)
+    #compile_PR(mode="isoAW",ground_truth=True)
+    compile_PR(mode="GTLSA",ground_truth=True)
+    compile_PR(mode="isoGTLSA",ground_truth=True)
     #compile_PR(mode="GT",ground_truth=True)
     #compile_PR(mode="isoGT",ground_truth=True)
     #compile_PR(mode="basic",ground_truth=True)

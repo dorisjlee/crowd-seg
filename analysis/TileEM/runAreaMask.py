@@ -71,14 +71,15 @@ def plot_tarea_mask(tarea_mask):
 
 def mask_area(mask):
     return len(np.where(mask)[0])
-object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
-#for sample in tqdm(sample_specs.keys()):
-for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
-    print sample 
-    for objid in object_lst:
-	print "objid:",objid
-	try:
-            #tarea_mask(sample,objid)
-	    create_tarea_mask(sample,objid)
-	except(IOError):
-	    pass
+if __name__=="__main__":
+    object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+    #for sample in tqdm(sample_specs.keys()):
+    for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
+        print sample 
+        for objid in object_lst:
+	    print "objid:",objid
+	    try:
+                #tarea_mask(sample,objid)
+	        create_tarea_mask(sample,objid)
+	    except(IOError):
+	        pass

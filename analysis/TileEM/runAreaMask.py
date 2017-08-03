@@ -1,9 +1,10 @@
 from tqdm import tqdm
-from sample_worker_seeds import sample_specs
+# from sample_worker_seeds import sample_specs
 import numpy as np 
 import pickle as pkl
 from PIL import Image, ImageDraw
 from time import time 
+from matplotlib import pyplot as plt
 def tarea_mask(sample, objid):
     # DEMOTED : this goes from uniqified tiles to pixel
     tiles = pkl.load(open("uniqueTiles/{}/vtiles{}.pkl".format(sample,objid)))
@@ -79,72 +80,141 @@ def index_item(pix_lst,item):
     for i,pix in enumerate(pix_lst):
         if str(list(pix))==str(list(item)):
              return i 
+
 def create_PixTiles(sample,objid):
     wmap  = pkl.load(open("pixel_em/{}/obj{}/voted_workers_mask.pkl".format(sample,objid)))
     tiles= []
     # Large outside tile 
     x,y = np.where(wmap==0)
-    tiles.append(zip(x,y))
+    # print len(x), len(y)
+    tiles.append(set(zip(x,y)))
+    # print len(tiles)
     # Pixels voted by at least one worker
     x,y = np.where(wmap!=0)
+
+    # num_votes_mask = wmap
+    # for i in range(len(wmap)):
+    #     for j in range(len(wmap[i])):
+    #         if wmap[i][j] == 0:
+    #             num_votes_mask[i][j] = 0
+    #         else:
+    #             num_votes_mask[i][j] = len(wmap[i][j])
+    #         if type(num_votes_mask[i][j]) is not int:
+    #             print 'Not int ', i, j, wmap[i][j], type(wmap[i][j]), len(wmap[i][j]), type(num_votes_mask[i][j])
+    #             print num_votes_mask[i][j]
+    #             return
+    # print type(num_votes_mask)
+    # plt.figure()
+    # plt.imshow(num_votes_mask)  # ,cmap="rainbow")
+    # plt.colorbar()
+    # plt.close()
+    # print len(x), len(y)
+
     potential_pixs = np.array(zip(x,y))
     #Compute the votes on each pixel 
     votes = np.array([len(wmap[tuple(pix)]) for pix in potential_pixs])
+
+    # print len(potential_pixs), len(potential_pixs[0])
+    # print [v for v in votes if v > 5]
+
     # sort from lowest to highest number of votes  (low votes likely to be lone/small tiles)
     srt_idx = np.argsort(votes)
+    # print srt_idx
+    # print votes[srt_idx]
     srt_potential_pix = potential_pixs[srt_idx]
 
+    # return
     tidx=1
-    while(len(srt_potential_pix)!=0):
+
+    pixs_already_tiled = set()
+
+    # while(len(srt_potential_pix)!=0):
+    for source in srt_potential_pix:
+
+        source = tuple(source)
+        t1 = time()
+        time_spent_searching = 0.0
+
+        # t2 = time()
+        if source in pixs_already_tiled:
+            continue
+        # t3 = time()
+        # time_spent_searching += (t3 - t2)
+
         print "Tile ", tidx
-        checked_pixs = []
         #print "srt_potential_pix length:", len(srt_potential_pix)
-        source = tuple(srt_potential_pix[0])
-        checked_pixs.append(source)
-        srt_potential_pix=np.delete(srt_potential_pix,index_item(srt_potential_pix,source),axis=0)
-        tiles.append([source])
+        # source = tuple(srt_potential_pix[0])
+        # checked_pixs.append(source)
+        # # srt_potential_pix=np.delete(srt_potential_pix,index_item(srt_potential_pix,source),axis=0)
+        # srt_potential_pix=np.delete(srt_potential_pix,0,axis=0)
+        pixs_already_tiled.add(source)
+        tiles.append(set([source]))
         voted_workers = wmap[source]
         pidx =1
         #while (checked_pixs!=tiles[tidx]):
-        potential_sources = [source]
+        potential_sources = set([source])
+        checked_pixs = set()
+        next_source = source
 
-        while (len(potential_sources)!=0):
+        # while (len(potential_sources)!=0):
+        while next_source is not None:
     #         print "Pix ", pidx
     #         print "source:",source
     #         print "tiles[tidx]:",tiles[tidx]
     #         print "checked_pixs:",checked_pixs
     #         print "potential_sources:",potential_sources
             at_least_one_connection=False
-            for neighbor in neighbor_widx(source):
+            for neighbor in neighbor_widx(next_source):
                 if wmap[neighbor] == voted_workers:
-                    tiles[tidx].append(neighbor)
+                    tiles[tidx].add(neighbor)
                     # Remove added neighbor from potential pixels 
-                    found_idx = index_item(srt_potential_pix,neighbor)
-                    if found_idx==None:
-                        #print "Neighbor already belong to another tile"
-                        pass
-                    else: 
-                        srt_potential_pix=np.delete(srt_potential_pix,found_idx,axis=0)
-                        at_least_one_connection=True
+                    # t2 = time()
+                    # found_idx = index_item(srt_potential_pix,neighbor)
+                    # t3 = time()
+                    # time_spent_searching += (t3 - t2)
+                    pixs_already_tiled.add(neighbor)
+                    potential_sources.add(neighbor)
+
+                    # if found_idx==None:
+                    #     #print "Neighbor already belong to another tile"
+                    #     pass
+                    # else: 
+                    #     srt_potential_pix=np.delete(srt_potential_pix,found_idx,axis=0)
+                    #     at_least_one_connection=True
                     #checked_pixs.append(neighbor)
     #        if at_least_one_connection==False: 
     #             potential_sources = [i for i in tiles[tidx] if i not in checked_pixs]
 
             # Identifying potential sources:
-            potential_sources=[]
-            for i in tiles[tidx]:
-                if i not in checked_pixs:
-                    potential_sources.append(i)
+            # potential_sources=[]
+            # t2 = time()
+            # for i in tiles[tidx]:
+            #     if i not in checked_pixs:
+            #         potential_sources.append(i)
+            # t3 = time()
+            # time_spent_searching += (t3 - t2)
     #         print "potential_source after:",potential_sources            
-            if len(potential_sources)==0:
-    #             print "new tile"
-                break
-            source = potential_sources[0]
-            checked_pixs.append(source)
+    #         if len(potential_sources)==0:
+    # #             print "new tile"
+    #             break
+            # source = potential_sources[0]
+            t2 = time()
+            checked_pixs.add(next_source)
+            pixs_already_tiled.add(next_source)
+            if len(potential_sources) > len(checked_pixs):
+                next_source = (potential_sources - checked_pixs).pop()
+            else:
+                next_source = None
+            t3 = time()
+            time_spent_searching += (t3 - t2)
             pidx+=1
+
         print "final tiles[tidx]:", tiles[tidx]
-        print "len(srt_potential_pix):",len(srt_potential_pix)
+        # print "len(srt_potential_pix):",len(srt_potential_pix)
         tidx+=1 #moving onto the next tile
+        t4 = time()
+        print 'Total time for tile: {}, time spent search index_item: {}'.format(t4-t1, time_spent_searching)
+
     pkl.dump(tiles,open("pixel_em/{}/obj{}/tiles.pkl".format(sample,objid),'w'))
  
 if __name__=="__main__":

@@ -71,18 +71,33 @@ def plot_tarea_mask(tarea_mask):
 def mask_area(mask):
     return len(np.where(mask)[0])
 ##############################################################################################
-def neighbor_widx(source):
+def neighbor_widx(wmap,source):
     x=source[0]
     y=source[1]
     return (x+1,y),(x,y+1),(x-1,y),(x,y-1)
-
+def edge_neighbor_widx(wmap,source):
+    x=source[0]
+    y=source[1]
+    valid_neighbors = []
+    w,h = np.shape(wmap) 
+    if x+1<w:
+	valid_neighbors.append((x+1,y))
+    if y+1<h:
+	valid_neighbors.append((x,y+1))
+    if x-1<0:
+	valid_neighbors.append((x-1,y))
+    if y-1<0:
+	valid_neighbors.append((x,y-1))
+    #return (x+1,y),(x,y+1),(x-1,y),(x,y-1)
+    return valid_neighbors
 def index_item(pix_lst,item):
     for i,pix in enumerate(pix_lst):
         if str(list(pix))==str(list(item)):
              return i 
 
-def create_PixTiles(sample,objid):
+def create_PixTiles(sample,objid,check_edges=False):
     wmap  = pkl.load(open("pixel_em/{}/obj{}/voted_workers_mask.pkl".format(sample,objid)))
+    #print "wmap:",np.shape(wmap)
     tiles= []
     # Large outside tile 
     x,y = np.where(wmap==0)
@@ -132,8 +147,8 @@ def create_PixTiles(sample,objid):
     for source in srt_potential_pix:
 
         source = tuple(source)
-        t1 = time()
-        time_spent_searching = 0.0
+        #t1 = time()
+        #time_spent_searching = 0.0
 
         # t2 = time()
         if source in pixs_already_tiled:
@@ -141,7 +156,7 @@ def create_PixTiles(sample,objid):
         # t3 = time()
         # time_spent_searching += (t3 - t2)
 
-        print "Tile ", tidx
+        #print "Tile ", tidx
         #print "srt_potential_pix length:", len(srt_potential_pix)
         # source = tuple(srt_potential_pix[0])
         # checked_pixs.append(source)
@@ -164,7 +179,13 @@ def create_PixTiles(sample,objid):
     #         print "checked_pixs:",checked_pixs
     #         print "potential_sources:",potential_sources
             at_least_one_connection=False
-            for neighbor in neighbor_widx(next_source):
+	    if (check_edges):
+		print "Check Edges!" 
+		neighbors = edge_neighbor_widx(wmap,source)
+	    else: 
+		neighbors = neighbor_widx(wmap,next_source)
+            for neighbor in neighbors:
+		#print neighbor
                 if wmap[neighbor] == voted_workers:
                     tiles[tidx].add(neighbor)
                     # Remove added neighbor from potential pixels 
@@ -198,38 +219,48 @@ def create_PixTiles(sample,objid):
     # #             print "new tile"
     #             break
             # source = potential_sources[0]
-            t2 = time()
+            #t2 = time()
             checked_pixs.add(next_source)
             pixs_already_tiled.add(next_source)
             if len(potential_sources) > len(checked_pixs):
                 next_source = (potential_sources - checked_pixs).pop()
             else:
                 next_source = None
-            t3 = time()
-            time_spent_searching += (t3 - t2)
+            #t3 = time()
+            #time_spent_searching += (t3 - t2)
             pidx+=1
 
-        print "final tiles[tidx]:", tiles[tidx]
-        # print "len(srt_potential_pix):",len(srt_potential_pix)
+        #print "final tiles[tidx]:", tiles[tidx]
+	#print "len(checked_pixs):",len(checked_pixs)
+        #print "len(srt_potential_pix):",len(srt_potential_pix)
         tidx+=1 #moving onto the next tile
-        t4 = time()
-        print 'Total time for tile: {}, time spent search index_item: {}'.format(t4-t1, time_spent_searching)
+        #t4 = time()
+        #print 'Total time for tile: {}, time spent search index_item: {}'.format(t4-t1, time_spent_searching)
 
     pkl.dump(tiles,open("pixel_em/{}/obj{}/tiles.pkl".format(sample,objid),'w'))
  
 if __name__=="__main__":
-    start = time()
-    create_PixTiles('5workers_rand0',1)
-    end = time()
-    print "Elapsed Time: ", end-start
-    #object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
-    ##for sample in tqdm(sample_specs.keys()):
-    #for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
-    #    print sample 
-    #    for objid in object_lst:
-    #	    print "objid:",objid
-    #	    try:
+    import os
+    #start = time()
+    #create_PixTiles('5workers_rand0',16)
+    #end = time()
+    #print "Elapsed Time: ", end-start
+    object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+    #for sample in tqdm(sample_specs.keys()):
+    for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
+    #for sample in tqdm(['25workers_rand0','30workers_rand0']):
+    #for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0']):
+        print sample 
+        for objid in object_lst:
+    	    print "objid:",objid
+    	    try:
     #            #tarea_mask(sample,objid)
-    #	        create_tarea_mask(sample,objid)
-    #	    except(IOError):
-    #	        pass
+    	        #create_tarea_mask(sample,objid)
+		if not os.path.exists("pixel_em/{}/obj{}/tiles.pkl".format(sample,objid)):
+   		    create_PixTiles(sample,objid)
+		else:
+		    print "already ran: ", sample, objid
+	    except(IndexError):
+		create_PixTiles(sample,objid,check_edges=True)
+    	    except(IOError):
+    	        pass

@@ -84,9 +84,9 @@ def edge_neighbor_widx(wmap,source):
 	valid_neighbors.append((x+1,y))
     if y+1<h:
 	valid_neighbors.append((x,y+1))
-    if x-1<0:
+    if x-1>=0:
 	valid_neighbors.append((x-1,y))
-    if y-1<0:
+    if y-1>=0:
 	valid_neighbors.append((x,y-1))
     #return (x+1,y),(x,y+1),(x-1,y),(x,y-1)
     return valid_neighbors
@@ -180,8 +180,8 @@ def create_PixTiles(sample,objid,check_edges=False):
     #         print "potential_sources:",potential_sources
             at_least_one_connection=False
 	    if (check_edges):
-		print "Check Edges!" 
-		neighbors = edge_neighbor_widx(wmap,source)
+		#print "Check Edges!" 
+		neighbors = edge_neighbor_widx(wmap,next_source)
 	    else: 
 		neighbors = neighbor_widx(wmap,next_source)
             for neighbor in neighbors:
@@ -245,22 +245,30 @@ if __name__=="__main__":
     #create_PixTiles('5workers_rand0',16)
     #end = time()
     #print "Elapsed Time: ", end-start
-    object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+    #object_lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47]
+    object_lst=[5]
+    if True:
+	sample='5workers_rand0'
     #for sample in tqdm(sample_specs.keys()):
-    for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
+    #for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0','25workers_rand0','30workers_rand0']):
     #for sample in tqdm(['25workers_rand0','30workers_rand0']):
-    #for sample in tqdm(['5workers_rand0','10workers_rand0','15workers_rand0','20workers_rand0']):
+    #for sample in tqdm(['5workers_rand0','10workers_rand0']):
+    #for sample in tqdm(['15workers_rand0','20workers_rand0']):
         print sample 
         for objid in object_lst:
     	    print "objid:",objid
     	    try:
     #            #tarea_mask(sample,objid)
     	        #create_tarea_mask(sample,objid)
-		if not os.path.exists("pixel_em/{}/obj{}/tiles.pkl".format(sample,objid)):
-   		    create_PixTiles(sample,objid)
-		else:
-		    print "already ran: ", sample, objid
-	    except(IndexError):
-		create_PixTiles(sample,objid,check_edges=True)
+		#if not os.path.exists("pixel_em/{}/obj{}/tiles.pkl".format(sample,objid)):
+		    #start = time()
+   		create_PixTiles(sample,objid,check_edges=True)
+		    #end = time()
+		    #print "Elapsed Time: ", end-start
+		#else:
+		#    print "already ran: ", sample, objid
+	    #except(IndexError):
+	    #	create_PixTiles(sample,objid,check_edges=True)
     	    except(IOError):
+		print "IO Error on:",sample, objid
     	        pass

@@ -70,7 +70,7 @@ def visualize_bb_objects(object_id,img_bkgrnd=True,worker_id=-1,gtypes=['worker'
     else:
         img_info,object_tbl,bb_info_bad,hit_info=load_info()
     plt.figure(figsize =(7,7))
-    ground_truth = pd.read_csv("../../data/object_ground_truth.csv")
+    ground_truth = pd.read_csv("../data/object_ground_truth.csv")
     my_BBG  = pd.read_csv("my_ground_truth.csv")
     if img_bkgrnd:
         img_name = img_info[img_info.id==int(object_tbl[object_tbl.id==object_id]["image_id"])]["filename"].iloc[0]
